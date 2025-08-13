@@ -1,0 +1,16 @@
+# Node
+node_modules/
+.pnpm-store/
+.npm/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Env
+.env
+.env.*
+
+# Misc
+.DS_Store
