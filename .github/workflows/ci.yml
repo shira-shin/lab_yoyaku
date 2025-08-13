@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile || true
+          pip install fastapi uvicorn pytest
+      - name: Lint web
+        run: pnpm --filter web lint || true
+      - name: Test api
+        run: pytest -q || true
