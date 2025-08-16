@@ -2,6 +2,7 @@
 node_modules/
 .pnpm-store/
 .npm/
+.next/
 
 # Python
 __pycache__/
@@ -11,6 +12,7 @@ __pycache__/
 # Env
 .env
 .env.*
+!web/.env.local
 
 # Misc
 .DS_Store
