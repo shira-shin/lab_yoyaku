@@ -1,15 +1,15 @@
 import DeviceCard from "@/components/DeviceCard";
-async function fetchDevices() {
-  const r = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/devices`, { cache: 'no-store' });
-  return (await r.json()).devices as any[];
-}
+import { getDevices } from "@/lib/api";
+
 export default async function DashboardPage() {
-  const devices = await fetchDevices();
+  const { devices } = await getDevices();
   return (
-    <main className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">機器ダッシュボード</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {devices.map((d: any) => <DeviceCard key={d.id} d={d} />)}
+    <main className="app-container py-6">
+      <h1 className="mb-4 text-2xl font-bold">機器ダッシュボード</h1>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {devices.map((d: any) => (
+          <DeviceCard key={d.id} d={d} />
+        ))}
       </div>
     </main>
   );

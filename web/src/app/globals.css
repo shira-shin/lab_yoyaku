@@ -3,3 +3,7 @@
 @tailwind utilities;
 
 html, body { height: 100%; }
+
+.app-container {
+  @apply max-w-[1040px] mx-auto px-4 sm:px-6;
+}
