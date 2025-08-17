@@ -1,15 +1,14 @@
-import type { Metadata } from 'next';
-import './globals.css';
+import "./globals.css";
+import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: 'Lab Yoyaku',
-  description: 'Lab equipment reservation system',
-};
+export const metadata: Metadata = { title: "Lab Yoyaku" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body className="min-h-screen bg-white text-neutral-900 antialiased">
+        {children}
+      </body>
     </html>
   );
 }
