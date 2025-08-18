@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { joinGroup } from '@/lib/api';
 
 export default function GroupJoinPage() {
   const [group, setGroup] = useState(""); // name or slug
@@ -14,18 +15,14 @@ export default function GroupJoinPage() {
     e.preventDefault();
     setErr(null);
     setLoading(true);
-    const res = await fetch("/api/mock/groups/join", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setErr(data.error || "参加に失敗しました");
+    try {
+      const { group: g } = await joinGroup({ identifier: group, password });
+      router.push(`/groups/${g.slug}/calendar`);
+    } catch (e:any) {
+      setErr(e.message);
       setLoading(false);
       return;
     }
-    router.push(`/groups/${data.group.slug}/calendar`);
   }
 
   return (

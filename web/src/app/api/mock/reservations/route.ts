@@ -1,26 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
-import { reservations, save } from "@/lib/mock-db";
-export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const deviceId = url.searchParams.get("deviceId");
-  const groupId = url.searchParams.get("groupId");
-  const from = url.searchParams.get("from");
-  const to   = url.searchParams.get("to");
-  let res = reservations.slice();
-  if (deviceId) res = res.filter(r=>r.deviceId===deviceId);
-  if (groupId)  res = res.filter(r=>r.groupId===groupId);
-  if (from)     res = res.filter(r=>new Date(r.end).getTime()   >= new Date(from).getTime());
-  if (to)       res = res.filter(r=>new Date(r.start).getTime() <= new Date(to).getTime());
-  return NextResponse.json({ reservations: res });
+import { NextResponse } from 'next/server';
+import { findReservations, insertReservation } from '@/lib/mock-db';
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const groupId = searchParams.get('groupId');
+  if (!groupId)
+    return NextResponse.json({ ok: false, error: 'groupId required' }, { status: 400 });
+  const deviceId = searchParams.get('deviceId') || undefined;
+  const from = searchParams.get('from') || undefined;
+  const to = searchParams.get('to') || undefined;
+  const data = findReservations({ groupId, deviceId, from, to });
+  return NextResponse.json({ ok: true, data });
 }
-export async function POST(req: NextRequest) {
+
+export async function POST(req: Request) {
   const p = await req.json();
-  const s = new Date(p.start).getTime(), e = new Date(p.end).getTime();
-  if(!(s<e)) return NextResponse.json({error:"開始は終了より前にしてください"}, {status:400});
-  const overlap = reservations.some(x=>x.deviceId===p.deviceId && !(new Date(x.end).getTime()<=s || e<=new Date(x.start).getTime()));
-  if(overlap) return NextResponse.json({error:"その時間帯は予約済みです"}, {status:409});
-  const rec = { id: crypto.randomUUID(), status: "confirmed", ...p };
-  reservations.unshift(rec);
-  save();
-  return NextResponse.json({ ok:true, reservation: rec }, {status:201});
+  if (!p.groupId || !p.deviceId || !p.title || !p.start || !p.end || !p.reservedBy)
+    return NextResponse.json({ ok: false, error: 'missing fields' }, { status: 400 });
+  const res = insertReservation(p);
+  return NextResponse.json({ ok: true, data: res }, { status: 201 });
 }
+
