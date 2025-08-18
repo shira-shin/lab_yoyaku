@@ -6,7 +6,14 @@ const abs = (p: string) => new URL(p, BASE).toString();
 
 export const getDevices = async () => (await fetch(abs("/api/devices"), { cache:"no-store" })).json();
 export const getGroups  = async () => (await fetch(abs("/api/mock/groups"), { cache:"no-store" })).json();
-export const getGroup   = async (slug:string) => (await fetch(abs(`/api/mock/groups/${slug}`),{cache:"no-store"})).json();
+export const getGroup = async (slug: string) => {
+  const res = await fetch(
+    abs(`/api/mock/groups/${encodeURIComponent(slug)}`),
+    { cache: "no-store" }
+  );
+  if (!res.ok) throw new Error("group not found");
+  return res.json();
+};
 export const getReservations = async (q:{groupId?:string, deviceId?:string, from?:string, to?:string}) => {
   const params = new URLSearchParams(q as any).toString();
   return (await fetch(abs(`/api/mock/reservations?${params}`), { cache:"no-store" })).json();

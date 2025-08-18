@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
+function toSlug(input: string) {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 export default function GroupNewPage() {
   const [name, setName] = useState("");
@@ -10,13 +18,22 @@ export default function GroupNewPage() {
   const [err, setErr] = useState<string | null>(null);
   const router = useRouter();
 
+  useEffect(() => {
+    if (!slug) setSlug(toSlug(name));
+  }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
+    const safeSlug = toSlug(slug || name);
+    if (!safeSlug) {
+      setErr("slug を半角英数字で入力してください（名称から自動生成されます）");
+      return;
+    }
     const res = await fetch("/api/mock/groups", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, slug, password }),
+      body: JSON.stringify({ name, slug: safeSlug, password }),
     });
     const data = await res.json();
     if (!res.ok) {
