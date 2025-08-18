@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import BadgeStatus from "@/components/BadgeStatus";
 import ReservationModal from "@/components/ReservationModal";
 import { getDevice, getReservations } from "@/lib/api";
@@ -32,9 +33,20 @@ export default async function DeviceDetail({ params }: { params: { uid: string }
           </section>
         </section>
         <aside className="h-fit space-y-3 rounded-2xl border p-4">
-          <ReservationModal deviceId={d.id} groupId={d.groupId}/>
+          <ReservationModal deviceId={d.id} groupId={d.groupId} />
           <button className="w-full rounded-2xl border px-4 py-2">使用開始</button>
-          <button className="w-full rounded-2xl border px-4 py-2">QRポスター</button>
+          <Link
+            href={`/devices/${encodeURIComponent(d.device_uid)}/poster`}
+            className="block w-full rounded-2xl border px-4 py-2 text-center"
+          >
+            QRポスター
+          </Link>
+          <Link
+            href={`/devices/${encodeURIComponent(d.device_uid)}/negotiations`}
+            className="block w-full rounded-2xl border px-4 py-2 text-center"
+          >
+            交渉スレッド
+          </Link>
         </aside>
       </div>
     </main>

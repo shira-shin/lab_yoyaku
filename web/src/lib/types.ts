@@ -14,3 +14,14 @@ export type Reservation = {
   bookedByType: BookedByType; bookedById: string; // groupId or userId
   createdByUserId?: string;
 };
+
+export type NegotiationStatus = 'open'|'accepted'|'rejected';
+export type Negotiation = {
+  id: string;
+  targetReservationId?: string;
+  deviceId: string;
+  requesterName: string;
+  message: string;
+  status: NegotiationStatus;
+  createdAt: string;
+};
