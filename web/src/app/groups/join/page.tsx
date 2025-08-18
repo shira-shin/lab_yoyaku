@@ -1,35 +1,55 @@
-'use client';
-import { useState } from 'react';
-import Button from '@/components/ui/Button';
+"use client";
 
-export default function GroupJoin() {
-  const [code, setCode] = useState('');
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-  const submit = async (e: React.FormEvent) => {
+export default function GroupJoinPage() {
+  const [group, setGroup] = useState(""); // name or slug
+  const [password, setPassword] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const r = await fetch('/api/mock/groups/join', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
+    setErr(null);
+    const res = await fetch("/api/mock/groups/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ group, password }),
     });
-    if (r.ok) {
-      alert('参加できました');
-      setCode('');
-    } else {
-      alert('コードが無効です');
+    const data = await res.json();
+    if (!res.ok) {
+      setErr(data.error || "参加に失敗しました");
+      return;
     }
-  };
+    router.push(`/groups/${data.group.slug}/calendar`);
+  }
 
   return (
-    <main className="max-w-md space-y-4">
-      <h1 className="text-2xl font-bold">グループに参加</h1>
-      <form onSubmit={submit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">招待コード</label>
-          <input value={code} onChange={e=>setCode(e.target.value)} className="w-full rounded border p-2" required />
-        </div>
-        <Button type="submit" variant="primary">参加する</Button>
+    <main className="max-w-2xl p-6 space-y-6">
+      <h1 className="text-3xl font-bold">グループに参加</h1>
+      <form onSubmit={onSubmit} className="space-y-5">
+        <label className="block">
+          <div className="mb-1">グループ名 または slug</div>
+          <input
+            className="w-full rounded-xl border p-3"
+            value={group}
+            onChange={(e) => setGroup(e.target.value)}
+          />
+        </label>
+        <label className="block">
+          <div className="mb-1">パスワード</div>
+          <input
+            type="password"
+            className="w-full rounded-xl border p-3"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
+        {err && <p className="text-red-600 text-sm">{err}</p>}
+        <button className="rounded-xl bg-black text-white px-5 py-2">参加する</button>
       </form>
     </main>
   );
 }
+

@@ -1,4 +1,10 @@
-export type Group = { id: string; name: string; slug: string };
+export type Group = {
+  id: string;
+  name: string;
+  slug: string;
+  // クライアントには返さない想定
+  passwordHash?: string;
+};
 export type Member = { userId: string; groupId: string; role: 'admin'|'member' };
 export type Device = {
   id: string; device_uid: string; name: string; category?: string; location?: string;
