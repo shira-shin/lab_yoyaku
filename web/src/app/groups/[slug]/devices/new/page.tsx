@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button';
 export default function DeviceNew({ params:{slug} }:{ params:{ slug:string } }) {
   const [name,setName] = useState('');
   const [category,setCategory] = useState('');
-  const [location,setLocation] = useState('');
+  const [place,setPlace] = useState('');
   const [sop,setSop] = useState('1');
 
   const submit = async (e:React.FormEvent)=>{
@@ -13,11 +13,11 @@ export default function DeviceNew({ params:{slug} }:{ params:{ slug:string } }) 
     const r = await fetch('/api/mock/devices',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ name, category, location, sop_version:sop, groupSlug: slug })
+      body: JSON.stringify({ name, category, location:place, sop_version:sop, groupSlug: slug })
     });
     if(r.ok){
       const { device } = await r.json();
-      location.href = `/devices/${device.device_uid}/poster`;
+      window.location.href = `/devices/${device.device_uid}/poster`;
     } else {
       alert('エラー');
     }
@@ -37,7 +37,7 @@ export default function DeviceNew({ params:{slug} }:{ params:{ slug:string } }) 
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">場所</label>
-          <input value={location} onChange={e=>setLocation(e.target.value)} className="w-full rounded border p-2" />
+          <input value={place} onChange={e=>setPlace(e.target.value)} className="w-full rounded border p-2" />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">SOPバージョン</label>

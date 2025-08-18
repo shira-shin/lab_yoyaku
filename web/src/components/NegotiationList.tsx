@@ -23,8 +23,24 @@ export default function NegotiationList({ deviceId, initialNegotiations }:{ devi
   return (
     <div className="space-y-4">
       <form onSubmit={submit} className="space-y-2">
-        <input value={name} onChange={e=>setName(e.target.value)} placeholder="名前" className="w-full rounded border p-2" required />
-        <textarea value={msg} onChange={e=>setMsg(e.target.value)} placeholder="メッセージ" className="w-full rounded border p-2" required />
+        <input
+          value={name}
+          onChange={e=>setName(e.target.value)}
+          placeholder="名前"
+          aria-label="名前"
+          className="w-full rounded border p-2"
+          required
+          aria-required="true"
+        />
+        <textarea
+          value={msg}
+          onChange={e=>setMsg(e.target.value)}
+          placeholder="メッセージ"
+          aria-label="メッセージ"
+          className="w-full rounded border p-2"
+          required
+          aria-required="true"
+        />
         <Button type="submit" variant="primary">送信</Button>
       </form>
       <ul className="space-y-2">
