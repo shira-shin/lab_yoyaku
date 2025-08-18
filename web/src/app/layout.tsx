@@ -14,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav className="flex gap-6 text-sm text-neutral-600">
               <Link href="/dashboard" className="hover:text-neutral-900">ダッシュボード</Link>
               <Link href="/dashboard" className="hover:text-neutral-900">機器一覧</Link>
+              <Link href="/groups" className="hover:text-neutral-900">グループ</Link>
             </nav>
           </div>
         </header>

@@ -1,11 +1,28 @@
 "use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import BadgeStatus from "./BadgeStatus";
-import type { Device } from "@/lib/mock";
+import BadgeUsage from "./BadgeUsage";
+import { getReservations } from "@/lib/api";
+import type { Device, Reservation } from "@/lib/types";
 
 export default function DeviceCard({ d }: { d: Device }) {
-  const nextAction =
-    d.status === "in_use" ? "終了予定 17:00" : "次予約 15:00";
+  const [nextRes, setNextRes] = useState<Reservation | null>(null);
+  useEffect(() => {
+    const load = async () => {
+      const { reservations } = await getReservations({ deviceId: d.id, from: new Date().toISOString() });
+      if (reservations.length > 0) {
+        reservations.sort((a: any, b: any) => new Date(a.start).getTime() - new Date(b.start).getTime());
+        setNextRes(reservations[0]);
+      }
+    };
+    load();
+  }, [d.id]);
+  const nextAction = nextRes
+    ? `次予約 ${new Date(nextRes.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+    : d.status === "in_use"
+    ? "使用中"
+    : "空き";
   return (
     <Link
       href={`/devices/${d.device_uid}`}
@@ -23,9 +40,17 @@ export default function DeviceCard({ d }: { d: Device }) {
       </div>
       <div className="mt-4 flex items-center justify-between text-sm text-neutral-600">
         <span>{nextAction}</span>
-        <span className="text-neutral-400 transition group-hover:translate-x-1 group-hover:text-neutral-600" aria-hidden>
-          →
-        </span>
+        <div className="flex items-center gap-2">
+          {nextRes && (
+            <BadgeUsage
+              type={nextRes.bookedByType}
+              name={nextRes.bookedByType === "user" ? nextRes.bookedById : undefined}
+            />
+          )}
+          <span className="text-neutral-400 transition group-hover:translate-x-1 group-hover:text-neutral-600" aria-hidden>
+            →
+          </span>
+        </div>
       </div>
     </Link>
   );
