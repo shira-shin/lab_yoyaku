@@ -23,3 +23,58 @@ export const getDevice = async (uid: string) => {
   const { devices } = await getDevices();
   return devices.find((d: any) => d.device_uid === uid);
 };
+
+export const createGroup = async (payload: any) => {
+  const r = await fetch(abs('/api/mock/groups'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw await r.json();
+  return r.json();
+};
+
+export const joinGroup = async (code: string) => {
+  const r = await fetch(abs('/api/mock/groups/join'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  if (!r.ok) throw await r.json();
+  return r.json();
+};
+
+export const createDevice = async (payload: any) => {
+  const r = await fetch(abs('/api/mock/devices'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw await r.json();
+  return r.json();
+};
+
+export const getNegotiations = async (deviceId: string) => {
+  const params = new URLSearchParams({ deviceId }).toString();
+  return (await fetch(abs(`/api/mock/negotiations?${params}`), { cache: 'no-store' })).json();
+};
+
+export const createNegotiation = async (payload: any) => {
+  const r = await fetch(abs('/api/mock/negotiations'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw await r.json();
+  return r.json();
+};
+
+export const updateNegotiation = async (id: string, status: string) => {
+  const r = await fetch(abs(`/api/mock/negotiations/${id}`), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+  if (!r.ok) throw await r.json();
+  return r.json();
+};

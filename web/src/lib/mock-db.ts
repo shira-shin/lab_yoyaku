@@ -1,4 +1,4 @@
-import type { Group, Device, Reservation } from "./types";
+import type { Group, Device, Reservation, Negotiation } from "./types";
 
 export const groups: Group[] = [
   { id:"g1", name:"植物生理学研究室", slug:"plant-phys" },
@@ -15,3 +15,5 @@ export const reservations: Reservation[] = [
   { id:"r1", deviceId:"d2", groupId:"g1", start:new Date().toISOString(), end:new Date(Date.now()+60*60e3).toISOString(), note:"PCR 予備実験", status:"in_use", bookedByType:"user", bookedById:"u-suzuki" },
   { id:"r2", deviceId:"d1", groupId:"g1", start:new Date(Date.now()+2*60*60e3).toISOString(), end:new Date(Date.now()+3*60*60e3).toISOString(), note:"光合成測定", status:"confirmed", bookedByType:"group", bookedById:"g1" },
 ];
+
+export const negotiations: Negotiation[] = [];
