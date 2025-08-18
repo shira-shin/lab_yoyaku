@@ -24,7 +24,11 @@ export const getDevice = async (uid: string) => {
   return devices.find((d: any) => d.device_uid === uid);
 };
 
-export const createGroup = async (payload: any) => {
+export const createGroup = async (payload: {
+  name: string;
+  slug: string;
+  password: string;
+}) => {
   const r = await fetch(abs('/api/mock/groups'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -34,11 +38,11 @@ export const createGroup = async (payload: any) => {
   return r.json();
 };
 
-export const joinGroup = async (code: string) => {
+export const joinGroup = async (payload: { group: string; password: string }) => {
   const r = await fetch(abs('/api/mock/groups/join'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code }),
+    body: JSON.stringify(payload),
   });
   if (!r.ok) throw await r.json();
   return r.json();

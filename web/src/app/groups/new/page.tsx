@@ -1,42 +1,64 @@
-'use client';
-import { useState } from 'react';
-import Button from '@/components/ui/Button';
+"use client";
 
-export default function GroupNew() {
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-  const submit = async (e: React.FormEvent) => {
+export default function GroupNewPage() {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [password, setPassword] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const router = useRouter();
+
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const r = await fetch('/api/mock/groups', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, slug }),
+    setErr(null);
+    const res = await fetch("/api/mock/groups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, slug, password }),
     });
-    if (r.ok) {
-      alert('グループを作成しました');
-      setName('');
-      setSlug('');
-    } else {
-      const err = await r.json();
-      alert(err.error ?? 'エラー');
+    const data = await res.json();
+    if (!res.ok) {
+      setErr(data.error || "作成に失敗しました");
+      return;
     }
-  };
+    router.push(`/groups/${data.group.slug}/calendar`);
+  }
 
   return (
-    <main className="max-w-md space-y-4">
-      <h1 className="text-2xl font-bold">グループ作成</h1>
-      <form onSubmit={submit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">名称</label>
-          <input value={name} onChange={e=>setName(e.target.value)} className="w-full rounded border p-2" required />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">slug</label>
-          <input value={slug} onChange={e=>setSlug(e.target.value)} className="w-full rounded border p-2" required />
-        </div>
-        <Button type="submit" variant="primary">作成</Button>
+    <main className="max-w-2xl p-6 space-y-6">
+      <h1 className="text-3xl font-bold">グループ作成</h1>
+      <form onSubmit={onSubmit} className="space-y-5">
+        <label className="block">
+          <div className="mb-1">名称</div>
+          <input
+            className="w-full rounded-xl border p-3"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </label>
+        <label className="block">
+          <div className="mb-1">slug</div>
+          <input
+            className="w-full rounded-xl border p-3"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+          />
+        </label>
+        <label className="block">
+          <div className="mb-1">パスワード</div>
+          <input
+            type="password"
+            className="w-full rounded-xl border p-3"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
+        {err && <p className="text-red-600 text-sm">{err}</p>}
+        <button className="rounded-xl bg-black text-white px-5 py-2">作成</button>
       </form>
     </main>
   );
 }
+
