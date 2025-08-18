@@ -1,4 +1,4 @@
-// eslint-disable-next-line import/no-unresolved, @typescript-eslint/no-var-requires
+// eslint-disable-next-line import/no-unresolved
 const { QRCodeCanvas } = require('qrcode.react');
 
 export default function DevicePoster({ device }: { device: any }) {

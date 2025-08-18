@@ -16,6 +16,7 @@ export default function GroupNewPage() {
   const [slug, setSlug] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -25,9 +26,11 @@ export default function GroupNewPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
+    setLoading(true);
     const safeSlug = toSlug(slug || name);
     if (!safeSlug) {
       setErr("slug を半角英数字で入力してください（名称から自動生成されます）");
+      setLoading(false);
       return;
     }
     const res = await fetch("/api/mock/groups", {
@@ -38,6 +41,7 @@ export default function GroupNewPage() {
     const data = await res.json();
     if (!res.ok) {
       setErr(data.error || "作成に失敗しました");
+      setLoading(false);
       return;
     }
     router.push(`/groups/${data.group.slug}/calendar`);
@@ -53,6 +57,8 @@ export default function GroupNewPage() {
             className="w-full rounded-xl border p-3"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            required
+            aria-required="true"
           />
         </label>
         <label className="block">
@@ -61,6 +67,8 @@ export default function GroupNewPage() {
             className="w-full rounded-xl border p-3"
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
+            required
+            aria-required="true"
           />
         </label>
         <label className="block">
@@ -70,10 +78,22 @@ export default function GroupNewPage() {
             className="w-full rounded-xl border p-3"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
+            aria-required="true"
           />
         </label>
-        {err && <p className="text-red-600 text-sm">{err}</p>}
-        <button className="rounded-xl bg-black text-white px-5 py-2">作成</button>
+        {err && (
+          <p className="text-red-600 text-sm" role="alert" aria-live="polite">
+            {err}
+          </p>
+        )}
+        <button
+          className="rounded-xl bg-black text-white px-5 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={loading || !name || !slug || !password}
+          aria-disabled={loading || !name || !slug || !password}
+        >
+          {loading ? "作成中..." : "作成"}
+        </button>
       </form>
     </main>
   );

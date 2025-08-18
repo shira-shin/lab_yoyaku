@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { reservations } from "@/lib/mock-db";
+import { reservations, save } from "@/lib/mock-db";
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const deviceId = url.searchParams.get("deviceId");
@@ -21,5 +21,6 @@ export async function POST(req: NextRequest) {
   if(overlap) return NextResponse.json({error:"その時間帯は予約済みです"}, {status:409});
   const rec = { id: crypto.randomUUID(), status: "confirmed", ...p };
   reservations.unshift(rec);
+  save();
   return NextResponse.json({ ok:true, reservation: rec }, {status:201});
 }

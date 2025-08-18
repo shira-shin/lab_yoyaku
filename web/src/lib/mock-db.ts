@@ -110,6 +110,7 @@ export async function createGroup(input: {
     passwordHash,
   };
   mockDB.groups.push(group);
+  save();
   return group;
 }
 
@@ -121,5 +122,34 @@ export async function joinGroup(identifier: string, password: string) {
   const ok = await verifyPassword(g.passwordHash, password);
   if (!ok) throw new Error("パスワードが違います");
   return g;
+}
+
+const isBrowser = typeof window !== "undefined";
+const KEY = "lab-yoyaku-mock-db";
+
+export function save() {
+  if (!isBrowser || process.env.NODE_ENV !== "development") return;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(mockDB));
+  } catch {
+    // ignore
+  }
+}
+
+export function load() {
+  if (!isBrowser || process.env.NODE_ENV !== "development") return;
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      Object.assign(mockDB, data);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+if (isBrowser && process.env.NODE_ENV === "development") {
+  load();
 }
 

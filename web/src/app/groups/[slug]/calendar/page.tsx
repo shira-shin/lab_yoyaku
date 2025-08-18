@@ -46,7 +46,7 @@ export default async function GroupCalendar({
           }}
         >
           {/* ヘッダ行 */}
-          <div className="bg-neutral-50 border-b p-2 font-medium">時間</div>
+          <div className="bg-neutral-50 border-b border-r p-2 font-medium">時間</div>
           {devs.map((d) => (
             <div key={d.id} className="bg-neutral-50 border-b p-2 font-medium">
               {d.name}

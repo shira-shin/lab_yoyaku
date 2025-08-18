@@ -7,11 +7,13 @@ export default function GroupJoinPage() {
   const [group, setGroup] = useState(""); // name or slug
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
+    setLoading(true);
     const res = await fetch("/api/mock/groups/join", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -20,6 +22,7 @@ export default function GroupJoinPage() {
     const data = await res.json();
     if (!res.ok) {
       setErr(data.error || "参加に失敗しました");
+      setLoading(false);
       return;
     }
     router.push(`/groups/${data.group.slug}/calendar`);
@@ -35,6 +38,8 @@ export default function GroupJoinPage() {
             className="w-full rounded-xl border p-3"
             value={group}
             onChange={(e) => setGroup(e.target.value)}
+            required
+            aria-required="true"
           />
         </label>
         <label className="block">
@@ -44,10 +49,22 @@ export default function GroupJoinPage() {
             className="w-full rounded-xl border p-3"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
+            aria-required="true"
           />
         </label>
-        {err && <p className="text-red-600 text-sm">{err}</p>}
-        <button className="rounded-xl bg-black text-white px-5 py-2">参加する</button>
+        {err && (
+          <p className="text-red-600 text-sm" role="alert" aria-live="polite">
+            {err}
+          </p>
+        )}
+        <button
+          className="rounded-xl bg-black text-white px-5 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={loading || !group || !password}
+          aria-disabled={loading || !group || !password}
+        >
+          {loading ? "参加中..." : "参加する"}
+        </button>
       </form>
     </main>
   );
