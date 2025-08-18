@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
-import { MOCK_DEVICES } from '@/lib/mock';
+import { NextResponse } from "next/server";
+import { devices } from "@/lib/mock-db";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  return NextResponse.json({ devices: MOCK_DEVICES });
+  return NextResponse.json({ devices });
 }

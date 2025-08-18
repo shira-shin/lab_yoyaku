@@ -1,33 +1,25 @@
-import { headers } from "next/headers";
+const BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  process.env.NEXT_PUBLIC_BASE_URL ??
+  "http://localhost:3000";
+const abs = (p: string) => new URL(p, BASE).toString();
 
-const baseFromHeaders = () => {
-  const h = headers();
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  return `${proto}://${host}`;
+export const getDevices = async () => (await fetch(abs("/api/devices"), { cache:"no-store" })).json();
+export const getGroups  = async () => (await fetch(abs("/api/mock/groups"), { cache:"no-store" })).json();
+export const getGroup   = async (slug:string) => (await fetch(abs(`/api/mock/groups/${slug}`),{cache:"no-store"})).json();
+export const getReservations = async (q:{groupId?:string, deviceId?:string, from?:string, to?:string}) => {
+  const params = new URLSearchParams(q as any).toString();
+  return (await fetch(abs(`/api/mock/reservations?${params}`), { cache:"no-store" })).json();
 };
-
-const abs = (p: string) => new URL(p, baseFromHeaders()).toString();
-
-export const getDevices = async () =>
-  (await fetch(abs("/api/devices"), { cache: "no-store" })).json();
+export const createReservation = async (payload:any) => {
+  const r = await fetch(abs("/api/mock/reservations"), {
+    method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload)
+  });
+  if(!r.ok) throw await r.json();
+  return r.json();
+};
 
 export const getDevice = async (uid: string) => {
   const { devices } = await getDevices();
   return devices.find((d: any) => d.device_uid === uid);
-};
-
-export const getReservations = async (uid: string) =>
-  (await fetch(abs(`/api/mock/reservations?uid=${uid}`), {
-    cache: "no-store",
-  })).json();
-
-export const createReservation = async (p: any) => {
-  const r = await fetch(abs("/api/mock/reservations"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(p),
-  });
-  if (!r.ok) throw await r.json();
-  return r.json();
 };
