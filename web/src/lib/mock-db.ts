@@ -1,155 +1,181 @@
-import bcrypt from "bcryptjs";
-import type { Group, Device, Reservation, Negotiation } from "./types";
+import bcrypt from 'bcryptjs';
+import type { Group, Member, Device, Reservation } from './types';
 
-// in-memory mock database
-export const mockDB = {
-  groups: [
-    { id: "g1", name: "植物生理学研究室", slug: "plant-phys" },
-    { id: "g2", name: "分析化学研究室", slug: "analytical" },
-  ] as Group[],
-  devices: [
-    {
-      id: "d1",
-      device_uid: "JR-PAM-01",
-      name: "ジュニアPAM",
-      category: "fluorometer",
-      location: "Room 302",
-      status: "available",
-      sop_version: 3,
-      groupId: "g1",
-    },
-    {
-      id: "d2",
-      device_uid: "PCR-02",
-      name: "PCR (Thermal Cycler)",
-      category: "pcr",
-      location: "Room 305",
-      status: "reserved",
-      sop_version: 5,
-      groupId: "g1",
-    },
-    {
-      id: "d3",
-      device_uid: "GC-01",
-      name: "GC-MS",
-      category: "gcms",
-      location: "Room 210",
-      status: "maintenance",
-      sop_version: 7,
-      groupId: "g2",
-    },
-  ] as Device[],
-  reservations: [
-    {
-      id: "r1",
-      deviceId: "d2",
-      groupId: "g1",
-      start: new Date().toISOString(),
-      end: new Date(Date.now() + 60 * 60e3).toISOString(),
-      note: "PCR 予備実験",
-      status: "in_use",
-      bookedByType: "user",
-      bookedById: "u-suzuki",
-    },
-    {
-      id: "r2",
-      deviceId: "d1",
-      groupId: "g1",
-      start: new Date(Date.now() + 2 * 60 * 60e3).toISOString(),
-      end: new Date(Date.now() + 3 * 60 * 60e3).toISOString(),
-      note: "光合成測定",
-      status: "confirmed",
-      bookedByType: "group",
-      bookedById: "g1",
-    },
-  ] as Reservation[],
-  negotiations: [] as Negotiation[],
+type DB = {
+  groups: Group[];
+  members: Member[];
+  devices: Device[];
+  reservations: Reservation[];
 };
 
-// legacy named exports for convenience
-export const groups = mockDB.groups;
-export const devices = mockDB.devices;
-export const reservations = mockDB.reservations;
-export const negotiations = mockDB.negotiations;
+const KEY = 'lab_yoyaku_v1';
+const isBrowser = typeof window !== 'undefined';
 
-// remove passwordHash when sending to client
-export const publicizeGroup = (g: Group) => {
-  const { passwordHash, ...rest } = g;
-  return rest;
+const db: DB = {
+  groups: [],
+  members: [],
+  devices: [],
+  reservations: [],
 };
 
-export async function hashPassword(plain: string) {
-  const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(plain, salt);
+function save() {
+  if (!isBrowser) return;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(db));
+  } catch {
+    // ignore
+  }
 }
 
-export async function verifyPassword(hash: string, plain: string) {
-  return bcrypt.compare(plain, hash);
+function load() {
+  if (!isBrowser) return;
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) Object.assign(db, JSON.parse(raw));
+  } catch {
+    // ignore
+  }
 }
 
-export function getGroupByNameOrSlug(identifier: string) {
-  const key = identifier.trim().toLowerCase();
-  return mockDB.groups.find(
-    (g) => g.name.toLowerCase() === key || g.slug.toLowerCase() === key,
-  );
+if (isBrowser) load();
+
+function genId() {
+  return crypto.randomUUID();
 }
 
-export async function createGroup(input: {
+export async function verifyPassword(group: Group, password: string) {
+  if (!group.passwordHash) return false;
+  return bcrypt.compare(password, group.passwordHash);
+}
+
+export async function insertGroup(p: {
   name: string;
   slug: string;
-  password: string;
+  password?: string;
 }) {
-  if (getGroupByNameOrSlug(input.name) || getGroupByNameOrSlug(input.slug)) {
-    throw new Error("同名/同slugのグループが既に存在します");
-  }
-  const passwordHash = await hashPassword(input.password);
+  const passwordHash = p.password
+    ? await bcrypt.hash(p.password, await bcrypt.genSalt(10))
+    : undefined;
   const group: Group = {
-    id: crypto.randomUUID(),
-    name: input.name,
-    slug: input.slug,
+    id: genId(),
+    name: p.name,
+    slug: p.slug,
     passwordHash,
+    createdAt: new Date().toISOString(),
   };
-  mockDB.groups.push(group);
+  db.groups.push(group);
   save();
   return group;
 }
 
-export async function joinGroup(identifier: string, password: string) {
-  const g = getGroupByNameOrSlug(identifier);
-  if (!g) throw new Error("グループが見つかりません");
-  if (!g.passwordHash)
-    throw new Error("このグループはまだパスワード設定がありません");
-  const ok = await verifyPassword(g.passwordHash, password);
-  if (!ok) throw new Error("パスワードが違います");
+export function updateGroup(id: string, patch: Partial<Group>) {
+  const g = db.groups.find(g => g.id === id);
+  if (!g) return undefined;
+  Object.assign(g, patch);
+  save();
   return g;
 }
 
-const isBrowser = typeof window !== "undefined";
-const KEY = "lab-yoyaku-mock-db";
-
-export function save() {
-  if (!isBrowser || process.env.NODE_ENV !== "development") return;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(mockDB));
-  } catch {
-    // ignore
+export function deleteGroup(id: string) {
+  const i = db.groups.findIndex(g => g.id === id);
+  if (i >= 0) {
+    db.groups.splice(i, 1);
+    save();
   }
 }
 
-export function load() {
-  if (!isBrowser || process.env.NODE_ENV !== "development") return;
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const data = JSON.parse(raw);
-      Object.assign(mockDB, data);
-    }
-  } catch {
-    // ignore
+export const findGroupBySlug = (slug: string) =>
+  db.groups.find(g => g.slug === slug);
+
+export function insertMember(m: Omit<Member, 'id'>) {
+  const member: Member = { ...m, id: genId() };
+  db.members.push(member);
+  save();
+  return member;
+}
+
+export function updateMember(id: string, patch: Partial<Member>) {
+  const m = db.members.find(m => m.id === id);
+  if (!m) return undefined;
+  Object.assign(m, patch);
+  save();
+  return m;
+}
+
+export function deleteMember(id: string) {
+  const i = db.members.findIndex(m => m.id === id);
+  if (i >= 0) {
+    db.members.splice(i, 1);
+    save();
   }
 }
 
-if (isBrowser && process.env.NODE_ENV === "development") {
-  load();
+export const findMembers = (groupId: string) =>
+  db.members.filter(m => m.groupId === groupId);
+
+export function insertDevice(d: Omit<Device, 'id' | 'status'> & { status?: Device['status'] }) {
+  const device: Device = { ...d, id: genId(), status: d.status ?? 'available' };
+  db.devices.push(device);
+  save();
+  return device;
 }
+
+export function updateDevice(id: string, patch: Partial<Device>) {
+  const d = db.devices.find(d => d.id === id);
+  if (!d) return undefined;
+  Object.assign(d, patch);
+  save();
+  return d;
+}
+
+export function deleteDevice(id: string) {
+  const i = db.devices.findIndex(d => d.id === id);
+  if (i >= 0) {
+    db.devices.splice(i, 1);
+    save();
+  }
+}
+
+export const findDevices = (groupId: string) =>
+  db.devices.filter(d => d.groupId === groupId);
+
+export function insertReservation(r: Omit<Reservation, 'id'>) {
+  const res: Reservation = { ...r, id: genId() };
+  db.reservations.push(res);
+  save();
+  return res;
+}
+
+export function updateReservation(id: string, patch: Partial<Reservation>) {
+  const r = db.reservations.find(r => r.id === id);
+  if (!r) return undefined;
+  Object.assign(r, patch);
+  save();
+  return r;
+}
+
+export function deleteReservation(id: string) {
+  const i = db.reservations.findIndex(r => r.id === id);
+  if (i >= 0) {
+    db.reservations.splice(i, 1);
+    save();
+  }
+}
+
+export const findReservations = (q: {
+  groupId: string;
+  deviceId?: string;
+  from?: string;
+  to?: string;
+}) => {
+  return db.reservations.filter(r => {
+    if (r.groupId !== q.groupId) return false;
+    if (q.deviceId && r.deviceId !== q.deviceId) return false;
+    if (q.from && r.end <= q.from) return false;
+    if (q.to && r.start >= q.to) return false;
+    return true;
+  });
+};
+
+export { db as mockDB };
 

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { getGroups } from "@/lib/api";
+import { listGroups } from '@/lib/api';
 
-export default async function GroupsPage(){
-  const { groups } = await getGroups();
+export default async function GroupsPage() {
+  const groups = await listGroups();
   return (
     <main className="space-y-4">
       <h1 className="text-2xl font-bold">グループ一覧</h1>

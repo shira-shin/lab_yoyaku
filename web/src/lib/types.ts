@@ -1,33 +1,38 @@
 export type Group = {
   id: string;
   name: string;
-  slug: string;
-  // クライアントには返さない想定
+  slug: string; // ASCII only
   passwordHash?: string;
-};
-export type Member = { userId: string; groupId: string; role: 'admin'|'member' };
-export type Device = {
-  id: string; device_uid: string; name: string; category?: string; location?: string;
-  status: 'available'|'reserved'|'in_use'|'maintenance'|'out_of_service';
-  sop_version: number; groupId: string;
-};
-export type ReservationStatus = 'confirmed'|'in_use'|'completed'|'cancelled';
-export type BookedByType = 'group'|'user';
-export type Reservation = {
-  id: string; deviceId: string; groupId: string;
-  start: string; end: string; note?: string;
-  status: ReservationStatus;
-  bookedByType: BookedByType; bookedById: string; // groupId or userId
-  createdByUserId?: string;
+  createdAt: string;
 };
 
-export type NegotiationStatus = 'open'|'accepted'|'rejected';
-export type Negotiation = {
+export type Member = {
   id: string;
-  targetReservationId?: string;
+  groupId: string;
+  displayName: string;
+  email?: string;
+  role: 'owner' | 'admin' | 'member';
+};
+
+export type Device = {
+  id: string;
+  groupId: string;
+  name: string;
+  category?: string;
+  location?: string;
+  uid: string; // for QR code
+  status: 'available' | 'booked' | 'maintenance';
+  sopVersion?: string;
+};
+
+export type Reservation = {
+  id: string;
+  groupId: string;
   deviceId: string;
-  requesterName: string;
-  message: string;
-  status: NegotiationStatus;
-  createdAt: string;
+  title: string;
+  start: string; // ISO
+  end: string;   // ISO
+  reservedBy: string; // memberId
+  scope: 'group' | 'individual';
+  notes?: string;
 };

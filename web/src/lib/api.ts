@@ -1,119 +1,49 @@
-const BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_BASE_URL ??
-  "http://localhost:3000";
-const abs = (p: string) => new URL(p, BASE).toString();
+import type { Group, Member, Device, Reservation } from './types';
 
-export const listDevices = async (groupId?: string) => {
-  const params = groupId ? `?groupId=${encodeURIComponent(groupId)}` : "";
-  const res = await fetch(abs(`/api/mock/devices${params}`), { cache: "no-store" });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-};
-export const getDevices = listDevices;
+const base = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
+  ? '/api/mock'
+  : (process.env.NEXT_PUBLIC_API_URL as string);
 
-export const getGroups = async () => {
-  const res = await fetch(abs("/api/mock/groups"), { cache: "no-store" });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-};
-export const getGroup = async (slug: string) => {
-  const res = await fetch(
-    abs(`/api/mock/groups/${encodeURIComponent(slug)}`),
-    { cache: "no-store" }
-  );
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-};
-export const listReservations = async (q: {
-  groupId?: string;
+export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const r = await fetch(`${base}${path}`, { cache: 'no-store', ...init });
+  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
+  const json = await r.json();
+  if (json?.ok === false) throw new Error(json.error || 'API error');
+  return (json?.data ?? json) as T;
+}
+
+// Groups
+export const listGroups = () => api<Group[]>('/groups');
+export const getGroup = (slug: string) =>
+  api<
+    Group & {
+      members: Member[];
+      devices: Device[];
+      counts: { members: number; devices: number };
+    }
+  >(`/groups/${slug}`);
+export const createGroup = (p: { name: string; slug: string; password: string }) =>
+  api<Group>('/groups', { method: 'POST', body: JSON.stringify(p) });
+export const joinGroup = (p: { identifier: string; password: string }) =>
+  api<{ group: Group; member: Member }>('/groups/join', {
+    method: 'POST',
+    body: JSON.stringify(p),
+  });
+
+// Devices
+export const listDevices = (groupId: string) =>
+  api<Device[]>(`/devices?groupId=${groupId}`);
+export const createDevice = (
+  p: Omit<Device, 'id' | 'status'> & { status?: Device['status'] }
+) => api<Device>('/devices', { method: 'POST', body: JSON.stringify(p) });
+
+// Reservations
+export const listReservations = (q: {
+  groupId: string;
   deviceId?: string;
-  from?: string;
-  to?: string;
-}) => {
-  const params = new URLSearchParams(q as any).toString();
-  const res = await fetch(abs(`/api/mock/reservations?${params}`), {
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-};
-export const getReservations = listReservations;
+  from: string;
+  to: string;
+}) => api<Reservation[]>(`/reservations?${new URLSearchParams(q as any)}`);
+export const createReservation = (p: Omit<Reservation, 'id'>) =>
+  api<Reservation>('/reservations', { method: 'POST', body: JSON.stringify(p) });
 
-export const createReservation = async (payload: any) => {
-  const r = await fetch(abs("/api/mock/reservations"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
-};
-
-export const getDevice = async (uid: string) => {
-  const { devices } = await listDevices();
-  return devices.find((d: any) => d.device_uid === uid);
-};
-
-export const createGroup = async (payload: {
-  name: string;
-  slug: string;
-  password: string;
-}) => {
-  const r = await fetch(abs('/api/mock/groups'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
-};
-
-export const joinGroup = async (payload: { group: string; password: string }) => {
-  const r = await fetch(abs('/api/mock/groups/join'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
-};
-
-export const createDevice = async (payload: any) => {
-  const r = await fetch(abs('/api/mock/devices'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
-};
-
-export const getNegotiations = async (deviceId: string) => {
-  const params = new URLSearchParams({ deviceId }).toString();
-  const res = await fetch(abs(`/api/mock/negotiations?${params}`), {
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-};
-
-export const createNegotiation = async (payload: any) => {
-  const r = await fetch(abs('/api/mock/negotiations'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
-};
-
-export const updateNegotiation = async (id: string, status: string) => {
-  const r = await fetch(abs(`/api/mock/negotiations/${id}`), {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status }),
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
-};

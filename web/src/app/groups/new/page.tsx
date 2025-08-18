@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createGroup } from '@/lib/api';
 
 function toSlug(input: string) {
   return input
@@ -33,18 +34,14 @@ export default function GroupNewPage() {
       setLoading(false);
       return;
     }
-    const res = await fetch("/api/mock/groups", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, slug: safeSlug, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setErr(data.error || "作成に失敗しました");
+    try {
+      const group = await createGroup({ name, slug: safeSlug, password });
+      router.push(`/groups/${group.slug}/calendar`);
+    } catch (e:any) {
+      setErr(e.message);
       setLoading(false);
       return;
     }
-    router.push(`/groups/${data.group.slug}/calendar`);
   }
 
   return (
