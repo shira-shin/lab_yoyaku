@@ -7,3 +7,7 @@ html, body { height: 100%; }
 .app-container {
   @apply max-w-[1040px] mx-auto px-4 sm:px-6;
 }
+
+/* ベースのリンク色とフォーカス見やすく */
+a { outline: none; }
+a:focus-visible { box-shadow: 0 0 0 3px rgba(59,130,246,.5); border-radius: .5rem; }
