@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { getGroup, getReservations } from "@/lib/api";
 import { devices } from "@/lib/mock-db"; // 本番はAPI化
 import BadgeUsage from "@/components/BadgeUsage";
@@ -7,7 +8,10 @@ export default async function GroupCalendar({
 }: {
   params: { slug: string };
 }) {
-  const { group } = await getGroup(slug);
+  const data = await getGroup(slug).catch(() => null);
+  const group = data?.group;
+  if (!group) return notFound();
+
   const devs = devices.filter((d) => d.groupId === group.id);
   const from = new Date();
   from.setHours(0, 0, 0, 0);
