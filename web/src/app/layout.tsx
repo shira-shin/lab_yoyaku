@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Lab Yoyaku" };
 
@@ -7,22 +8,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ja">
       <body className="min-h-screen bg-white text-neutral-900 antialiased">
-        <header className="fixed top-0 z-10 w-full border-b bg-white/80 backdrop-blur">
-          <div className="app-container flex h-14 items-center justify-between">
-            <a href="/" className="font-bold">
-              Lab Yoyaku
-            </a>
-            <nav className="flex gap-4 text-sm">
-              <a href="/dashboard" className="hover:underline">
-                ダッシュボード
-              </a>
-              <a href="/dashboard" className="hover:underline">
-                機器一覧
-              </a>
+        <header className="border-b">
+          <div className="mx-auto max-w-[1040px] px-4 sm:px-6 py-3 flex items-center justify-between">
+            <Link href="/" className="text-lg font-bold">Lab Yoyaku</Link>
+            <nav className="flex gap-6 text-sm text-neutral-600">
+              <Link href="/dashboard" className="hover:text-neutral-900">ダッシュボード</Link>
+              <Link href="/dashboard" className="hover:text-neutral-900">機器一覧</Link>
             </nav>
           </div>
         </header>
-        <div className="pt-14">{children}</div>
+        <main className="mx-auto max-w-[1040px] px-4 sm:px-6 py-8">
+          {children}
+        </main>
       </body>
     </html>
   );
