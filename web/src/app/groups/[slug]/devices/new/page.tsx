@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/Button';
 
 export default function DeviceNew({ params:{slug} }:{ params:{ slug:string } }) {
@@ -7,6 +8,7 @@ export default function DeviceNew({ params:{slug} }:{ params:{ slug:string } }) 
   const [category,setCategory] = useState('');
   const [place,setPlace] = useState('');
   const [sop,setSop] = useState('1');
+  const router = useRouter();
 
   const submit = async (e:React.FormEvent)=>{
     e.preventDefault();
@@ -16,8 +18,8 @@ export default function DeviceNew({ params:{slug} }:{ params:{ slug:string } }) 
       body: JSON.stringify({ name, category, location:place, sop_version:sop, groupSlug: slug })
     });
     if(r.ok){
-      const { device } = await r.json();
-      window.location.href = `/devices/${device.device_uid}/poster`;
+      await r.json();
+      router.push(`/groups/${slug}`);
     } else {
       alert('エラー');
     }

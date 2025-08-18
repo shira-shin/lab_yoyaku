@@ -3,14 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createGroup } from '@/lib/api';
-
-function toSlug(input: string) {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
-    .replace(/^-+|-+$/g, "");
-}
+import { makeSlug } from '@/lib/slug';
 
 export default function GroupNewPage() {
   const [name, setName] = useState("");
@@ -21,14 +14,14 @@ export default function GroupNewPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!slug) setSlug(toSlug(name));
+    if (!slug) setSlug(makeSlug(name));
   }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     setLoading(true);
-    const safeSlug = toSlug(slug || name);
+    const safeSlug = makeSlug(slug || name);
     if (!safeSlug) {
       setErr("slug を半角英数字で入力してください（名称から自動生成されます）");
       setLoading(false);
@@ -36,7 +29,7 @@ export default function GroupNewPage() {
     }
     try {
       const group = await createGroup({ name, slug: safeSlug, password });
-      router.push(`/groups/${group.slug}/calendar`);
+      router.push(`/groups/${group.slug}`);
     } catch (e:any) {
       setErr(e.message);
       setLoading(false);

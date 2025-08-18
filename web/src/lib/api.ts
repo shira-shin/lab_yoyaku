@@ -1,15 +1,24 @@
 import type { Group, Member, Device, Reservation } from './types';
 
-const base = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
+const useMock = (process.env.NEXT_PUBLIC_USE_MOCK ?? 'true').toLowerCase() === 'true';
+const API_BASE = useMock
   ? '/api/mock'
-  : (process.env.NEXT_PUBLIC_API_URL as string);
+  : (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(`${base}${path}`, { cache: 'no-store', ...init });
-  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
-  const json = await r.json();
-  if (json?.ok === false) throw new Error(json.error || 'API error');
-  return (json?.data ?? json) as T;
+  const base = API_BASE || '/api/mock';
+  const url = `${base}${path}`;
+  const res = await fetch(url, {
+    cache: 'no-store',
+    ...init,
+    headers: { 'content-type': 'application/json', ...(init?.headers as any) },
+  });
+  if (!res.ok) {
+    const msg = await res.text().catch(() => '');
+    throw new Error(`API ${res.status} ${url} :: ${msg}`);
+  }
+  const json = await res.json().catch(() => ({}));
+  return ((json as any)?.data ?? json) as T;
 }
 
 // Groups

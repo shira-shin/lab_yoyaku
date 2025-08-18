@@ -17,7 +17,7 @@ export default function GroupJoinPage() {
     setLoading(true);
     try {
       const { group: g } = await joinGroup({ identifier: group, password });
-      router.push(`/groups/${g.slug}/calendar`);
+      router.push(`/groups/${g.slug}`);
     } catch (e:any) {
       setErr(e.message);
       setLoading(false);

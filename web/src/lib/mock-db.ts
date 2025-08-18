@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import type { Group, Member, Device, Reservation } from './types';
+import { makeSlug } from './slug';
 
 type DB = {
   groups: Group[];
@@ -31,7 +32,18 @@ function load() {
   if (!isBrowser) return;
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) Object.assign(db, JSON.parse(raw));
+    if (raw) {
+      Object.assign(db, JSON.parse(raw));
+      // migrate: ensure all groups have slug
+      let migrated = false;
+      for (const g of db.groups) {
+        if (!g.slug) {
+          g.slug = makeSlug(g.name);
+          migrated = true;
+        }
+      }
+      if (migrated) save();
+    }
   } catch {
     // ignore
   }
@@ -59,7 +71,7 @@ export async function insertGroup(p: {
   const group: Group = {
     id: genId(),
     name: p.name,
-    slug: p.slug,
+    slug: makeSlug(p.slug),
     passwordHash,
     createdAt: new Date().toISOString(),
   };
