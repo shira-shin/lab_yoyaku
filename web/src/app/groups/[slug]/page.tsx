@@ -1,23 +1,17 @@
-import { api } from '@/lib/api';
+import { getGroup } from '@/lib/api';
 import ErrorView from '@/components/ErrorView';
-import type { Group, Member, Device } from '@/lib/types';
+import type { Device } from '@/lib/types';
 
 export default async function GroupDetail({ params: { slug } }: { params: { slug: string } }) {
   try {
-    const g = await api<
-      Group & {
-        members: Member[];
-        devices: Device[];
-        counts: { members: number; devices: number };
-      }
-    >(`/api/mock/groups/${slug}`);
+    const g = await getGroup(slug);
     return (
       <main className="space-y-4">
         <h1 className="text-2xl font-bold">{g.name}</h1>
         <div>
           <h2 className="text-lg font-semibold mt-4">機器</h2>
           <ul className="list-disc pl-5 space-y-1">
-            {g.devices.map((d: any) => (
+            {g.devices.map((d: Device) => (
               <li key={d.id}>{d.name}</li>
             ))}
           </ul>
