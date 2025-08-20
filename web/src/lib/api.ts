@@ -48,8 +48,9 @@ export const getGroup = (slug: string) =>
 export const createGroup = (p: { name: string; slug: string; password: string }) =>
   api<Group>('/groups', { method: 'POST', body: JSON.stringify(p) });
 export const joinGroup = (p: { identifier: string; password: string }) =>
-  api<{ group: Group; member: Member }>('/groups/join', {
+  api<{ group: Group; member: Member }>('/api/mock/groups/join', {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(p),
   });
 
