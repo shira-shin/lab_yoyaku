@@ -20,7 +20,8 @@ const API_BASE =
     : (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = buildUrl(`${API_BASE}${path}`);
+  const fullPath = path.startsWith('/api/') ? path : `${API_BASE}${path}`;
+  const url = buildUrl(fullPath);
   const res = await fetch(url, {
     cache: 'no-store',
     ...init,
