@@ -10,47 +10,17 @@ type DB = {
   reservations: Reservation[];
 };
 
-const KEY = 'lab_yoyaku_v1';
-const isBrowser = typeof window !== 'undefined';
+declare global {
+  // eslint-disable-next-line no-var
+  var __MOCK_DB__: DB | undefined;
+}
 
-const db: DB = {
+const db: DB = (globalThis.__MOCK_DB__ ??= {
   groups: [],
   members: [],
   devices: [],
   reservations: [],
-};
-
-function save() {
-  if (!isBrowser) return;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(db));
-  } catch {
-    // ignore
-  }
-}
-
-function load() {
-  if (!isBrowser) return;
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      Object.assign(db, JSON.parse(raw));
-      // migrate: ensure all groups have slug
-      let migrated = false;
-      for (const g of db.groups) {
-        if (!g.slug) {
-          g.slug = makeSlug(g.name);
-          migrated = true;
-        }
-      }
-      if (migrated) save();
-    }
-  } catch {
-    // ignore
-  }
-}
-
-if (isBrowser) load();
+});
 
 function genId() {
   return uid();
@@ -77,7 +47,6 @@ export async function insertGroup(p: {
     createdAt: new Date().toISOString(),
   };
   db.groups.push(group);
-  save();
   return group;
 }
 
@@ -85,7 +54,6 @@ export function updateGroup(id: string, patch: Partial<Group>) {
   const g = db.groups.find(g => g.id === id);
   if (!g) return undefined;
   Object.assign(g, patch);
-  save();
   return g;
 }
 
@@ -93,7 +61,6 @@ export function deleteGroup(id: string) {
   const i = db.groups.findIndex(g => g.id === id);
   if (i >= 0) {
     db.groups.splice(i, 1);
-    save();
   }
 }
 
@@ -103,7 +70,6 @@ export const findGroupBySlug = (slug: string) =>
 export function insertMember(m: Omit<Member, 'id'>) {
   const member: Member = { ...m, id: genId() };
   db.members.push(member);
-  save();
   return member;
 }
 
@@ -111,7 +77,6 @@ export function updateMember(id: string, patch: Partial<Member>) {
   const m = db.members.find(m => m.id === id);
   if (!m) return undefined;
   Object.assign(m, patch);
-  save();
   return m;
 }
 
@@ -119,7 +84,6 @@ export function deleteMember(id: string) {
   const i = db.members.findIndex(m => m.id === id);
   if (i >= 0) {
     db.members.splice(i, 1);
-    save();
   }
 }
 
@@ -129,7 +93,6 @@ export const findMembers = (groupId: string) =>
 export function insertDevice(d: Omit<Device, 'id' | 'status'> & { status?: Device['status'] }) {
   const device: Device = { ...d, id: genId(), status: d.status ?? 'available' };
   db.devices.push(device);
-  save();
   return device;
 }
 
@@ -137,7 +100,6 @@ export function updateDevice(id: string, patch: Partial<Device>) {
   const d = db.devices.find(d => d.id === id);
   if (!d) return undefined;
   Object.assign(d, patch);
-  save();
   return d;
 }
 
@@ -145,7 +107,6 @@ export function deleteDevice(id: string) {
   const i = db.devices.findIndex(d => d.id === id);
   if (i >= 0) {
     db.devices.splice(i, 1);
-    save();
   }
 }
 
@@ -155,7 +116,6 @@ export const findDevices = (groupId: string) =>
 export function insertReservation(r: Omit<Reservation, 'id'>) {
   const res: Reservation = { ...r, id: genId() };
   db.reservations.push(res);
-  save();
   return res;
 }
 
@@ -163,7 +123,6 @@ export function updateReservation(id: string, patch: Partial<Reservation>) {
   const r = db.reservations.find(r => r.id === id);
   if (!r) return undefined;
   Object.assign(r, patch);
-  save();
   return r;
 }
 
@@ -171,7 +130,6 @@ export function deleteReservation(id: string) {
   const i = db.reservations.findIndex(r => r.id === id);
   if (i >= 0) {
     db.reservations.splice(i, 1);
-    save();
   }
 }
 
