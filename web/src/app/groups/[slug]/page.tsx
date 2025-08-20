@@ -32,7 +32,7 @@ export default async function GroupDetail({ params: { slug } }: { params: { slug
         title="エラーが発生しました"
         detail={
           isNotFound
-            ? `グループ ${slug} が見つかりません。作成/参加が成功しているか、LocalStorageの初期化をご確認ください。`
+            ? `グループ ${slug} が見つかりません。作成/参加が成功しているか確認してください。`
             : msg
         }
         retryHref="/groups"
