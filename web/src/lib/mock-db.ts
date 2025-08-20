@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import type { Group, Member, Device, Reservation } from './types';
 import { makeSlug } from './slug';
+import { uid } from './uid';
 
 type DB = {
   groups: Group[];
@@ -52,7 +53,7 @@ function load() {
 if (isBrowser) load();
 
 function genId() {
-  return crypto.randomUUID();
+  return uid();
 }
 
 export async function verifyPassword(group: Group, password: string) {

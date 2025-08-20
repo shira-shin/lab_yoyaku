@@ -1,13 +1,26 @@
 import type { Group, Member, Device, Reservation } from './types';
 
-const useMock = (process.env.NEXT_PUBLIC_USE_MOCK ?? 'true').toLowerCase() === 'true';
-const API_BASE = useMock
-  ? '/api/mock'
-  : (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
+function getBaseUrl() {
+  const env = process.env.NEXT_PUBLIC_BASE_URL?.trim();
+  if (env) return env.replace(/\/$/, '');
+  const port = process.env.PORT || '3000';
+  return `http://localhost:${port}`;
+}
+
+function buildUrl(path: string) {
+  if (/^https?:\/\//i.test(path)) return path;
+  if (!path.startsWith('/')) path = `/${path}`;
+  return `${getBaseUrl()}${path}`;
+}
+
+const apiMode = (process.env.NEXT_PUBLIC_API_MODE ?? 'mock').toLowerCase();
+const API_BASE =
+  apiMode === 'mock'
+    ? '/api/mock'
+    : (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const base = API_BASE || '/api/mock';
-  const url = `${base}${path}`;
+  const url = buildUrl(`${API_BASE}${path}`);
   const res = await fetch(url, {
     cache: 'no-store',
     ...init,
@@ -15,7 +28,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const msg = await res.text().catch(() => '');
-    throw new Error(`API ${res.status} ${url} :: ${msg}`);
+    throw new Error(`API ${res.status} ${path} :: ${msg || res.statusText}`);
   }
   const json = await res.json().catch(() => ({}));
   return ((json as any)?.data ?? json) as T;
