@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listGroups } from '@/lib/api';
+import { listGroups } from '@/lib/server-api';
 
 export default async function GroupsPage() {
   const res = await listGroups();
