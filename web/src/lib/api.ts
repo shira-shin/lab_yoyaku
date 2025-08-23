@@ -1,65 +1,47 @@
-import type { Device, Reservation } from './types';
-
-function getBaseUrl() {
-  const env = process.env.NEXT_PUBLIC_BASE_URL?.trim();
-  if (env) return env.replace(/\/$/, '');
-  const port = process.env.PORT || '3000';
-  return `http://localhost:${port}`;
-}
-
-function buildUrl(path: string) {
-  if (/^https?:\/\//i.test(path)) return path;
-  if (!path.startsWith('/')) path = `/${path}`;
-  return `${getBaseUrl()}${path}`;
-}
-
-const apiMode = (process.env.NEXT_PUBLIC_API_MODE ?? 'mock').toLowerCase();
-const API_BASE =
-  apiMode === 'mock'
-    ? '/api/mock'
-    : (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
-
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const fullPath = path.startsWith('/api/') ? path : `${API_BASE}${path}`;
-  const url = buildUrl(fullPath);
-  const res = await fetch(url, {
-    cache: 'no-store',
-    ...init,
-    headers: { 'content-type': 'application/json', ...(init?.headers as any) },
-  });
-  if (!res.ok) {
-    const msg = await res.text().catch(() => '');
-    throw new Error(`API ${res.status} ${path} :: ${msg || res.statusText}`);
-  }
-  const json = await res.json().catch(() => ({}));
-  return ((json as any)?.data ?? json) as T;
-}
+import { addGroup, findGroupBySlug, listGroups as dbListGroups, addDevice, listDevicesByGroup, addReservation, listReservations as dbListReservations } from './mock-db';
+import type { Group, Device, Reservation } from './types';
 
 // Groups
-export const listGroups = () => api<any[]>('/groups');
-export const getGroup = (slug: string) => api<any>(`/groups/${slug}`);
-export const createGroup = (p: { name: string; slug: string; password?: string }) =>
-  api<any>('/groups', { method: 'POST', body: JSON.stringify(p) });
-export const joinGroup = (p: { identifier: string; password: string }) =>
-  api<any>('/api/mock/groups/join', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(p),
-  });
+export async function listGroups(): Promise<Group[]> {
+  return dbListGroups();
+}
+
+export async function getGroup(slug: string): Promise<{ group: Group | undefined }> {
+  const group = findGroupBySlug(slug);
+  return { group };
+}
+
+export async function createGroup(input: { name: string; slug: string; password?: string }) {
+  return addGroup({ name: input.name, slug: input.slug, passwordHash: input.password });
+}
+
+export async function joinGroup(input: { identifier: string; password: string }) {
+  const g = dbListGroups().find(
+    grp => grp.slug === input.identifier || grp.name === input.identifier
+  );
+  if (!g) throw new Error('group not found');
+  if (g.passwordHash && g.passwordHash !== input.password) {
+    throw new Error('invalid password');
+  }
+  return { group: g };
+}
 
 // Devices
-export const listDevices = (groupId: string) =>
-  api<Device[]>(`/devices?groupId=${groupId}`);
-export const createDevice = (
-  p: Omit<Device, 'id' | 'status'> & { status?: Device['status'] }
-) => api<Device>('/devices', { method: 'POST', body: JSON.stringify(p) });
+export async function listDevices(groupId: string): Promise<Device[]> {
+  return listDevicesByGroup(groupId);
+}
+
+export async function createDevice(input: { groupId: string; name: string; note?: string }) {
+  return addDevice(input);
+}
 
 // Reservations
-export const listReservations = (q: {
-  groupId: string;
-  deviceId?: string;
-  from: string;
-  to: string;
-}) => api<Reservation[]>(`/reservations?${new URLSearchParams(q as any)}`);
-export const createReservation = (p: Omit<Reservation, 'id'>) =>
-  api<Reservation>('/reservations', { method: 'POST', body: JSON.stringify(p) });
+export async function listReservations(groupId: string, deviceId?: string): Promise<Reservation[]> {
+  return dbListReservations(groupId, deviceId);
+}
+
+export async function createReservation(input: {
+  groupId: string; deviceId: string; start: string; end: string; purpose?: string; reserver: string;
+}) {
+  return addReservation(input);
+}
