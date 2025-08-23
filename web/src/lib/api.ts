@@ -1,4 +1,4 @@
-import type { Group, Member, Device, Reservation } from './types';
+import type { Device, Reservation } from './types';
 
 function getBaseUrl() {
   const env = process.env.NEXT_PUBLIC_BASE_URL?.trim();
@@ -36,19 +36,12 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 // Groups
-export const listGroups = () => api<Group[]>('/groups');
-export const getGroup = (slug: string) =>
-  api<
-    Group & {
-      members: Member[];
-      devices: Device[];
-      counts: { members: number; devices: number };
-    }
-  >(`/groups/${slug}`);
-export const createGroup = (p: { name: string; slug: string; password: string }) =>
-  api<Group>('/groups', { method: 'POST', body: JSON.stringify(p) });
+export const listGroups = () => api<any[]>('/groups');
+export const getGroup = (slug: string) => api<any>(`/groups/${slug}`);
+export const createGroup = (p: { name: string; slug: string; password?: string }) =>
+  api<any>('/groups', { method: 'POST', body: JSON.stringify(p) });
 export const joinGroup = (p: { identifier: string; password: string }) =>
-  api<{ group: Group; member: Member }>('/api/mock/groups/join', {
+  api<any>('/api/mock/groups/join', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(p),
@@ -70,4 +63,3 @@ export const listReservations = (q: {
 }) => api<Reservation[]>(`/reservations?${new URLSearchParams(q as any)}`);
 export const createReservation = (p: Omit<Reservation, 'id'>) =>
   api<Reservation>('/reservations', { method: 'POST', body: JSON.stringify(p) });
-
