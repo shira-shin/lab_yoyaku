@@ -11,3 +11,7 @@ html, body { height: 100%; }
 /* ベースのリンク色とフォーカス見やすく */
 a { outline: none; }
 a:focus-visible { box-shadow: 0 0 0 3px rgba(59,130,246,.5); border-radius: .5rem; }
+
+/* 任意: 簡易ユーティリティ */
+.input { @apply border rounded px-3 py-2 w-full; }
+.btn-primary { @apply inline-flex items-center justify-center bg-neutral-900 text-white rounded px-4 py-2 hover:bg-neutral-800; }
