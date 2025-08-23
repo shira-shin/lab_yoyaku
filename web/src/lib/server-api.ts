@@ -1,5 +1,12 @@
+import { headers } from 'next/headers';
+
 function getBaseURL() {
-  return process.env.NEXT_PUBLIC_API_BASE || '';
+  if (process.env.NEXT_PUBLIC_API_BASE) return process.env.NEXT_PUBLIC_API_BASE;
+
+  const h = headers();
+  const proto = h.get('x-forwarded-proto') ?? 'http';
+  const host = h.get('x-forwarded-host') ?? h.get('host');
+  return `${proto}://${host}`;
 }
 
 async function api(path: string, init?: RequestInit) {

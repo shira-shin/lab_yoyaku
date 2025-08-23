@@ -1,4 +1,4 @@
-import { listDevices, createDevice, listReservations, createReservation, getGroup } from '@/lib/api';
+import { listDevices, createDevice, listReservations, createReservation, getGroup } from '@/lib/server-api';
 import { notFound } from 'next/navigation';
 
 function MonthCalendar({
