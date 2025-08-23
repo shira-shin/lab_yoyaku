@@ -1,24 +1,26 @@
-export type Group = {
-  id: string;
-  name: string;
-  slug: string;
-  passwordHash?: string;
-  memberIds: string[];
-};
-
 export type Device = {
   id: string;
-  groupId: string;
   name: string;
   note?: string;
 };
 
 export type Reservation = {
   id: string;
-  groupId: string;
   deviceId: string;
   start: string; // ISO
   end: string;   // ISO
-  purpose?: string;
+  title?: string;
   reserver: string; // reserver name
+  scope: 'group' | 'member';
+  memberId?: string;
+};
+
+export type Group = {
+  id: string;
+  slug: string;
+  name: string;
+  passwordHash?: string;
+  members: Array<{ id: string; name: string; role: 'admin' | 'member' }>;
+  devices: Device[];
+  reservations: Reservation[];
 };

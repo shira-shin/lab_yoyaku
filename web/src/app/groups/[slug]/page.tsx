@@ -44,12 +44,15 @@ function MonthCalendar({
 }
 
 export default async function GroupPage({ params }: { params: { slug: string } }) {
-  const { group } = await getGroup(params.slug);
-  if (!group) return notFound();
+  const groupRes = await getGroup(params.slug);
+  const group = groupRes.data;
+  if (!groupRes.ok || !group) return notFound();
 
-  const devices = await listDevices(group.id);
+  const devicesRes = await listDevices(group.slug);
+  const devices = devicesRes.data || [];
   const today = new Date();
-  const monthReservations = await listReservations(group.id);
+  const monthRes = await listReservations(group.slug);
+  const monthReservations = monthRes.data || [];
   const byDate: Record<string, number> = {};
   monthReservations.forEach(r => {
     const key = r.start.slice(0,10);
@@ -72,7 +75,7 @@ export default async function GroupPage({ params }: { params: { slug: string } }
             </li>
           ))}
         </ul>
-        <DeviceCreateForm groupId={group.id} />
+        <DeviceCreateForm slug={group.slug} />
       </section>
 
       <section className="space-y-4">
@@ -89,19 +92,19 @@ export default async function GroupPage({ params }: { params: { slug: string } }
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">予約</h2>
-        <ReservationForm groupId={group.id} devices={devices} />
+        <ReservationForm slug={group.slug} devices={devices} />
       </section>
     </div>
   );
 }
 
-function DeviceCreateForm({ groupId }: { groupId: string }) {
+function DeviceCreateForm({ slug }: { slug: string }) {
   async function action(data: FormData) {
     'use server';
     const name = String(data.get('name') || '').trim();
     const note = String(data.get('note') || '').trim() || undefined;
     if (!name) return;
-    await createDevice({ groupId, name, note });
+    await createDevice({ slug, name, note });
   }
   return (
     <form action={action} className="grid gap-2 sm:grid-cols-2 max-w-xl">
@@ -112,16 +115,16 @@ function DeviceCreateForm({ groupId }: { groupId: string }) {
   );
 }
 
-function ReservationForm({ groupId, devices }: { groupId: string; devices: {id: string; name: string}[] }) {
+function ReservationForm({ slug, devices }: { slug: string; devices: {id: string; name: string}[] }) {
   async function action(data: FormData) {
     'use server';
     const deviceId = String(data.get('deviceId') || '');
     const start = String(data.get('start') || '');
     const end   = String(data.get('end') || '');
-    const purpose = String(data.get('purpose') || '').trim() || undefined;
+    const title = String(data.get('title') || '').trim() || undefined;
     const reserver = String(data.get('reserver') || '').trim();
     if (!deviceId || !start || !end || !reserver) return;
-    await createReservation({ groupId, deviceId, start, end, purpose, reserver });
+    await createReservation({ slug, deviceId, start, end, title, reserver });
   }
   return (
     <form action={action} className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-3xl">
@@ -132,7 +135,7 @@ function ReservationForm({ groupId, devices }: { groupId: string; devices: {id: 
       <input name="reserver" placeholder="予約者名（必須）" className="input" required />
       <input type="datetime-local" name="start" className="input" required />
       <input type="datetime-local" name="end" className="input" required />
-      <input name="purpose" placeholder="用途（任意）" className="input sm:col-span-2" />
+      <input name="title" placeholder="用途（任意）" className="input sm:col-span-2" />
       <button className="btn-primary w-28 sm:col-span-2">予約追加</button>
     </form>
   );
