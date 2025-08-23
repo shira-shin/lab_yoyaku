@@ -1,15 +1,18 @@
+import { headers } from 'next/headers';
+
 function getBaseURL() {
-  // 明示指定があれば最優先（本番やプロキシ環境）
+  // 明示指定があればそれを優先
   if (process.env.NEXT_PUBLIC_API_BASE) return process.env.NEXT_PUBLIC_API_BASE;
 
-  // サーバー側（RSC/Route Handlers）では絶対URLが必要
+  // サーバ側(RSC/route handlers)では Host ヘッダから絶対URLを合成
   if (typeof window === 'undefined') {
-    // 開発中のデフォルト。必要に応じて .env.local で上書き
-    const internal = process.env.INTERNAL_API_BASE || 'http://localhost:3000';
-    return internal;
+    const h = headers();
+    const proto = h.get('x-forwarded-proto') ?? 'http';
+    const host = h.get('x-forwarded-host') ?? h.get('host');
+    return `${proto}://${host}`;
   }
 
-  // ブラウザでは相対URLでOK
+  // クライアントでは相対でOK
   return '';
 }
 
