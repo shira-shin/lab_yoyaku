@@ -1,47 +1,50 @@
-import { addGroup, findGroupBySlug, listGroups as dbListGroups, addDevice, listDevicesByGroup, addReservation, listReservations as dbListReservations } from './mock-db';
-import type { Group, Device, Reservation } from './types';
+import { headers } from 'next/headers';
 
-// Groups
-export async function listGroups(): Promise<Group[]> {
-  return dbListGroups();
-}
+function getBaseURL() {
+  // 明示指定があればそれを優先
+  if (process.env.NEXT_PUBLIC_API_BASE) return process.env.NEXT_PUBLIC_API_BASE;
 
-export async function getGroup(slug: string): Promise<{ group: Group | undefined }> {
-  const group = findGroupBySlug(slug);
-  return { group };
-}
-
-export async function createGroup(input: { name: string; slug: string; password?: string }) {
-  return addGroup({ name: input.name, slug: input.slug, passwordHash: input.password });
-}
-
-export async function joinGroup(input: { identifier: string; password: string }) {
-  const g = dbListGroups().find(
-    grp => grp.slug === input.identifier || grp.name === input.identifier
-  );
-  if (!g) throw new Error('group not found');
-  if (g.passwordHash && g.passwordHash !== input.password) {
-    throw new Error('invalid password');
+  // サーバ側(RSC/route handlers)では Host ヘッダから絶対URLを合成
+  if (typeof window === 'undefined') {
+    const h = headers();
+    const proto = h.get('x-forwarded-proto') ?? 'http';
+    const host = h.get('x-forwarded-host') ?? h.get('host');
+    return `${proto}://${host}`;
   }
-  return { group: g };
+
+  // クライアントでは相対でOK
+  return '';
 }
 
-// Devices
-export async function listDevices(groupId: string): Promise<Device[]> {
-  return listDevicesByGroup(groupId);
+async function api(path: string, init?: RequestInit) {
+  const base = getBaseURL();
+  const url = `${base}${path}`;
+  const res = await fetch(url, { ...init, cache: 'no-store' });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`API ${res.status} ${path} :: ${text || res.statusText}`);
+  }
+  return res.json();
 }
 
-export async function createDevice(input: { groupId: string; name: string; note?: string }) {
-  return addDevice(input);
-}
+// 以降のヘルパは全部 api('/api/mock/...') を使う
+export const listGroups = () => api('/api/mock/groups');
+export const createGroup = (body: any) =>
+  api('/api/mock/groups', { method: 'POST', body: JSON.stringify(body) });
+export const getGroup = (slug: string) => api(`/api/mock/groups/${slug}`);
+export const joinGroup = (payload: any) =>
+  api('/api/mock/groups/join', { method: 'POST', body: JSON.stringify(payload) });
 
-// Reservations
-export async function listReservations(groupId: string, deviceId?: string): Promise<Reservation[]> {
-  return dbListReservations(groupId, deviceId);
-}
+export const listDevices = (slug: string) =>
+  api(`/api/mock/devices?slug=${encodeURIComponent(slug)}`);
+export const createDevice = (body: any) =>
+  api('/api/mock/devices', { method: 'POST', body: JSON.stringify(body) });
 
-export async function createReservation(input: {
-  groupId: string; deviceId: string; start: string; end: string; purpose?: string; reserver: string;
-}) {
-  return addReservation(input);
-}
+export const listReservations = (slug: string, deviceId?: string) =>
+  api(
+    `/api/mock/reservations?slug=${encodeURIComponent(slug)}${
+      deviceId ? `&deviceId=${encodeURIComponent(deviceId)}` : ''
+    }`
+  );
+export const createReservation = (body: any) =>
+  api('/api/mock/reservations', { method: 'POST', body: JSON.stringify(body) });

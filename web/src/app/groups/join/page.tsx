@@ -16,9 +16,13 @@ export default function GroupJoinPage() {
     setErr(null);
     setLoading(true);
     try {
-      const { group: g } = await joinGroup({ identifier: group, password });
-      router.push(`/groups/${g.slug}`);
-    } catch (e:any) {
+      const res = await joinGroup({ identifier: group, password });
+      if (res?.ok && res.data) {
+        router.push(`/groups/${res.data.slug}`);
+      } else {
+        throw new Error(res?.error || 'failed');
+      }
+    } catch (e: any) {
       setErr(e.message);
       setLoading(false);
       return;
