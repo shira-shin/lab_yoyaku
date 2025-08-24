@@ -4,24 +4,6 @@ import { useState } from 'react';
 
 type Tab = 'login' | 'register';
 
-// シンプルなインラインSVG（外部依存なし）
-const IconLogin = (props: any) => (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
-    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-    <path d="M10 17l5-5-5-5" />
-    <path d="M15 12H3" />
-  </svg>
-);
-
-const IconUserPlus = (props: any) => (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
-    <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M19 8v6" />
-    <path d="M22 11h-6" />
-  </svg>
-);
-
 export default function LoginPage() {
   const router = useRouter();
   const sp = useSearchParams();
@@ -50,10 +32,10 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: lemail, password: lpass })
+        body: JSON.stringify({ email: lemail, password: lpass }),
       });
       if (!res.ok) throw new Error();
-      router.replace(next || '/'); // ✅ 成功後ホームへ
+      router.replace(next || '/');
     } catch {
       setLErr('メールまたはパスワードが違います');
     } finally {
@@ -73,13 +55,13 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: remail, password: rpass, name: rname })
+        body: JSON.stringify({ email: remail, password: rpass, name: rname }),
       });
       if (!res.ok) {
         const t = await res.text();
         throw new Error(/already/.test(t) ? 'このメールは登録済みです' : '登録に失敗しました');
       }
-      router.replace('/'); // ✅ 成功後ホームへ
+      router.replace('/');
     } catch (e: any) {
       setRErr(e?.message ?? '登録に失敗しました');
     } finally {
@@ -87,63 +69,71 @@ export default function LoginPage() {
     }
   }
 
+  const card =
+    'rounded-xl border border-gray-200 bg-white p-5 shadow-sm';
+  const input =
+    'w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-800/10';
+
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-gradient-to-b from-sky-50 via-white to-white">
-      <div className="mx-auto max-w-4xl px-4 py-12">
-        {/* ヒーロー */}
-        <header className="text-center mb-10">
-          <h1 className="text-4xl font-extrabold tracking-tight">Lab Yoyaku へようこそ</h1>
-          <p className="text-gray-600 mt-3">
-            研究室の機器をグループで管理し、予約と使用状況をカレンダーで可視化。QRコードで機器ページへも即アクセス。
-          </p>
-        </header>
+    <div className="mx-auto max-w-5xl px-4 py-10">
+      <header className="text-center mb-8">
+        <h1 className="text-3xl font-semibold tracking-tight">Lab Yoyaku へようこそ</h1>
+        <p className="text-gray-600 mt-2">研究室の機器をグループで管理し、予約と使用状況をカレンダーで可視化します。</p>
+      </header>
 
-        {/* 説明カード */}
-        <div className="grid gap-4 md:grid-cols-3 mb-10">
-          {[
-            { t: '① グループを作成', d: '研究室/班ごとに立ち上げ、メンバーを招待。' },
-            { t: '② グループに参加', d: '招待リンク/QRから参加。機器一覧とカレンダーを共有。' },
-            { t: '③ 機器登録 & 予約', d: '機器ごとにQR発行、予約・使用中がすぐ分かる。' }
-          ].map((c, i) => (
-            <div key={i} className="rounded-2xl border shadow-sm bg-white p-5 hover:shadow-md transition">
-              <div className="font-semibold mb-1">{c.t}</div>
-              <div className="text-sm text-gray-600">{c.d}</div>
-            </div>
-          ))}
-        </div>
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* 左：説明（落ち着いた説明だけ） */}
+        <section className={card}>
+          <h2 className="font-medium mb-3">できること</h2>
+          <ol className="space-y-3 text-sm text-gray-700">
+            <li>
+              <span className="font-medium">① グループを作成：</span> 研究室/班ごとに立ち上げ、メンバーを招待。
+            </li>
+            <li>
+              <span className="font-medium">② グループに参加：</span> 招待リンク/QRから参加。機器一覧とカレンダーを共有。
+            </li>
+            <li>
+              <span className="font-medium">③ 機器登録と予約：</span> 機器ごとにQR発行。予約・使用中がひと目で分かる。
+            </li>
+          </ol>
+        </section>
 
-        {/* タブ＋フォーム */}
-        <div className="mx-auto max-w-xl bg-white rounded-2xl border shadow-sm p-6">
-          <div className="inline-flex rounded-full bg-gray-100 p-1 mb-6">
+        {/* 右：認証カード（タブは線のみ） */}
+        <section className={card}>
+          <div className="flex gap-6 border-b mb-4">
             <button
-              className={`px-4 py-2 rounded-full text-sm transition ${tab === 'login' ? 'bg-white shadow-sm font-semibold' : 'text-gray-500'}`}
+              className={`pb-2 text-sm ${
+                tab === 'login'
+                  ? 'border-b-2 border-gray-900 font-semibold'
+                  : 'text-gray-500'
+              }`}
               onClick={() => setTab('login')}
             >
-              <span className="inline-flex items-center gap-2">
-                <IconLogin /> ログイン
-              </span>
+              ログイン
             </button>
             <button
-              className={`px-4 py-2 rounded-full text-sm transition ${tab === 'register' ? 'bg-white shadow-sm font-semibold' : 'text-gray-500'}`}
+              className={`pb-2 text-sm ${
+                tab === 'register'
+                  ? 'border-b-2 border-gray-900 font-semibold'
+                  : 'text-gray-500'
+              }`}
               onClick={() => setTab('register')}
             >
-              <span className="inline-flex items-center gap-2">
-                <IconUserPlus /> 新規作成
-              </span>
+              新規作成
             </button>
           </div>
 
           {tab === 'login' && (
             <form onSubmit={submitLogin} className="space-y-3">
               <input
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className={input}
                 placeholder="メールアドレス"
                 value={lemail}
                 onChange={e => setLEmail(e.target.value)}
                 required
               />
               <input
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className={input}
                 type="password"
                 placeholder="パスワード"
                 value={lpass}
@@ -152,34 +142,32 @@ export default function LoginPage() {
               />
               {lerr && <div className="text-sm text-red-600">{lerr}</div>}
               <button
-                className="w-full rounded-xl bg-sky-600 text-white px-4 py-2 font-semibold hover:bg-sky-700 transition disabled:opacity-60"
+                className="w-full rounded-lg bg-black text-white px-4 py-2 hover:opacity-90 disabled:opacity-60"
                 disabled={loadingLogin}
               >
                 {loadingLogin ? 'ログイン中…' : 'ログイン'}
               </button>
-              <p className="text-xs text-gray-500 text-center">
-                デモ: <b>demo / demo</b> でもログインできます。
-              </p>
+              <p className="text-xs text-gray-500 text-center">デモ: <b>demo / demo</b> でもログインできます。</p>
             </form>
           )}
 
           {tab === 'register' && (
             <form onSubmit={submitRegister} className="space-y-3">
               <input
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={input}
                 placeholder="表示名（任意）"
                 value={rname}
                 onChange={e => setRName(e.target.value)}
               />
               <input
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={input}
                 placeholder="メールアドレス"
                 value={remail}
                 onChange={e => setREmail(e.target.value)}
                 required
               />
               <input
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={input}
                 type="password"
                 placeholder="パスワード（6文字以上）"
                 value={rpass}
@@ -187,7 +175,7 @@ export default function LoginPage() {
                 required
               />
               <input
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={input}
                 type="password"
                 placeholder="パスワード（確認）"
                 value={rpass2}
@@ -196,14 +184,14 @@ export default function LoginPage() {
               />
               {rerr && <div className="text-sm text-red-600">{rerr}</div>}
               <button
-                className="w-full rounded-xl bg-indigo-600 text-white px-4 py-2 font-semibold hover:bg-indigo-700 transition disabled:opacity-60"
+                className="w-full rounded-lg bg-black text-white px-4 py-2 hover:opacity-90 disabled:opacity-60"
                 disabled={loadingReg}
               >
                 {loadingReg ? '作成中…' : 'アカウントを作成'}
               </button>
             </form>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );
