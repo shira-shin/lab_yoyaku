@@ -1,3 +1,4 @@
+// Server-side API helpers using runtime headers to determine base URL
 import { headers } from 'next/headers';
 import { createApi } from './api-core';
 

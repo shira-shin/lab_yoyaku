@@ -1,3 +1,4 @@
+// Client-side API helpers built on top of the shared core
 import { createApi } from './api-core';
 
 function getBaseURL() {
