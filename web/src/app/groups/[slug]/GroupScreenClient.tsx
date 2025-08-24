@@ -13,10 +13,12 @@ export default function GroupScreenClient({
   initialGroup,
   initialDevices,
   initialReservations,
+  defaultReserver,
 }: {
   initialGroup: any;
   initialDevices: any[];
   initialReservations: any[];
+  defaultReserver?: string;
 }) {
   const [group] = useState(initialGroup);
   const [devices, setDevices] = useState<any[]>(initialDevices);
@@ -25,7 +27,7 @@ export default function GroupScreenClient({
   const [reservations, setReservations] = useState<any[]>(initialReservations);
 
   const [deviceId, setDeviceId] = useState('');
-  const [reserver, setReserver] = useState('');
+  const [reserver, setReserver] = useState(defaultReserver || '');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [title, setTitle] = useState('');
