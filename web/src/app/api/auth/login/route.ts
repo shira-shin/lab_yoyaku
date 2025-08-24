@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server';
-import { signToken, setAuthCookie } from '@/lib/auth';
+import { findUserByEmail, hashPassword, signToken, setAuthCookie } from '@/lib/auth';
 
 export async function POST(req: Request) {
-  const { username, password } = await req.json().catch(() => ({}));
-  // デモ: demo/demo 固定。ここをFastAPIに差し替え予定
-  if (username === 'demo' && password === 'demo') {
-    const token = await signToken({ id: 'u-demo', name: 'demo' });
+  const { email, password } = await req.json().catch(() => ({}));
+
+  // デモショートカット：demo/demo でもログイン可（任意）
+  if (email === 'demo' && password === 'demo') {
+    const token = await signToken({ id: 'u-demo', name: 'demo', email: 'demo@example.com' });
     await setAuthCookie(token);
     return NextResponse.json({ ok: true });
   }
-  return NextResponse.json({ ok: false, error: 'invalid credentials' }, { status: 401 });
+
+  const user = email ? findUserByEmail(String(email)) : null;
+  if (!user || user.passHash !== hashPassword(String(password))) {
+    return NextResponse.json({ ok:false, error:'invalid credentials' }, { status:401 });
+  }
+  const token = await signToken({ id: user.id, name: user.name || '', email: user.email });
+  await setAuthCookie(token);
+  return NextResponse.json({ ok:true });
 }
 

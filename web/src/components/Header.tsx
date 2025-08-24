@@ -10,6 +10,7 @@ export default async function Header() {
           {me && <>
             <a href="/">ダッシュボード</a>
             <a href="/groups">グループ</a>
+            <span className="text-gray-500">{me.name || me.email}</span>
             <form action="/api/auth/logout" method="post">
               <button className="text-gray-600 hover:underline">ログアウト</button>
             </form>
