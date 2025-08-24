@@ -4,7 +4,7 @@ export default async function Header() {
   const me = await readUserFromCookie();
   return (
     <header className="border-b bg-white">
-      <div className="mx-auto max-w-5xl px-4 h-12 flex items-center justify-between">
+      <div className="mx-auto max-w-6xl px-4 h-12 flex items-center justify-between">
         <a href="/" className="font-semibold tracking-tight">Lab Yoyaku</a>
         <nav className="flex items-center gap-4 text-sm">
           {me ? (
@@ -17,7 +17,10 @@ export default async function Header() {
               </form>
             </>
           ) : (
-            <a className="rounded border px-3 py-1 hover:bg-gray-50" href="/login">ログイン</a>
+            <>
+              <a className="rounded border px-3 py-1 hover:bg-gray-50" href="/login?tab=login">ログイン</a>
+              <a className="rounded border px-3 py-1 hover:bg-gray-50" href="/login?tab=register">新規作成</a>
+            </>
           )}
         </nav>
       </div>
