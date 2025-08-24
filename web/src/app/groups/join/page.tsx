@@ -18,14 +18,19 @@ export default function GroupJoinPage() {
     try {
       const res = await joinGroup({ identifier: group, password });
       if (res?.ok && res.data) {
-        router.push(`/groups/${res.data.slug}`);
+        try {
+          router.push(`/groups/${res.data.slug}`);
+        } catch {
+          setErr('ページ遷移に失敗しました');
+        }
       } else {
         throw new Error(res?.error || 'failed');
       }
     } catch (e: any) {
       setErr(e.message);
-      setLoading(false);
       return;
+    } finally {
+      setLoading(false);
     }
   }
 
