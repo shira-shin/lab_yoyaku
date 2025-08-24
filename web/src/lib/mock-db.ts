@@ -5,7 +5,7 @@ export type DB = {
     name: string;
     passwordHash?: string;
     members: Array<{ id: string; name: string; role: 'admin' | 'member' }>;
-    devices: Array<{ id: string; name: string; note?: string }>;
+    devices: Array<{ id: string; slug: string; name: string; note?: string; qrToken: string }>;
     reservations: Array<{
       id: string;
       deviceId: string;

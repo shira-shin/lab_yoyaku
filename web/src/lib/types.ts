@@ -1,7 +1,9 @@
 export type Device = {
   id: string;
+  slug: string;
   name: string;
   note?: string;
+  qrToken: string;
 };
 
 export type Reservation = {
