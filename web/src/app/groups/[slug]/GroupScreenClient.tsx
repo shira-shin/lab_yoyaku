@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   createDevice,
   listDevices,
@@ -31,6 +31,12 @@ export default function GroupScreenClient({
   const [title, setTitle] = useState('');
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const preselect = searchParams.get('device');
+    if (preselect) setDeviceId(preselect);
+  }, [searchParams]);
 
   const byDate = useMemo(() => {
     const map: Record<string, number> = {};
@@ -81,9 +87,22 @@ export default function GroupScreenClient({
         <h2 className="text-xl font-semibold">機器</h2>
         <ul className="space-y-2">
           {devices.map((d) => (
-            <li key={d.id} className="border rounded p-3">
-              {d.name}
-              <div className="text-xs text-neutral-500">ID: {d.id}</div>
+            <li
+              key={d.id}
+              className="border rounded p-3 flex items-center justify-between"
+            >
+              <div>
+                {d.name}
+                <div className="text-xs text-neutral-500">ID: {d.id}</div>
+              </div>
+              <a
+                href={`/api/mock/devices/${d.slug}/qr`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary"
+              >
+                QRコード
+              </a>
             </li>
           ))}
         </ul>
