@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { joinGroup } from '@/lib/api';
 
 export default function GroupJoinPage() {
   const [group, setGroup] = useState(""); // name or slug
@@ -16,19 +15,22 @@ export default function GroupJoinPage() {
     setErr(null);
     setLoading(true);
     try {
-      const res = await joinGroup({ identifier: group, password });
-      if (res?.ok && res.data) {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ identifier: group, password }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok && data.data) {
         try {
-          router.push(`/groups/${res.data.slug}`);
+          router.push(`/groups/${data.data.slug}`);
         } catch {
           setErr('ページ遷移に失敗しました');
         }
       } else {
-        throw new Error(res?.error || 'failed');
+        throw new Error(data?.error || 'failed');
       }
     } catch (e: any) {
       setErr(e.message);
-      return;
     } finally {
       setLoading(false);
     }
