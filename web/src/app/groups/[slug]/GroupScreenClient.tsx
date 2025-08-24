@@ -20,7 +20,7 @@ export default function GroupScreenClient({
   initialReservations: any[];
   defaultReserver?: string;
 }) {
-  const [group] = useState(initialGroup);
+  const group = initialGroup;
   const [devices, setDevices] = useState<any[]>(initialDevices);
   const [deviceName, setDeviceName] = useState('');
   const [note, setNote] = useState('');
