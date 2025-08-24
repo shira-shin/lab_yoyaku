@@ -22,6 +22,8 @@ export default function GroupScreenClient({
   const [devices, setDevices] = useState<any[]>(initialDevices);
   const [deviceName, setDeviceName] = useState('');
   const [note, setNote] = useState('');
+  const [deviceError, setDeviceError] = useState<string | null>(null);
+  const [addingDevice, setAddingDevice] = useState(false);
   const [reservations, setReservations] = useState<any[]>(initialReservations);
 
   const [deviceId, setDeviceId] = useState('');
@@ -29,6 +31,8 @@ export default function GroupScreenClient({
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [title, setTitle] = useState('');
+  const [reservationError, setReservationError] = useState<string | null>(null);
+  const [addingReservation, setAddingReservation] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,31 +53,47 @@ export default function GroupScreenClient({
 
   async function handleAddDevice() {
     if (!deviceName.trim()) return;
-    await createDevice({ slug: group.slug, name: deviceName, note });
-    const updated = await listDevices(group.slug);
-    setDevices(updated.data || []);
-    setDeviceName('');
-    setNote('');
+    setAddingDevice(true);
+    setDeviceError(null);
+    try {
+      await createDevice({ slug: group.slug, name: deviceName, note });
+      const updated = await listDevices(group.slug);
+      setDevices(updated.data || []);
+      setDeviceName('');
+      setNote('');
+    } catch (err: any) {
+      setDeviceError(err?.message || 'Failed to add device');
+    } finally {
+      setAddingDevice(false);
+    }
   }
 
   async function handleAddReservation(e: React.FormEvent) {
     e.preventDefault();
     if (!deviceId || !start || !end || !reserver) return;
-    await createReservation({
-      slug: group.slug,
-      deviceId,
-      start,
-      end,
-      title: title || undefined,
-      reserver,
-    });
-    const updated = await listReservations(group.slug);
-    setReservations(updated.data || []);
-    setDeviceId('');
-    setReserver('');
-    setStart('');
-    setEnd('');
-    setTitle('');
+    setAddingReservation(true);
+    setReservationError(null);
+    try {
+      await createReservation({
+        slug: group.slug,
+        deviceId,
+        start,
+        end,
+        title: title || undefined,
+        reserver,
+      });
+      const updated = await listReservations(group.slug);
+      setReservations(updated.data || []);
+      setDeviceId('');
+      setReserver('');
+      setStart('');
+      setEnd('');
+      setTitle('');
+    } catch (err: any) {
+      setReservationError(err?.message || 'Failed to add reservation');
+    } finally {
+      setAddingReservation(false);
+    }
   }
 
   return (
@@ -121,10 +141,14 @@ export default function GroupScreenClient({
           />
           <button
             onClick={handleAddDevice}
+            disabled={addingDevice}
             className="btn-primary sm:col-span-2 w-24"
           >
             追加
           </button>
+          {deviceError && (
+            <div className="text-sm text-red-600 sm:col-span-2">{deviceError}</div>
+          )}
         </div>
       </section>
 
@@ -186,9 +210,16 @@ export default function GroupScreenClient({
             placeholder="用途（任意）"
             className="input sm:col-span-2"
           />
-          <button type="submit" className="btn-primary w-28 sm:col-span-2">
+          <button
+            type="submit"
+            disabled={addingReservation}
+            className="btn-primary w-28 sm:col-span-2"
+          >
             予約追加
           </button>
+          {reservationError && (
+            <div className="text-sm text-red-600 sm:col-span-2">{reservationError}</div>
+          )}
         </form>
       </section>
     </div>
