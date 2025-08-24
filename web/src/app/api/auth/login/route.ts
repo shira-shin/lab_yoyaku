@@ -4,9 +4,10 @@ import { createSession } from '@/lib/auth';
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { identifier, password } = body;
+  const { identifier, username, password } = body;
+  const ident = identifier ?? username;
   const g = db.groups.find(
-    (x) => x.slug === identifier || x.name === identifier
+    (x) => x.slug === ident || x.name === ident
   );
   if (!g)
     return NextResponse.json({ ok: false, error: 'group not found' }, { status: 404 });

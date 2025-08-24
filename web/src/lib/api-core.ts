@@ -35,5 +35,11 @@ export function createApi(getBaseURL: () => string) {
         method: 'POST',
         body: JSON.stringify(body),
       }),
+    listMyReservations: (from?: string, limit?: number) =>
+      api(
+        `/api/mock/reservations?me=1${
+          from ? `&from=${encodeURIComponent(from)}` : ''
+        }${limit ? `&limit=${limit}` : ''}`
+      ),
   };
 }

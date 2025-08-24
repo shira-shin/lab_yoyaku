@@ -20,4 +20,5 @@ export const {
   createDevice,
   listReservations,
   createReservation,
+  listMyReservations,
 } = createApi(getBaseURL);

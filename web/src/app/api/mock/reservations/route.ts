@@ -4,6 +4,29 @@ import { uuid } from '@/lib/uuid';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
+  const me = searchParams.get('me');
+  if (me) {
+    const from = searchParams.get('from');
+    const limit = Number(searchParams.get('limit') || '5');
+    const fromDate = from ? new Date(from) : new Date();
+    const result: any[] = [];
+    for (const g of db.groups) {
+      for (const r of g.reservations) {
+        if (new Date(r.end) < fromDate) continue;
+        const d = g.devices.find((d) => d.id === r.deviceId);
+        result.push({
+          deviceName: d?.name || '',
+          deviceSlug: d?.slug || '',
+          from: r.start,
+          to: r.end,
+          purpose: r.title || '',
+        });
+      }
+    }
+    result.sort((a, b) => new Date(a.from).getTime() - new Date(b.from).getTime());
+    return NextResponse.json({ ok: true, data: result.slice(0, limit) });
+  }
+
   const slug = searchParams.get('slug');
   if (!slug) return NextResponse.json({ ok: false, error: 'slug required' }, { status: 400 });
   const deviceId = searchParams.get('deviceId');
