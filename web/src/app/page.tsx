@@ -1,12 +1,24 @@
 import { readUserFromCookie } from '@/lib/auth';
-import HomeDashboard from './_parts/HomeDashboard';
-import LoginEmbed from './_parts/LoginEmbed';
 
-export default async function Page() {
+export default async function Home() {
   const me = await readUserFromCookie();
-
-  if (me) {
-    return <HomeDashboard />;
-  }
-  return <LoginEmbed />;
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
+      <h1 className="text-2xl font-bold">ダッシュボード</h1>
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl border bg-white p-4 shadow-sm">
+          <div className="font-semibold mb-1">ようこそ</div>
+          <div className="text-gray-600 text-sm">{me?.name || me?.email}</div>
+        </div>
+        <a href="/groups" className="rounded-2xl border bg-white p-4 shadow-sm hover:shadow transition">
+          <div className="font-semibold mb-1">グループ</div>
+          <div className="text-gray-600 text-sm">作成 / 参加 / 一覧</div>
+        </a>
+        <a href="/groups/new" className="rounded-2xl border bg-white p-4 shadow-sm hover:shadow transition">
+          <div className="font-semibold mb-1">新しいグループ</div>
+          <div className="text-gray-600 text-sm">すぐに立ち上げ</div>
+        </a>
+      </div>
+    </div>
+  );
 }
