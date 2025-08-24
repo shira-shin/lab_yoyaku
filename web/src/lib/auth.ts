@@ -1,56 +1,41 @@
+import 'server-only';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
-const secret = new TextEncoder().encode(process.env.AUTH_SECRET || 'secret');
-export const SESSION_COOKIE_NAME = 'auth_token';
+const secret = new TextEncoder().encode(process.env.AUTH_SECRET || 'dev-secret');
+const COOKIE = 'labyoyaku_token';
 
-export type Session = {
-  groupId: string;
-  groupSlug: string;
-  groupName: string;
-};
+export type User = { id: string; name: string };
 
-export async function createSession(payload: Session) {
-  const token = await new SignJWT(payload)
+export async function signToken(user: User) {
+  return await new SignJWT(user)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
     .sign(secret);
+}
 
-  cookies().set({
-    name: SESSION_COOKIE_NAME,
-    value: token,
+export async function readUserFromCookie(): Promise<User | null> {
+  const token = cookies().get(COOKIE)?.value;
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, secret);
+    return { id: String(payload.id), name: String(payload.name) };
+  } catch {
+    return null;
+  }
+}
+
+export async function setAuthCookie(token: string) {
+  cookies().set(COOKIE, token, {
     httpOnly: true,
+    sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24 * 7,
   });
 }
 
-export async function getSession(): Promise<Session | null> {
-  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return null;
-  try {
-    const { payload } = await jwtVerify(token, secret);
-    return payload as Session;
-  } catch {
-    return null;
-  }
+export async function clearAuthCookie() {
+  cookies().delete(COOKIE);
 }
 
-export function clearSession() {
-  cookies().set({
-    name: SESSION_COOKIE_NAME,
-    value: '',
-    path: '/',
-    maxAge: 0,
-  });
-}
-
-export async function verifyToken(token: string): Promise<Session | null> {
-  try {
-    const { payload } = await jwtVerify(token, secret);
-    return payload as Session;
-  } catch {
-    return null;
-  }
-}

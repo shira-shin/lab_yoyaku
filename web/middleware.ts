@@ -1,23 +1,28 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth'
-
-const PROTECTED = [/^\/dashboard/, /^\/groups(\/.*)?$/, /^\/devices(\/.*)?$/]
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
-  const url = req.nextUrl
-  const isProtected = PROTECTED.some((re) => re.test(url.pathname))
+  const { pathname } = req.nextUrl;
 
-  if (!isProtected) return NextResponse.next()
-
-  const token = req.cookies.get('auth_token')?.value
-  if (!token || !(await verifyToken(token))) {
-    const login = new URL('/login', req.url)
-    login.searchParams.set('next', url.pathname)
-    return NextResponse.redirect(login)
+  // /login と /api/auth/* は誰でもOK
+  if (pathname.startsWith('/login') || pathname.startsWith('/api/auth')) {
+    return NextResponse.next();
   }
-  return NextResponse.next()
+  // Next 静的リソースは除外
+  if (pathname.startsWith('/_next') || pathname.startsWith('/favicon')) {
+    return NextResponse.next();
+  }
+
+  const token = req.cookies.get('labyoyaku_token')?.value;
+  if (!token) {
+    const url = new URL('/login', req.url);
+    url.searchParams.set('next', pathname);
+    return NextResponse.redirect(url);
+  }
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/((?!_next|favicon.ico|api).*)'],
-}
+  matcher: ['/((?!_next|favicon).*)'],
+};
+
