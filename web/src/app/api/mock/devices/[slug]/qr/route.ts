@@ -6,7 +6,10 @@ import QRCode from 'qrcode';
 export const runtime = 'nodejs';
 
 export async function GET(_req: Request, { params }: { params: { slug: string } }) {
-  const device = db.groups.flatMap((g) => g.devices).find((d) => d.slug === params.slug);
+  const slugLc = params.slug.toLowerCase();
+  const device = db.groups
+    .flatMap((g) => g.devices)
+    .find((d) => d.slug.toLowerCase() === slugLc);
   if (!device) return new Response('Not found', { status: 404 });
 
   const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';

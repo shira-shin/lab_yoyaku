@@ -25,6 +25,7 @@ export const listGroups = () => api('/api/mock/groups');
 export const createGroup = (body: any) =>
   api('/api/mock/groups', { method: 'POST', body: JSON.stringify(body) });
 export const getGroup = (slug: string) => api(`/api/mock/groups/${slug}`);
+// identifier may be group name or slug; comparison is case-insensitive
 export const joinGroup = (payload: any) =>
   api('/api/mock/groups/join', { method: 'POST', body: JSON.stringify(payload) });
 

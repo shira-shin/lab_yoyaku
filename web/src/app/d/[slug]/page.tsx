@@ -9,8 +9,9 @@ export default function DeviceQRPage({
   searchParams: { t?: string };
 }) {
   const token = searchParams?.t;
-  const group = db.groups.find((g) => g.devices.some((d) => d.slug === params.slug));
-  const device = group?.devices.find((d) => d.slug === params.slug);
+  const slugLc = params.slug.toLowerCase();
+  const group = db.groups.find((g) => g.devices.some((d) => d.slug.toLowerCase() === slugLc));
+  const device = group?.devices.find((d) => d.slug.toLowerCase() === slugLc);
   if (!group || !device || !token || token !== device.qrToken) {
     notFound();
   }

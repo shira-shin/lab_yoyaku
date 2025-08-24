@@ -12,7 +12,8 @@ export async function POST(req: Request) {
   if (!name || !slug) {
     return NextResponse.json({ ok: false, error: 'invalid request' }, { status: 400 });
   }
-  if (db.groups.find((g) => g.slug === slug)) {
+  const slugLc = slug.toLowerCase();
+  if (db.groups.find((g) => g.slug.toLowerCase() === slugLc)) {
     return NextResponse.json({ ok: false, error: 'slug already exists' }, { status: 409 });
   }
   const g = {

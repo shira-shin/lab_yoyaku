@@ -7,7 +7,8 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const slug = searchParams.get('slug');
   if (!slug) return NextResponse.json({ ok: false, error: 'slug required' }, { status: 400 });
-  const g = db.groups.find((x) => x.slug === slug);
+  const slugLc = slug.toLowerCase();
+  const g = db.groups.find((x) => x.slug.toLowerCase() === slugLc);
   if (!g) return NextResponse.json({ ok: false, error: 'group not found' }, { status: 404 });
   return NextResponse.json({ ok: true, data: g.devices });
 }
@@ -15,7 +16,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const body = await req.json();
   const { slug, name, note, deviceSlug } = body;
-  const g = db.groups.find((x) => x.slug === slug);
+  const slugLc = slug.toLowerCase();
+  const g = db.groups.find((x) => x.slug.toLowerCase() === slugLc);
   if (!g) return NextResponse.json({ ok: false, error: 'group not found' }, { status: 404 });
   const dSlug = deviceSlug || makeSlug(name);
   const d = { id: uuid(), slug: dSlug, name, note, qrToken: uuid().replace(/-/g, '') };
