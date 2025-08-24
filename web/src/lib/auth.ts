@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
 const secret = new TextEncoder().encode(process.env.AUTH_SECRET || 'secret');
-export const SESSION_COOKIE_NAME = 'session';
+export const SESSION_COOKIE_NAME = 'auth_token';
 
 export type Session = {
   groupId: string;
