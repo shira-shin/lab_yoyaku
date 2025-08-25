@@ -55,7 +55,7 @@ export default async function Home() {
   const card = "rounded-xl border border-gray-200 bg-white p-5 shadow-sm";
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
+    <div className="mx-auto max-w-6xl px-6 py-8 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">ダッシュボード</h1>
         <div className="flex gap-2">

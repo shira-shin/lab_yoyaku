@@ -6,7 +6,7 @@ export default async function HomeDashboard() {
   const reservations = res.ok ? (res.data as any[]) : []
 
   return (
-    <main className="mx-auto max-w-[1040px] px-4 sm:px-6 py-10 space-y-8">
+    <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
       <h1 className="text-2xl font-bold">ホーム</h1>
 
       <section className="space-y-3">
@@ -33,7 +33,7 @@ export default async function HomeDashboard() {
       </section>
 
       <section className="space-x-3">
-        <Link className="px-3 py-2 rounded bg-black text-white" href="/groups/new">グループを作成</Link>
+        <Link className="px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white" href="/groups/new">グループを作成</Link>
         <Link className="px-3 py-2 rounded border" href="/groups/join">グループに参加</Link>
         <Link className="px-3 py-2 rounded border" href="/dashboard">ダッシュボード</Link>
         <Link className="px-3 py-2 rounded border" href="/groups">グループ一覧</Link>

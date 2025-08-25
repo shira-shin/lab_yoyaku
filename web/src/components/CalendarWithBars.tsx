@@ -51,7 +51,9 @@ export default function CalendarWithBars({
                 {todays.slice(0,2).map((s)=>(
                   <div key={s.id} className="h-4 rounded-sm flex items-center px-1"
                        style={{backgroundColor:s.color, color:'#fff'}}>
-                    <span className="text-[10px] leading-none truncate">{short(s.name,8)}</span>
+                    <span className="text-[10px] leading-none truncate">
+                      {short(`${s.name} ${pad(s.end.getHours())}:${pad(s.end.getMinutes())}`, 12)}
+                    </span>
                   </div>
                 ))}
                 {todays.length>2 && <div className="text-[10px] text-gray-500">+{todays.length-2}</div>}
