@@ -11,6 +11,8 @@ export type DB = {
       deviceId: string;
       title?: string;
       reserver: string;     // 予約者名
+      user?: string;        // 予約者メール
+      participants?: string[];
       start: string;
       end: string;
       scope: 'group' | 'member';

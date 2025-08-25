@@ -28,7 +28,7 @@ export default function NewGroupPage() {
   }
 
   return (
-    <main className="max-w-2xl p-6 space-y-6">
+    <main className="mx-auto max-w-6xl px-6 py-8 space-y-6">
       <h1 className="text-3xl font-bold">グループ作成</h1>
       <form onSubmit={onSubmit} className="space-y-5">
         <label className="block">
@@ -62,7 +62,7 @@ export default function NewGroupPage() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-xl bg-black text-white px-5 py-2"
+          className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2"
         >
           作成
         </button>

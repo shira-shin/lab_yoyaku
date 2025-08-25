@@ -13,6 +13,8 @@ export type Reservation = {
   end: string;   // ISO
   title?: string;
   reserver: string; // reserver name
+  user?: string;
+  participants?: string[];
   scope: 'group' | 'member';
   memberId?: string;
 };

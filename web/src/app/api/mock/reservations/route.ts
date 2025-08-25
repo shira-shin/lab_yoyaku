@@ -40,13 +40,37 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { slug, deviceId, start, end, reserver, title, scope, memberId } = body;
+  const {
+    slug,
+    deviceId,
+    start,
+    end,
+    user,
+    reserver,
+    title,
+    scope,
+    memberId,
+    participants: pBody,
+  } = body;
   const g = db.groups.find((x) => x.slug === slug);
   if (!g) return NextResponse.json({ ok: false, error: 'group not found' }, { status: 404 });
   if (!g.devices.find((d) => d.id === deviceId)) {
     return NextResponse.json({ ok: false, error: 'unknown device' }, { status: 400 });
   }
-  const r = { id: uuid(), deviceId, start, end, reserver, title, scope: scope ?? 'group', memberId };
+  const participants = Array.isArray(pBody) ? pBody : [];
+  if (user && !participants.includes(user)) participants.push(user);
+  const r = {
+    id: uuid(),
+    deviceId,
+    start,
+    end,
+    user,
+    reserver,
+    title,
+    scope: scope ?? 'group',
+    memberId,
+    participants,
+  };
   g.reservations.push(r);
   return NextResponse.json({ ok: true, data: r });
 }
