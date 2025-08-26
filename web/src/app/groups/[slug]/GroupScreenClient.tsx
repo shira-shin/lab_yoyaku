@@ -2,11 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import {
-  createDevice,
-  listDevices,
-  createReservation,
-} from '@/lib/api';
+import { createDevice, listDevices } from '@/lib/api';
 
 export default function GroupScreenClient({
   initialGroup,
@@ -29,7 +25,7 @@ export default function GroupScreenClient({
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [title, setTitle] = useState('');
-  const [reservationError, setReservationError] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string>('');
   const [addingReservation, setAddingReservation] = useState(false);
 
   const searchParams = useSearchParams();
@@ -62,24 +58,47 @@ export default function GroupScreenClient({
     e.preventDefault();
     if (!deviceId || !start || !end || !reserver) return;
     setAddingReservation(true);
-    setReservationError(null);
+    setErrorMsg('');
     try {
-      await createReservation({
-        slug: group.slug,
+      const payload = {
+        groupSlug: group.slug,
         deviceId,
         start,
         end,
         title: title || undefined,
-        user: reserver,
-        reserver,
+      };
+      const r = await fetch('/api/mock/reservations', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
       });
+
+      if (r.status === 409) {
+        const { conflicts } = await r.json();
+        const lines = conflicts
+          .map((c: any) => {
+            const s = new Date(c.start), e = new Date(c.end);
+            const pad = (n: number) => n.toString().padStart(2, '0');
+            const hhmm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            return `・${c.deviceName}（${hhmm(s)}–${hhmm(e)}）`;
+          })
+          .join('\n');
+        setErrorMsg(`この時間は他の予約があります。\n${lines}`);
+        return;
+      }
+
+      if (!r.ok) {
+        setErrorMsg('保存に失敗しました');
+        return;
+      }
+
       router.refresh();
       setDeviceId('');
       setStart('');
       setEnd('');
       setTitle('');
     } catch (err: any) {
-      setReservationError(err?.message || 'Failed to add reservation');
+      setErrorMsg(err?.message || '保存に失敗しました');
     } finally {
       setAddingReservation(false);
     }
@@ -187,8 +206,8 @@ export default function GroupScreenClient({
           >
             予約追加
           </button>
-          {reservationError && (
-            <div className="text-sm text-red-600 sm:col-span-2">{reservationError}</div>
+          {errorMsg && (
+            <div className="text-sm text-red-600 sm:col-span-2 whitespace-pre-wrap">{errorMsg}</div>
           )}
         </form>
       </section>

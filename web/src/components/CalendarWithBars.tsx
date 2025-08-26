@@ -3,12 +3,21 @@ import { useMemo, useState } from 'react';
 
 export type Span = { id:string; name:string; start:Date; end:Date; color:string; groupSlug:string };
 
+const pad = (n:number)=> n.toString().padStart(2,'0');
+const short = (s:string,len=14)=> s.length<=len ? s : s.slice(0,len-1)+'…';
+
 function strip(d:Date){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
 function add(d:Date,n:number){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
 function overlaps(day:Date, s:Date, e:Date){ return day>=strip(s) && day<strip(add(e,1)); }
-const pad = (n:number)=> n.toString().padStart(2,'0');
-const t = (d:Date)=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
-const short = (s:string,len=8)=> s.length<=len ? s : s.slice(0,len-1)+'…';
+
+// そのセルの日付に対する「開始–終了」ラベル（日またぎ対応）
+function labelForDay(cell: Date, s: Date, e: Date) {
+  const cs = strip(cell);
+  const ce = add(cs, 1);
+  const from = s < cs ? '00:00' : `${pad(s.getHours())}:${pad(s.getMinutes())}`;
+  const to   = e > ce ? '24:00' : `${pad(e.getHours())}:${pad(e.getMinutes())}`;
+  return `${from}–${to}`;
+}
 
 export default function CalendarWithBars({
   weeks, month, spans,
@@ -44,7 +53,6 @@ export default function CalendarWithBars({
               key={i}
               className={`h-16 rounded-lg border relative text-left px-1 ${inMonth?'bg-white':'bg-gray-50 text-gray-400'}`}
               onClick={()=>setSel(d)}
-              title={`${d.getMonth()+1}/${d.getDate()}`}
             >
               <div className="absolute right-1 top-1 text-xs">{d.getDate()}</div>
               <div className="absolute left-1 right-1 bottom-2 space-y-1">
@@ -52,7 +60,7 @@ export default function CalendarWithBars({
                   <div key={s.id} className="h-4 rounded-sm flex items-center px-1"
                        style={{backgroundColor:s.color, color:'#fff'}}>
                     <span className="text-[10px] leading-none truncate">
-                      {short(`${s.name} ${pad(s.end.getHours())}:${pad(s.end.getMinutes())}`, 12)}
+                      {short(`${s.name}（${labelForDay(d, s.start, s.end)}）`, 16)}
                     </span>
                   </div>
                 ))}
@@ -77,6 +85,7 @@ export default function CalendarWithBars({
 function DayModal({ date, items, onClose }:{
   date:Date; items:Span[]; onClose:()=>void;
 }){
+  const row = (s:Span)=> `${s.name}（${labelForDay(date, s.start, s.end)}）`;
   return (
     <div className="fixed inset-0 bg-black/30 flex items-end sm:items-center justify-center z-50">
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-lg w-full max-w-lg p-5">
@@ -88,14 +97,8 @@ function DayModal({ date, items, onClose }:{
         <ul className="space-y-2">
           {items.map((s)=>(
             <li key={s.id} className="rounded-lg border p-3">
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{backgroundColor:s.color}}/>
-                <div className="font-medium">{s.name}</div>
-              </div>
-              <div className="text-sm text-gray-600 mt-1">{t(s.start)} – {t(s.end)}</div>
-              <a href={`/groups/${s.groupSlug}`} className="text-sm text-gray-500 hover:underline mt-1 inline-block">
-                グループページへ
-              </a>
+              <div className="font-medium">{row(s)}</div>
+              <a href={`/groups/${s.groupSlug}`} className="text-sm text-gray-500 hover:underline mt-1 inline-block">グループページへ</a>
             </li>
           ))}
         </ul>
@@ -103,4 +106,3 @@ function DayModal({ date, items, onClose }:{
     </div>
   );
 }
-
