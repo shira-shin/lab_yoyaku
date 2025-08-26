@@ -57,7 +57,6 @@ export default async function GroupPage({ params }: { params: { slug: string } }
       <GroupScreenClient
         initialGroup={group}
         initialDevices={devices}
-        initialReservations={reservations}
         defaultReserver={me?.email}
       />
       <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">

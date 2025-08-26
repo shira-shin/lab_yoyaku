@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/mock-db';
-import { uuid } from '@/lib/uuid';
+import { readUserFromCookie } from '@/lib/auth';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -40,36 +40,30 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const {
-    slug,
-    deviceId,
-    start,
-    end,
-    user,
-    reserver,
-    title,
-    scope,
-    memberId,
-    participants: pBody,
-  } = body;
+  const me = await readUserFromCookie();
+  if (!me) {
+    return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+  }
+
+  const { slug, deviceId } = body;
   const g = db.groups.find((x) => x.slug === slug);
   if (!g) return NextResponse.json({ ok: false, error: 'group not found' }, { status: 404 });
   if (!g.devices.find((d) => d.id === deviceId)) {
     return NextResponse.json({ ok: false, error: 'unknown device' }, { status: 400 });
   }
-  const participants = Array.isArray(pBody) ? pBody : [];
-  if (user && !participants.includes(user)) participants.push(user);
+
+  const participants: string[] = Array.isArray(body.participants)
+    ? body.participants.slice()
+    : [];
+  if (!participants.includes(me.email)) participants.push(me.email);
+
   const r = {
-    id: uuid(),
-    deviceId,
-    start,
-    end,
-    user,
-    reserver,
-    title,
-    scope: scope ?? 'group',
-    memberId,
+    ...body,
+    user: me.email,
     participants,
+    id: body.id ?? crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    scope: body.scope ?? 'group',
   };
   g.reservations.push(r);
   return NextResponse.json({ ok: true, data: r });
