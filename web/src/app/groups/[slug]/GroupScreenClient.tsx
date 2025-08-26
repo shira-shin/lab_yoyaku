@@ -1,23 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   createDevice,
   listDevices,
-  listReservations,
   createReservation,
 } from '@/lib/api';
 
 export default function GroupScreenClient({
   initialGroup,
   initialDevices,
-  initialReservations,
   defaultReserver,
 }: {
   initialGroup: any;
   initialDevices: any[];
-  initialReservations: any[];
   defaultReserver?: string;
 }) {
   const group = initialGroup;
@@ -26,7 +23,6 @@ export default function GroupScreenClient({
   const [note, setNote] = useState('');
   const [deviceError, setDeviceError] = useState<string | null>(null);
   const [addingDevice, setAddingDevice] = useState(false);
-  const [reservations, setReservations] = useState<any[]>(initialReservations);
 
   const [deviceId, setDeviceId] = useState('');
   const reserver = defaultReserver || '';
@@ -37,6 +33,7 @@ export default function GroupScreenClient({
   const [addingReservation, setAddingReservation] = useState(false);
 
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
     const preselect = searchParams.get('device');
@@ -76,8 +73,7 @@ export default function GroupScreenClient({
         user: reserver,
         reserver,
       });
-      const updated = await listReservations(group.slug);
-      setReservations(updated.data || []);
+      router.refresh();
       setDeviceId('');
       setStart('');
       setEnd('');
