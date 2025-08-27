@@ -13,22 +13,33 @@ export async function POST(req: Request) {
   if (String(password).length < 6) {
     return NextResponse.json({ ok:false, error:'password too short' }, { status:400 });
   }
-  const db = loadDB();
-  if (db.users.some(u => u.email.toLowerCase() === String(email).toLowerCase())) {
-    return NextResponse.json({ ok:false, error:'email already registered' }, { status:409 });
+  let user;
+  try {
+    const db = loadDB();
+    if (db.users.some(u => u.email.toLowerCase() === String(email).toLowerCase())) {
+      return NextResponse.json({ ok:false, error:'email already registered' }, { status:409 });
+    }
+
+    user = {
+      id: uid(),
+      email: String(email),
+      name: name ? String(name) : String(email).split('@')[0],
+      passHash: hashPassword(String(password)),
+    };
+    db.users.push(user);
+    saveDB(db);
+  } catch (err) {
+    console.error('Failed to register user:', err);
+    return NextResponse.json({ ok:false, error:'failed to register user' }, { status:500 });
   }
 
-  const user = {
-    id: uid(),
-    email: String(email),
-    name: name ? String(name) : String(email).split('@')[0],
-    passHash: hashPassword(String(password)),
-  };
-  db.users.push(user);
-  saveDB(db);
-
-  // 自動ログイン
-  const token = await signToken({ id: user.id, name: user.name || '', email: user.email });
-  await setAuthCookie(token);
-  return NextResponse.json({ ok:true });
+  try {
+    // 自動ログイン
+    const token = await signToken({ id: user.id, name: user.name || '', email: user.email });
+    await setAuthCookie(token);
+    return NextResponse.json({ ok:true });
+  } catch (err) {
+    console.error('Failed to login user after registration:', err);
+    return NextResponse.json({ ok:false, error:'failed to login after registration' }, { status:500 });
+  }
 }
