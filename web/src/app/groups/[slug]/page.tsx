@@ -51,8 +51,8 @@ export default async function GroupPage({ params }: { params: { slug: string } }
 
   const { weeks, month } = buildMonth(new Date());
   const devices = devicesRes.data || [];
-  const spans: Span[] = reservations.map((r: any) => {
-    const dev = devices.find((d: any) => d.id === r.deviceId);
+  const spans: Span[] = (reservations ?? []).map((r: any) => {
+    const dev = group.devices.find((d: any)=> d.id === r.deviceId);
     return {
       id: r.id,
       name: dev?.name ?? r.deviceId,
@@ -60,6 +60,8 @@ export default async function GroupPage({ params }: { params: { slug: string } }
       end: new Date(r.end),
       color: colorFromString(r.deviceId),
       groupSlug: group.slug,
+      by: r.userName || r.user,
+      participants: r.participants ?? [],
     };
   });
 

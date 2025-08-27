@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 
 type Mine = {
-  id:string; deviceId:string; deviceName?:string; user:string;
+  id:string; deviceId:string; deviceName?:string; user:string; userName?:string;
+  participants?: string[];
   start:string; end:string; purpose?:string; groupSlug:string; groupName:string;
 };
 
@@ -42,13 +43,15 @@ export default async function Home() {
   const upcoming = mine.filter(r=> new Date(r.end)>=now).slice(0,10);
   const { weeks, month } = buildMonth(now);
 
-  const spans: Span[] = mine.map(r=>({
-    id:r.id,
-    name:r.deviceName ?? r.deviceId,
-    start:new Date(r.start),
-    end:new Date(r.end),
+  const spans: Span[] = mine.map((r:any)=>({
+    id: r.id,
+    name: r.deviceName ?? r.deviceId,
+    start: new Date(r.start),
+    end: new Date(r.end),
     color: colorFromString(r.deviceId),
-    groupSlug: r.groupSlug
+    groupSlug: r.groupSlug,
+    by: r.userName || r.user,
+    participants: r.participants ?? [],
   }));
 
   const legend = Array.from(new Map(spans.map(s=>[s.name, s.color])).entries());

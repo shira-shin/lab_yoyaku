@@ -73,6 +73,7 @@ export async function POST(req: Request) {
     ...body,
     id: body.id ?? crypto.randomUUID(),
     user: me.email,
+    userName: me.name ?? me.email,
     participants,
     createdAt: new Date().toISOString(),
   };
