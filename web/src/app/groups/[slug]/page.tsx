@@ -1,4 +1,4 @@
-import { getGroup, listDevices, listReservations } from '@/lib/server-api';
+import { listDevices } from '@/lib/server-api';
 import { notFound } from 'next/navigation';
 import GroupScreenClient from './GroupScreenClient';
 import { readUserFromCookie } from '@/lib/auth';
@@ -27,21 +27,32 @@ function colorFromString(s: string) {
 }
 
 export default async function GroupPage({ params }: { params: { slug: string } }) {
-  const groupRes = await getGroup(params.slug);
-  const group = groupRes.data;
-  if (!groupRes.ok || !group) return notFound();
+  const { slug } = params;
+  const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
 
-  const [devicesRes, reservationsRes, me] = await Promise.all([
+  const gRes = await fetch(`${base}/api/mock/groups/${slug}`, { cache: 'no-store' });
+  if (gRes.status === 404) return notFound();
+  if (!gRes.ok) throw new Error(`API ${gRes.status} /api/mock/groups/${slug}`);
+  const group = (await gRes.json()).data;
+
+  const [devicesRes, reservations, me] = await Promise.all([
     listDevices(group.slug),
-    listReservations(group.slug),
+    (async () => {
+      const r = await fetch(`${base}/api/mock/reservations?slug=${slug}`, { cache: 'no-store' });
+      if (r.ok) {
+        const json = await r.json();
+        return json.data ?? [];
+      }
+      if (r.status === 404) return [];
+      throw new Error(`API ${r.status} /api/mock/reservations?slug=${slug}`);
+    })(),
     readUserFromCookie(),
   ]);
 
   const { weeks, month } = buildMonth(new Date());
   const devices = devicesRes.data || [];
-  const reservations = reservationsRes.data || [];
-  const spans: Span[] = reservations.map(r => {
-    const dev = devices.find(d => d.id === r.deviceId);
+  const spans: Span[] = reservations.map((r: any) => {
+    const dev = devices.find((d: any) => d.id === r.deviceId);
     return {
       id: r.id,
       name: dev?.name ?? r.deviceId,

@@ -6,29 +6,35 @@ import { useRouter } from "next/navigation";
 export default function GroupJoinPage() {
   const [group, setGroup] = useState(""); // name or slug
   const [password, setPassword] = useState("");
-  const [err, setErr] = useState<string | null>(null);
+  const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setErr(null);
+    setErr('');
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/mock/groups/join', {
         method: 'POST',
-        body: JSON.stringify({ identifier: group, password }),
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: group, password }),
       });
-      const data = await res.json().catch(() => null);
-      if (res.ok && data?.ok && data.data) {
-        router.push(`/groups/${data.data.slug}`);
-      } else {
-        throw new Error(data?.error || 'failed');
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setErr(j?.error || '参加に失敗しました');
+        return;
       }
+      const { data } = await res.json();
+      if (!data?.slug) {
+        setErr('参加できましたが slug を取得できませんでした');
+        return;
+      }
+      router.push(`/groups/${data.slug}`);
     } catch (e: any) {
-      setErr(e.message);
+      setErr(e.message || '参加に失敗しました');
+    } finally {
       setLoading(false);
-      return;
     }
   }
 

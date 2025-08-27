@@ -2,11 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createGroup } from '@/lib/api';
 
 export default function NewGroupPage() {
   const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
   const router = useRouter();
@@ -15,13 +13,19 @@ export default function NewGroupPage() {
     e.preventDefault();
     setPending(true);
     try {
-      const res = await createGroup({ name: name.trim(), slug: slug.trim(), password });
-      if (res?.ok && res.data?.slug) {
-        router.push(`/groups/${res.data.slug}`);
-        router.refresh();
-      } else {
-        alert(res?.error || '作成に失敗しました');
+      const res = await fetch('/api/mock/groups', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), password }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        alert(j?.error || '作成に失敗しました');
+        return;
       }
+      const { data } = await res.json();
+      router.push(`/groups/${data.slug}`);
+      router.refresh();
     } finally {
       setPending(false);
     }
@@ -36,15 +40,6 @@ export default function NewGroupPage() {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-xl border p-3"
-            required
-          />
-        </label>
-        <label className="block">
-          <div className="mb-1">slug</div>
-          <input
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
             className="w-full rounded-xl border p-3"
             required
           />

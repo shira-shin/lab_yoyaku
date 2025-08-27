@@ -1,29 +1,32 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/mock-db';
-import { uuid } from '@/lib/uuid';
+import { loadDB, saveDB } from '@/lib/mockdb';
+import { makeSlug } from '@/lib/slug';
 
 export async function GET() {
+  const db = loadDB();
   return NextResponse.json({ ok: true, data: db.groups });
 }
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  const { name, slug, password } = body;
-  if (!name || !slug) {
+  const { name, password, slug } = await req.json();
+  if (!name) {
     return NextResponse.json({ ok: false, error: 'invalid request' }, { status: 400 });
   }
-  if (db.groups.find((g) => g.slug === slug)) {
+  const db = loadDB();
+  const s = makeSlug(slug || name);
+  if (db.groups.find((g: any) => g.slug === s)) {
     return NextResponse.json({ ok: false, error: 'slug already exists' }, { status: 409 });
   }
   const g = {
-    id: uuid(),
+    slug: s,
     name,
-    slug,
-    passwordHash: password || undefined,
+    password: password || undefined,
     members: [],
     devices: [],
     reservations: [],
-  };
+  } as any;
   db.groups.push(g);
-  return NextResponse.json({ ok: true, data: g });
+  saveDB(db);
+  return NextResponse.json({ ok: true, data: { slug: g.slug, name: g.name } });
 }
+
