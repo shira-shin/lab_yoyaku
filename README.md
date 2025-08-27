@@ -21,3 +21,8 @@ Lab equipment reservation system monorepo.
    ```bash
    uvicorn app.main:app --reload --app-dir api
    ```
+
+### Environment
+
+The web app uses SQLite for user persistence. Configure the database path
+via `DATABASE_PATH` in `web/.env.local` (default: `./data.db`).

@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const user = email ? findUserByEmail(String(email)) : null;
+  const user = email ? await findUserByEmail(String(email)) : null;
   if (!user || user.passHash !== hashPassword(String(password))) {
     return NextResponse.json({ ok:false, error:'invalid credentials' }, { status:401 });
   }

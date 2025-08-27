@@ -2,7 +2,7 @@ import 'server-only';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { createHash } from 'crypto';
-import { loadDB } from './mockdb';
+import { loadUsers } from './db';
 
 const secret = new TextEncoder().encode(process.env.AUTH_SECRET || 'dev-secret');
 const COOKIE = 'labyoyaku_token';
@@ -33,9 +33,9 @@ export async function setAuthCookie(token: string) {
 }
 export async function clearAuthCookie() { (await cookies()).delete(COOKIE); }
 
-/** emailでユーザーを探す（モックDB） */
-export function findUserByEmail(email: string) {
-  const db = loadDB();
-  return db.users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+/** emailでユーザーを探す（DB） */
+export async function findUserByEmail(email: string) {
+  const users = await loadUsers();
+  return users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
 }
 

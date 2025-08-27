@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { hashPassword, signToken, setAuthCookie } from '@/lib/auth';
-import { isEmail, loadDB, saveDB, uid } from '@/lib/mockdb';
+import { loadUsers, saveUser } from '@/lib/db';
+import { isEmail, uid } from '@/lib/mockdb';
 
 export async function POST(req: Request) {
   const { email, password, name } = await req.json().catch(() => ({}));
@@ -13,8 +14,8 @@ export async function POST(req: Request) {
   if (String(password).length < 6) {
     return NextResponse.json({ ok:false, error:'password too short' }, { status:400 });
   }
-  const db = loadDB();
-  if (db.users.some(u => u.email.toLowerCase() === String(email).toLowerCase())) {
+  const users = await loadUsers();
+  if (users.some(u => u.email.toLowerCase() === String(email).toLowerCase())) {
     return NextResponse.json({ ok:false, error:'email already registered' }, { status:409 });
   }
 
@@ -24,8 +25,7 @@ export async function POST(req: Request) {
     name: name ? String(name) : String(email).split('@')[0],
     passHash: hashPassword(String(password)),
   };
-  db.users.push(user);
-  saveDB(db);
+  await saveUser(user);
 
   // 自動ログイン
   const token = await signToken({ id: user.id, name: user.name || '', email: user.email });
