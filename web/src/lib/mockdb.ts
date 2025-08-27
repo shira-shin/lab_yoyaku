@@ -27,6 +27,17 @@ if (!g.__MOCK_DB__) g.__MOCK_DB__ = { groups: [], users: [] } as DB;
 export function loadDB(): DB { return g.__MOCK_DB__ as DB; }
 export function saveDB(_db: DB) { /* メモリなのでnoop */ }
 
+export async function loadUsers(): Promise<UserRecord[]> {
+  const db = loadDB();
+  return db.users;
+}
+
+export async function saveUser(user: UserRecord): Promise<void> {
+  const db = loadDB();
+  db.users.push(user);
+  saveDB(db);
+}
+
 export const uid = () =>
   'id_' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36);
 

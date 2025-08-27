@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { hashPassword, signToken, setAuthCookie } from '@/lib/auth';
-import { isEmail, loadDB, saveDB, uid } from '@/lib/mockdb';
+import { isEmail, loadUsers, saveUser, uid } from '@/lib/mockdb';
 
 export async function POST(req: Request) {
   const { email, password, name } = await req.json().catch(() => ({}));
@@ -15,8 +15,8 @@ export async function POST(req: Request) {
   }
   let user;
   try {
-    const db = loadDB();
-    if (db.users.some(u => u.email.toLowerCase() === String(email).toLowerCase())) {
+    const users = await loadUsers();
+    if (users.some(u => u.email.toLowerCase() === String(email).toLowerCase())) {
       return NextResponse.json({ ok:false, error:'email already registered' }, { status:409 });
     }
 
@@ -26,8 +26,7 @@ export async function POST(req: Request) {
       name: name ? String(name) : String(email).split('@')[0],
       passHash: hashPassword(String(password)),
     };
-    db.users.push(user);
-    saveDB(db);
+    await saveUser(user);
   } catch (err) {
     console.error('Failed to register user:', err);
     return NextResponse.json({ ok:false, error:'failed to register user' }, { status:500 });
