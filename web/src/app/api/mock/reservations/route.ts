@@ -67,7 +67,9 @@ export async function POST(req: Request) {
   const db = loadDB();
 
   const participants: string[] = Array.isArray(body.participants) ? body.participants.slice() : [];
-  if (!participants.includes(me.email)) participants.push(me.email);
+  const add = (v?:string)=> { const x=(v??'').trim(); if(x && !participants.includes(x)) participants.push(x); };
+  add(me.email);
+  add(me.name);
 
   const record = {
     ...body,
