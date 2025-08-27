@@ -1,6 +1,7 @@
 import { readUserFromCookie } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
+import type { Span } from '@/components/CalendarWithBars';
+import RightCalendarClient from './page.client';
 
 type Mine = {
   id:string; deviceId:string; deviceName?:string; user:string; userName?:string;
@@ -15,14 +16,6 @@ const fmtRange = (s:string,e:string)=>{
   const d =(x:Date)=>`${x.getMonth()+1}/${x.getDate()} ${pad(x.getHours())}:${pad(x.getMinutes())}`;
   return same ? `${d(S)}–${pad(E.getHours())}:${pad(E.getMinutes())}` : `${d(S)} → ${d(E)}`;
 };
-
-function buildMonth(base=new Date()){
-  const y=base.getFullYear(), m=base.getMonth();
-  const first = new Date(y,m,1);
-  const start = new Date(first); start.setDate(first.getDate()-((first.getDay()+6)%7));
-  const weeks: Date[][]=[]; for(let w=0;w<6;w++){ const row:Date[]=[]; for(let i=0;i<7;i++){ row.push(new Date(start)); start.setDate(start.getDate()+1);} weeks.push(row); }
-  return { weeks, month:m };
-}
 function colorFromString(s:string){
   const palette=['#2563eb','#16a34a','#f59e0b','#ef4444','#7c3aed','#0ea5e9','#f97316','#14b8a6'];
   let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0;
@@ -36,14 +29,14 @@ export default async function Home() {
 
   const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
   const res = await fetch(`${base}/api/me/reservations`, { cache:'no-store' });
-  const mine: Mine[] = (await res.json()).data ?? [];
-  mine.sort((a,b)=> new Date(a.start).getTime() - new Date(b.start).getTime());
+  const json = await res.json();
 
-  const now = new Date();
-  const upcoming = mine.filter(r=> new Date(r.end)>=now).slice(0,10);
-  const { weeks, month } = buildMonth(now);
+  const upcomingRaw: Mine[] = json.data ?? [];
+  upcomingRaw.sort((a,b)=> new Date(a.start).getTime() - new Date(b.start).getTime());
+  const upcoming = upcomingRaw.slice(0,10);
 
-  const spans: Span[] = mine.map((r:any)=>({
+  const mineAll = json.all ?? [];
+  const spans: Span[] = mineAll.map((r:any)=>({
     id: r.id,
     name: r.deviceName ?? r.deviceId,
     start: new Date(r.start),
@@ -92,7 +85,7 @@ export default async function Home() {
         </section>
 
         <section className={card}>
-          <CalendarWithBars weeks={weeks} month={month} spans={spans}/>
+          <RightCalendarClient spans={spans} />
           {legend.length>0 && (
             <div className="mt-4">
               <div className="text-xs text-gray-500 mb-1">色の対応</div>
