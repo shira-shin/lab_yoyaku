@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { hashPassword, signToken, setAuthCookie } from '@/lib/auth';
 import { loadUsers, saveUser } from '@/lib/db';
-import { isEmail, uid } from '@/lib/mockdb';
+import { isEmail, uid, UserRecord } from '@/lib/mockdb';
 
 export async function POST(req: Request) {
   const { email, password, name } = await req.json().catch(() => ({}));
@@ -19,7 +19,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok:false, error:'email already registered' }, { status:409 });
   }
 
-  const user = {
+  let user: UserRecord;
+  user = {
     id: uid(),
     email: String(email),
     name: name ? String(name) : String(email).split('@')[0],
