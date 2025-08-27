@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     await setAuthCookie(token);
     return NextResponse.json({ ok:true });
   } catch (err) {
-    console.error('Failed to login user after registration:', err);
-    return NextResponse.json({ ok:false, error:'failed to login after registration' }, { status:500 });
+    console.error('Failed to log in user after registration:', err);
+    return NextResponse.json({ ok:false, error:'failed to log in after registration' }, { status:500 });
   }
 }
