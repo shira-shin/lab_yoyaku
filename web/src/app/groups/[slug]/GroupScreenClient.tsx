@@ -60,17 +60,27 @@ export default function GroupScreenClient({
     setAddingReservation(true);
     setErrorMsg('');
     try {
-      const payload = {
+      const me = await fetch('/api/auth/me', { cache: 'no-store' }).then((r) =>
+        r.json()
+      );
+
+      const record = {
         groupSlug: group.slug,
         deviceId,
         start,
         end,
         title: title || undefined,
+        user: me.email,
+        userName: me.name || me.email,
+        participants: Array.from(
+          new Set([me.email, me.name || me.email])
+        ),
       };
+
       const r = await fetch('/api/mock/reservations', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(record),
       });
 
       if (r.status === 409) {

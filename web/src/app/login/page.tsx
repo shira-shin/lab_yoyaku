@@ -1,6 +1,7 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import { PASSWORD_HINT, passwordRegex } from '@/utils/password';
 
 type Tab = 'login' | 'register';
 
@@ -48,6 +49,10 @@ export default function LoginPage() {
     setRErr('');
     if (rpass !== rpass2) {
       setRErr('確認用パスワードが一致しません');
+      return;
+    }
+    if (!passwordRegex.test(rpass)) {
+      setRErr(PASSWORD_HINT);
       return;
     }
     setLoadingReg(true);
@@ -167,9 +172,9 @@ export default function LoginPage() {
                 required
               />
               <input
-                className={input}
+              className={input}
                 type="password"
-                placeholder="パスワード（6文字以上）"
+                placeholder="パスワード"
                 value={rpass}
                 onChange={e => setRPass(e.target.value)}
                 required
@@ -182,6 +187,7 @@ export default function LoginPage() {
                 onChange={e => setRPass2(e.target.value)}
                 required
               />
+              <p className="text-sm text-gray-500 mt-1">{PASSWORD_HINT}</p>
               {rerr && <div className="text-sm text-red-600">{rerr}</div>}
               <button
                 className="w-full rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 disabled:opacity-60"
