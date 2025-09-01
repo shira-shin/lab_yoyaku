@@ -5,6 +5,7 @@ export type Reservation = {
   id: string; deviceId: string; user: MemberId;
   start: string; end: string; purpose?: string;
   participants?: MemberId[];
+  reminderMinutes?: number;
 };
 export type Group = {
   slug: string; name: string; password?: string;

@@ -105,6 +105,59 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, data: record });
 }
 
+/* --------------------------- PATCH ---------------------------
+   Update reservation fields (currently reminderMinutes only)
+------------------------------------------------------------ */
+export async function PATCH(req: Request) {
+  const me = await readUserFromCookie();
+  if (!me) return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+
+  const body = await req.json();
+  const { id, groupSlug, reminderMinutes } = body || {};
+  if (!id) return NextResponse.json({ ok: false, error: 'id required' }, { status: 400 });
+
+  const db = loadDB();
+  const g = db.groups.find((x: any) => x.slug === groupSlug);
+  if (!g) return NextResponse.json({ ok: false, error: 'group not found' }, { status: 404 });
+
+  const r = (g.reservations ?? []).find((x: any) => x.id === id);
+  if (!r) return NextResponse.json({ ok: false, error: 'reservation not found' }, { status: 404 });
+  if (r.user !== me.email) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+
+  if (reminderMinutes === null || reminderMinutes === undefined) {
+    delete r.reminderMinutes;
+  } else {
+    r.reminderMinutes = reminderMinutes;
+  }
+  saveDB(db);
+  return NextResponse.json({ ok: true, data: r });
+}
+
+/* --------------------------- DELETE ---------------------------
+   Cancel reservation (only owner can delete)
+------------------------------------------------------------ */
+export async function DELETE(req: Request) {
+  const me = await readUserFromCookie();
+  if (!me) return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+
+  const body = await req.json();
+  const { id, groupSlug } = body || {};
+  if (!id) return NextResponse.json({ ok: false, error: 'id required' }, { status: 400 });
+
+  const db = loadDB();
+  const g = db.groups.find((x: any) => x.slug === groupSlug);
+  if (!g) return NextResponse.json({ ok: false, error: 'group not found' }, { status: 404 });
+
+  const idx = (g.reservations ?? []).findIndex((x: any) => x.id === id);
+  if (idx === -1) return NextResponse.json({ ok: false, error: 'reservation not found' }, { status: 404 });
+  const r = g.reservations[idx];
+  if (r.user !== me.email) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+
+  g.reservations.splice(idx, 1);
+  saveDB(db);
+  return NextResponse.json({ ok: true });
+}
+
 async function sendReminderEmail(record: any) {
   const to = record.user;
   const subject = '予約確認';
