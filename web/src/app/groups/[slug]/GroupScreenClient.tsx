@@ -93,7 +93,7 @@ export default function GroupScreenClient({
   }
 
   return (
-    <div className="max-w-4xl space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8">
       <header className="space-y-1">
         <h1 className="text-3xl font-bold">{group.name}</h1>
         <p className="text-sm text-neutral-500">slug: {group.slug}</p>

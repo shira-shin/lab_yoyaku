@@ -52,7 +52,7 @@ export default function CalendarWithBars({
           return (
             <button key={i} className="h-16 rounded-lg border relative text-left px-1"
                     onClick={()=>setSel(d)}>
-              <div className="absolute right-1 top-1 text-xs">{d.getDate()}</div>
+              <div className="absolute left-1 top-1 text-xs">{d.getDate()}</div>
               <div className="absolute left-1 right-1 bottom-2 space-y-1">
                 {todays.slice(0,2).map((s)=>(
                   <div key={s.id} className="h-4 rounded-sm flex items-center px-1"

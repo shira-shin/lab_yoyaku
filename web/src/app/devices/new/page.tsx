@@ -38,7 +38,7 @@ export default function NewDevicePage() {
   }
 
   return (
-    <div className="p-4 max-w-lg space-y-4">
+    <div className="p-4 max-w-lg mx-auto space-y-4">
       <h1 className="text-2xl font-bold">機器登録</h1>
       <form onSubmit={handleSubmit} className="space-y-2">
         <input
