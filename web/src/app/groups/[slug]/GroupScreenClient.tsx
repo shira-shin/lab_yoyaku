@@ -108,7 +108,9 @@ export default function GroupScreenClient({
               className="border rounded p-3 flex items-center justify-between"
             >
               <div>
-                {d.name}
+                <a href={`/devices/${d.slug}`} className="font-medium hover:underline">
+                  {d.name}
+                </a>
                 <div className="text-xs text-neutral-500">ID: {d.id}</div>
               </div>
               <a
