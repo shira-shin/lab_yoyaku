@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import GroupScreenClient from './GroupScreenClient';
 import { readUserFromCookie } from '@/lib/auth';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
+import { getBaseUrl } from '@/lib/config';
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
   const first = new Date(y, m, 1);
@@ -28,7 +29,7 @@ function colorFromString(s: string) {
 
 export default async function GroupPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+  const base = getBaseUrl();
 
   const gRes = await fetch(`${base}/api/mock/groups/${slug}`, { cache: 'no-store' });
   if (gRes.status === 404) return notFound();

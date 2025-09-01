@@ -1,6 +1,7 @@
 import { readUserFromCookie } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import type { Span } from '@/components/CalendarWithBars';
+import { getBaseUrl } from '@/lib/config';
 import RightCalendarClient from './page.client';
 import UpcomingReservations from './_parts/UpcomingReservations';
 
@@ -21,7 +22,7 @@ export default async function Home() {
   const me = await readUserFromCookie();
   if (!me) redirect('/login?next=/');
 
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+  const base = getBaseUrl();
   const res = await fetch(`${base}/api/me/reservations`, { cache:'no-store' });
   const json = await res.json();
 
