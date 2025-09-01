@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { updateReservation, deleteReservation } from '@/lib/api';
 
 export type Item = {
   id: string;
@@ -10,6 +11,7 @@ export type Item = {
   purpose?: string;
   groupSlug: string;
   groupName: string;
+  reminderMinutes?: number;
 };
 
 function pad(n: number) {
@@ -103,16 +105,70 @@ export default function UpcomingReservations({
       )}
 
       {sel && (
-        <Modal item={sel} onClose={() => setSel(null)} />
+        <Modal
+          item={sel}
+          onClose={() => setSel(null)}
+          onDeleted={(id) => {
+            setItems((prev) => prev.filter((i) => i.id !== id));
+            setSel(null);
+          }}
+          onUpdated={(u) =>
+            setItems((prev) =>
+              prev.map((i) => (i.id === u.id ? { ...i, ...u } : i))
+            )
+          }
+        />
       )}
     </>
   );
 }
 
-function Modal({ item, onClose }: { item: Item; onClose: () => void }) {
+function Modal({
+  item,
+  onClose,
+  onDeleted,
+  onUpdated,
+}: {
+  item: Item;
+  onClose: () => void;
+  onDeleted: (id: string) => void;
+  onUpdated: (r: Partial<Item> & { id: string }) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [rem, setRem] = useState<string | number>(
+    item.reminderMinutes ?? ''
+  );
+
+  const saveRem = async (v: string) => {
+    setRem(v);
+    setSaving(true);
+    try {
+      const minutes = v === '' ? null : Number(v);
+      const res = await updateReservation({
+        id: item.id,
+        groupSlug: item.groupSlug,
+        reminderMinutes: minutes,
+      });
+      onUpdated(res.data);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const cancel = async () => {
+    if (!confirm('この予約を取り消しますか？')) return;
+    setSaving(true);
+    try {
+      await deleteReservation({ id: item.id, groupSlug: item.groupSlug });
+      onDeleted(item.id);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/30 flex items-end sm:items-center justify-center z-50">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-lg w-full max-w-lg p-5 space-y-2">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-lg w-full max-w-lg p-5 space-y-3">
         <div className="flex items-center justify-between mb-2">
           <div className="font-semibold">予約の詳細</div>
           <button onClick={onClose} className="text-sm text-gray-500 hover:underline">
@@ -124,12 +180,37 @@ function Modal({ item, onClose }: { item: Item; onClose: () => void }) {
         {item.purpose && (
           <div className="text-sm text-gray-600">用途：{item.purpose}</div>
         )}
-        <a
-          href={`/groups/${item.groupSlug}`}
-          className="text-sm text-indigo-600 hover:underline inline-block mt-2"
-        >
-          グループページへ
-        </a>
+
+        <div className="mt-2 text-sm">
+          <label className="mr-2">リマインド:</label>
+          <select
+            className="border rounded px-2 py-1"
+            value={rem}
+            onChange={(e) => saveRem(e.target.value)}
+            disabled={saving}
+          >
+            <option value="">なし</option>
+            <option value="15">15分前</option>
+            <option value="30">30分前</option>
+            <option value="60">1時間前</option>
+          </select>
+        </div>
+
+        <div className="flex justify-between items-center mt-4">
+          <a
+            href={`/groups/${item.groupSlug}`}
+            className="text-sm text-indigo-600 hover:underline"
+          >
+            グループページへ
+          </a>
+          <button
+            onClick={cancel}
+            disabled={saving}
+            className="text-sm text-red-600 hover:underline"
+          >
+            予約を取り消す
+          </button>
+        </div>
       </div>
     </div>
   );
