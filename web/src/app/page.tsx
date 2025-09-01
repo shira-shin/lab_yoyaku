@@ -2,6 +2,7 @@ import { readUserFromCookie } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import type { Span } from '@/components/CalendarWithBars';
 import RightCalendarClient from './page.client';
+import UpcomingReservations from './_parts/UpcomingReservations';
 
 type Mine = {
   id:string; deviceId:string; deviceName?:string; user:string; userName?:string;
@@ -9,13 +10,6 @@ type Mine = {
   start:string; end:string; purpose?:string; groupSlug:string; groupName:string;
 };
 
-const pad = (n:number)=> n.toString().padStart(2,'0');
-const fmtRange = (s:string,e:string)=>{
-  const S=new Date(s), E=new Date(e);
-  const same = S.toDateString()===E.toDateString();
-  const d =(x:Date)=>`${x.getMonth()+1}/${x.getDate()} ${pad(x.getHours())}:${pad(x.getMinutes())}`;
-  return same ? `${d(S)}–${pad(E.getHours())}:${pad(E.getMinutes())}` : `${d(S)} → ${d(E)}`;
-};
 function colorFromString(s:string){
   const palette=['#2563eb','#16a34a','#f59e0b','#ef4444','#7c3aed','#0ea5e9','#f97316','#14b8a6'];
   let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0;
@@ -62,26 +56,7 @@ export default async function Home() {
 
       <div className="grid gap-6 md:grid-cols-3">
         <section className={`md:col-span-2 ${card}`}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-medium">直近の自分の予約</div>
-            <a className="text-sm text-gray-500 hover:underline" href="/groups">すべてのグループへ</a>
-          </div>
-          {!upcoming.length && (
-            <div className="text-gray-500 text-sm">直近の予約はありません。右上の「グループ参加」から始めましょう。</div>
-          )}
-          <ul className="space-y-2">
-            {upcoming.map(r=>(
-              <li key={r.id} className="rounded-lg border px-3 py-2 flex items-start gap-3">
-                <span className="inline-block h-2.5 w-2.5 rounded-full mt-2" style={{backgroundColor:colorFromString(r.deviceId)}}/>
-                <div className="flex-1">
-                  <div className="text-sm text-gray-600">{fmtRange(r.start,r.end)}（{r.groupName}）</div>
-                  <div className="font-medium mt-0.5">機器：{r.deviceName ?? r.deviceId}</div>
-                  {r.purpose && <div className="text-sm text-gray-500">用途：{r.purpose}</div>}
-                </div>
-                <a className="text-sm text-gray-500 hover:underline" href={`/groups/${r.groupSlug}`}>詳細</a>
-              </li>
-            ))}
-          </ul>
+          <UpcomingReservations initialItems={upcoming} />
         </section>
 
         <section className={card}>
