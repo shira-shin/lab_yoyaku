@@ -2,8 +2,7 @@ import { readUserFromCookie } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import type { Span } from '@/components/CalendarWithBars';
 import { getBaseUrl } from '@/lib/config';
-import RightCalendarClient from './page.client';
-import UpcomingReservations from './_parts/UpcomingReservations';
+import DashboardClient from './page.client';
 
 type Mine = {
   id:string; deviceId:string; deviceName?:string; user:string; userName?:string;
@@ -42,9 +41,6 @@ export default async function Home() {
     participants: r.participants ?? [],
   }));
 
-  const legend = Array.from(new Map(spans.map(s=>[s.name, s.color])).entries());
-  const card = "rounded-xl border border-gray-200 bg-white p-5 shadow-sm";
-
   return (
     <div className="mx-auto max-w-6xl px-6 py-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -55,27 +51,7 @@ export default async function Home() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <section className={`md:col-span-2 ${card}`}>
-          <UpcomingReservations initialItems={upcoming} />
-        </section>
-
-        <section className={card}>
-          <RightCalendarClient spans={spans} />
-          {legend.length>0 && (
-            <div className="mt-4">
-              <div className="text-xs text-gray-500 mb-1">色の対応</div>
-              <div className="flex flex-wrap gap-3">
-                {legend.map(([name,color])=>(
-                  <span key={name} className="inline-flex items-center gap-1.5 text-sm">
-                    <i className="inline-block h-2.5 w-2.5 rounded-full" style={{backgroundColor:color}}/> {short(name)}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-      </div>
+      <DashboardClient initialItems={upcoming} initialSpans={spans} />
     </div>
   );
 }

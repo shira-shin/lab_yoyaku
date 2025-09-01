@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-type Item = {
+export type Item = {
   id: string;
   deviceId: string;
   deviceName?: string;
@@ -30,9 +30,16 @@ function colorFromString(s: string) {
   return palette[h % palette.length];
 }
 
-export default function UpcomingReservations({ initialItems }: { initialItems: Item[] }) {
+export default function UpcomingReservations({
+  initialItems,
+  onLoaded,
+}: {
+  initialItems: Item[];
+  onLoaded?: (payload: any) => void;
+}) {
   const [items, setItems] = useState<Item[]>(initialItems);
   const [loading, setLoading] = useState(false);
+  const [sel, setSel] = useState<Item | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -43,6 +50,7 @@ export default function UpcomingReservations({ initialItems }: { initialItems: I
         new Date(a.start).getTime() - new Date(b.start).getTime()
       ).slice(0, 10);
       setItems(arr);
+      onLoaded?.(j);
     } finally {
       setLoading(false);
     }
@@ -71,7 +79,11 @@ export default function UpcomingReservations({ initialItems }: { initialItems: I
       ) : (
         <ul className="space-y-2">
           {items.map((r) => (
-            <li key={r.id} className="rounded-lg border px-3 py-2 flex items-start gap-3">
+            <li
+              key={r.id}
+              className="rounded-lg border px-3 py-2 flex items-start gap-3 cursor-pointer"
+              onClick={() => setSel(r)}
+            >
               <span
                 className="inline-block h-2.5 w-2.5 rounded-full mt-2"
                 style={{ backgroundColor: colorFromString(r.deviceId) }}
@@ -85,16 +97,40 @@ export default function UpcomingReservations({ initialItems }: { initialItems: I
                   <div className="text-sm text-gray-500">用途：{r.purpose}</div>
                 )}
               </div>
-              <a
-                className="text-sm text-gray-500 hover:underline"
-                href={`/groups/${r.groupSlug}`}
-              >
-                詳細
-              </a>
             </li>
           ))}
         </ul>
       )}
+
+      {sel && (
+        <Modal item={sel} onClose={() => setSel(null)} />
+      )}
     </>
+  );
+}
+
+function Modal({ item, onClose }: { item: Item; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-end sm:items-center justify-center z-50">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-lg w-full max-w-lg p-5 space-y-2">
+        <div className="flex items-center justify-between mb-2">
+          <div className="font-semibold">予約の詳細</div>
+          <button onClick={onClose} className="text-sm text-gray-500 hover:underline">
+            閉じる
+          </button>
+        </div>
+        <div className="text-sm">{fmtRange(item.start, item.end)}（{item.groupName}）</div>
+        <div className="font-medium">機器：{item.deviceName ?? item.deviceId}</div>
+        {item.purpose && (
+          <div className="text-sm text-gray-600">用途：{item.purpose}</div>
+        )}
+        <a
+          href={`/groups/${item.groupSlug}`}
+          className="text-sm text-indigo-600 hover:underline inline-block mt-2"
+        >
+          グループページへ
+        </a>
+      </div>
+    </div>
   );
 }
