@@ -1,5 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
+import clsx from 'clsx';
 
 export type Span = {
   id: string;
@@ -49,16 +50,30 @@ export default function CalendarWithBars({
       <div className="grid grid-cols-7 gap-1">
         {weeks.flat().map((d,i)=>{
           const todays = map.get(d.toDateString()) ?? [];
+          const isToday = d.toDateString() === new Date().toDateString();
+          const isSun = d.getDay() === 0;
+          const isSat = d.getDay() === 6;
           return (
-            <button key={i} className="h-16 rounded-lg border relative text-left px-1"
-                    onClick={()=>setSel(d)}>
+            <button
+              key={i}
+              className={clsx(
+                'h-16 rounded-lg border relative text-left px-1',
+                isSun && 'bg-red-50',
+                isSat && 'bg-blue-50',
+                isToday && 'border-2 border-indigo-500'
+              )}
+              onClick={()=>setSel(d)}
+            >
               <div className="absolute left-1 top-1 text-xs">{d.getDate()}</div>
               <div className="absolute left-1 right-1 bottom-2 space-y-1">
                 {todays.slice(0,2).map((s)=>(
-                  <div key={s.id} className="h-4 rounded-sm flex items-center px-1"
-                       style={{backgroundColor:s.color, color:'#fff'}}>
+                  <div
+                    key={s.id}
+                    className="h-4 rounded-sm flex items-center px-1 text-white print:text-black"
+                    style={{backgroundColor:s.color}}
+                  >
                     <span className="text-[10px] leading-none truncate">
-                      {short(`${s.name}（${labelForDay(d, s.start, s.end)}） / ${s.by}`, 22)}
+                      {short(`${s.name}（${labelForDay(d, s.start, s.end)}） / ${s.by}`, 28)}
                     </span>
                   </div>
                 ))}

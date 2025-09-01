@@ -13,7 +13,8 @@ export default function GroupScreenClient({
   defaultReserver?: string;
 }) {
   const group = initialGroup;
-  const [devices] = useState<any[]>(initialDevices);
+  const [devices, setDevices] = useState<any[]>(initialDevices);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   const [deviceId, setDeviceId] = useState('');
   const reserver = defaultReserver || '';
@@ -92,6 +93,24 @@ export default function GroupScreenClient({
     }
   }
 
+  async function handleDeleteDevice(id: string) {
+    if (!confirm('この機器を削除しますか？')) return;
+    setRemovingId(id);
+    try {
+      const r = await fetch('/api/mock/devices', {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ slug: group.slug, id }),
+      });
+      if (!r.ok) throw new Error('failed');
+      setDevices((prev) => prev.filter((d) => d.id !== id));
+    } catch (e) {
+      alert('削除に失敗しました');
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <header className="space-y-1">
@@ -113,14 +132,23 @@ export default function GroupScreenClient({
                 </a>
                 <div className="text-xs text-neutral-500">ID: {d.id}</div>
               </div>
-              <a
-                href={`/api/mock/devices/${d.slug}/qr`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary"
-              >
-                QRコード
-              </a>
+              <div className="flex gap-2">
+                <a
+                  href={`/api/mock/devices/${d.slug}/qr`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary"
+                >
+                  QRコード
+                </a>
+                <button
+                  onClick={() => handleDeleteDevice(d.id)}
+                  className="btn-danger"
+                  disabled={removingId === d.id}
+                >
+                  削除
+                </button>
+              </div>
             </li>
           ))}
         </ul>

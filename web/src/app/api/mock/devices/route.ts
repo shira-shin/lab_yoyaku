@@ -26,3 +26,21 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, data: d });
 }
 
+export async function DELETE(req: Request) {
+  const body = await req.json();
+  const { slug, id } = body || {};
+  if (!slug || !id)
+    return NextResponse.json({ ok: false, error: 'invalid request' }, { status: 400 });
+  const db = loadDB();
+  const g = db.groups.find((x: any) => x.slug === slug);
+  if (!g) return NextResponse.json({ ok: false, error: 'group not found' }, { status: 404 });
+  const idx = (g.devices ?? []).findIndex((d: any) => d.id === id);
+  if (idx === -1)
+    return NextResponse.json({ ok: false, error: 'device not found' }, { status: 404 });
+  const removed = g.devices.splice(idx, 1)[0];
+  if (g.reservations)
+    g.reservations = g.reservations.filter((r: any) => r.deviceId !== removed.id);
+  saveDB(db);
+  return NextResponse.json({ ok: true });
+}
+
