@@ -1,8 +1,9 @@
+import { getBaseUrl } from '@/lib/config';
 // eslint-disable-next-line import/no-unresolved
 const { QRCodeCanvas } = require('qrcode.react');
 
 export default function DevicePoster({ device }: { device: any }) {
-  const url = `${process.env.NEXT_PUBLIC_BASE_URL}/devices/${device.device_uid}?from=qr`;
+  const url = `${getBaseUrl()}/devices/${device.device_uid}?from=qr`;
   return (
     <div className="mx-auto w-[794px] h-[1123px] p-10 border rounded bg-white">
       <h1 className="text-3xl font-bold mb-6">Lab Yoyaku</h1>
