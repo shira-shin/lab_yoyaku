@@ -17,6 +17,7 @@ export type Reservation = {
   participants?: string[];
   scope: 'group' | 'member';
   memberId?: string;
+  reminderMinutes?: number;
 };
 
 export type Group = {
