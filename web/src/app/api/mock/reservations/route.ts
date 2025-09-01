@@ -100,6 +100,27 @@ export async function POST(req: Request) {
   g.reservations.push(record);
   saveDB(db);
 
+  sendReminderEmail(record).catch((e) => console.error('reminder mail failed', e));
+
   return NextResponse.json({ ok: true, data: record });
+}
+
+async function sendReminderEmail(record: any) {
+  const to = record.user;
+  const subject = '予約確認';
+  const text = `以下の内容で予約を受け付けました\n機器: ${record.deviceId}\n開始: ${record.start}\n終了: ${record.end}`;
+  try {
+    if (process.env.MAIL_WEBHOOK) {
+      await fetch(process.env.MAIL_WEBHOOK, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ to, subject, text }),
+      });
+    } else {
+      console.log('reminder mail to', to, text);
+    }
+  } catch (e) {
+    console.error(e);
+  }
 }
 
