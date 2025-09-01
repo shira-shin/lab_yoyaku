@@ -4,6 +4,7 @@ import GroupScreenClient from './GroupScreenClient';
 import { readUserFromCookie } from '@/lib/auth';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 import { getBaseUrl } from '@/lib/config';
+import PrintButton from '@/components/PrintButton';
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
   const first = new Date(y, m, 1);
@@ -68,12 +69,17 @@ export default async function GroupPage({ params }: { params: { slug: string } }
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <GroupScreenClient
-        initialGroup={group}
-        initialDevices={devices}
-        defaultReserver={me?.email}
-      />
+      <div className="print:hidden">
+        <GroupScreenClient
+          initialGroup={group}
+          initialDevices={devices}
+          defaultReserver={me?.email}
+        />
+      </div>
       <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="flex justify-end mb-2 print:hidden">
+          <PrintButton className="btn-primary" />
+        </div>
         <CalendarWithBars weeks={weeks} month={month} spans={spans} />
       </div>
     </div>
