@@ -2,7 +2,7 @@ import Image from 'next/image';
 
 export default function DevicesPage() {
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4 max-w-lg mx-auto">
       <h1 className="text-2xl font-bold">機器の管理</h1>
       <p>下の画像をクリックして新しい機器を登録します。</p>
       <a href="/devices/new">
