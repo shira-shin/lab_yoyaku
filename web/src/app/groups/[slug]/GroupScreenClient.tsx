@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { createDevice, listDevices } from '@/lib/api';
 
 export default function GroupScreenClient({
   initialGroup,
@@ -14,11 +13,7 @@ export default function GroupScreenClient({
   defaultReserver?: string;
 }) {
   const group = initialGroup;
-  const [devices, setDevices] = useState<any[]>(initialDevices);
-  const [deviceName, setDeviceName] = useState('');
-  const [note, setNote] = useState('');
-  const [deviceError, setDeviceError] = useState<string | null>(null);
-  const [addingDevice, setAddingDevice] = useState(false);
+  const [devices] = useState<any[]>(initialDevices);
 
   const [deviceId, setDeviceId] = useState('');
   const reserver = defaultReserver || '';
@@ -36,23 +31,6 @@ export default function GroupScreenClient({
     if (preselect) setDeviceId(preselect);
   }, [searchParams]);
 
-
-  async function handleAddDevice() {
-    if (!deviceName.trim()) return;
-    setAddingDevice(true);
-    setDeviceError(null);
-    try {
-      await createDevice({ slug: group.slug, name: deviceName, note });
-      const updated = await listDevices(group.slug);
-      setDevices(updated.data || []);
-      setDeviceName('');
-      setNote('');
-    } catch (err: any) {
-      setDeviceError(err?.message || 'Failed to add device');
-    } finally {
-      setAddingDevice(false);
-    }
-  }
 
   async function handleAddReservation(e: React.FormEvent) {
     e.preventDefault();
@@ -144,30 +122,12 @@ export default function GroupScreenClient({
             </li>
           ))}
         </ul>
-        <div className="grid gap-2 sm:grid-cols-2 max-w-xl">
-          <input
-            value={deviceName}
-            onChange={(e) => setDeviceName(e.target.value)}
-            placeholder="例：蛍光測定器"
-            className="input"
-          />
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="備考（任意）"
-            className="input"
-          />
-          <button
-            onClick={handleAddDevice}
-            disabled={addingDevice}
-            className="btn-primary sm:col-span-2 w-24"
-          >
-            追加
-          </button>
-          {deviceError && (
-            <div className="text-sm text-red-600 sm:col-span-2">{deviceError}</div>
-          )}
-        </div>
+        <a
+          href={`/devices/new?group=${encodeURIComponent(group.slug)}`}
+          className="btn-primary inline-block"
+        >
+          機器を追加
+        </a>
       </section>
 
       <section className="space-y-3">
