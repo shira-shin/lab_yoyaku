@@ -147,12 +147,12 @@ export default function LoginPage() {
               />
               {lerr && <div className="text-sm text-red-600">{lerr}</div>}
               <button
-                className="w-full rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 disabled:opacity-60"
+                className="w-full rounded-lg bg-primary hover:bg-primary-dark text-white px-4 py-2 disabled:opacity-60"
                 disabled={loadingLogin}
               >
                 {loadingLogin ? 'ログイン中…' : 'ログイン'}
               </button>
-              <p className="text-xs text-gray-500 text-center">デモ: <b>demo / demo</b> でもログインできます。</p>
+              <p className="text-xs text-muted text-center">デモ: <b>demo / demo</b> でもログインできます。</p>
             </form>
           )}
 
@@ -187,10 +187,10 @@ export default function LoginPage() {
                 onChange={e => setRPass2(e.target.value)}
                 required
               />
-              <p className="text-sm text-gray-500 mt-1">{PASSWORD_HINT}</p>
+              <p className="text-sm text-muted mt-1">{PASSWORD_HINT}</p>
               {rerr && <div className="text-sm text-red-600">{rerr}</div>}
               <button
-                className="w-full rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 disabled:opacity-60"
+                className="w-full rounded-lg bg-primary hover:bg-primary-dark text-white px-4 py-2 disabled:opacity-60"
                 disabled={loadingReg}
               >
                 {loadingReg ? '作成中…' : 'アカウントを作成'}

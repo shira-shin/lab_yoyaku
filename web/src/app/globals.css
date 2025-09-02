@@ -1,21 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Open+Sans:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 html, body { height: 100%; }
 
+@layer base {
+  body { @apply bg-background text-gray-900 font-sans; }
+  a { @apply text-primary; outline: none; }
+  a:hover { @apply text-primary-dark; }
+  a:focus-visible { box-shadow: 0 0 0 3px rgba(74,144,226,.5); border-radius: .5rem; }
+}
+
 .app-container {
   @apply max-w-[1040px] mx-auto px-4 sm:px-6;
 }
 
-/* ベースのリンク色とフォーカス見やすく */
-a { outline: none; }
-a:focus-visible { box-shadow: 0 0 0 3px rgba(59,130,246,.5); border-radius: .5rem; }
-
 /* 任意: 簡易ユーティリティ */
-.input { @apply border rounded px-3 py-2 w-full; }
-.btn-primary { @apply inline-flex items-center justify-center rounded px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700; }
-.btn-danger { @apply inline-flex items-center justify-center rounded px-4 py-2 bg-red-600 text-white hover:bg-red-700; }
+.input { @apply border rounded-md px-3 py-2 w-full focus:border-primary focus:ring-1 focus:ring-primary; }
+.btn-primary { @apply inline-flex items-center justify-center rounded-md px-4 py-2 bg-primary text-white hover:bg-primary-dark; }
+.btn-danger { @apply inline-flex items-center justify-center rounded-md px-4 py-2 bg-red-600 text-white hover:bg-red-700; }
 
 @media print {
   @page { size: A4; margin: 20mm; }

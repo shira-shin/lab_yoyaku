@@ -46,8 +46,8 @@ export default async function Home() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">ダッシュボード</h1>
         <div className="flex gap-2">
-          <a href="/groups/new"  className="rounded-lg border px-3 py-2 bg-indigo-600 text-white hover:bg-indigo-700">グループ作成</a>
-          <a href="/groups/join" className="rounded-lg border px-3 py-2 hover:bg-gray-50">グループ参加</a>
+          <a href="/groups/new"  className="rounded-lg border px-3 py-2 bg-primary text-white hover:bg-primary-dark">グループ作成</a>
+          <a href="/groups/join" className="rounded-lg border border-primary text-primary px-3 py-2 hover:bg-primary/10">グループ参加</a>
         </div>
       </div>
 

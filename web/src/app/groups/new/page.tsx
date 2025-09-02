@@ -57,7 +57,7 @@ export default function NewGroupPage() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2"
+          className="rounded-xl bg-primary hover:bg-primary-dark text-white px-5 py-2"
         >
           作成
         </button>

@@ -33,7 +33,7 @@ export default async function HomeDashboard() {
       </section>
 
       <section className="space-x-3">
-        <Link className="px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white" href="/groups/new">グループを作成</Link>
+        <Link className="px-3 py-2 rounded bg-primary hover:bg-primary-dark text-white" href="/groups/new">グループを作成</Link>
         <Link className="px-3 py-2 rounded border" href="/groups/join">グループに参加</Link>
         <Link className="px-3 py-2 rounded border" href="/dashboard">ダッシュボード</Link>
         <Link className="px-3 py-2 rounded border" href="/groups">グループ一覧</Link>
