@@ -60,7 +60,7 @@ export default function CalendarWithBars({
                 'h-16 rounded-lg border relative text-left px-1',
                 isSun && 'bg-red-50',
                 isSat && 'bg-blue-50',
-                isToday && 'border-2 border-indigo-500'
+                isToday && 'border-2 border-primary'
               )}
               onClick={()=>setSel(d)}
             >
@@ -80,7 +80,7 @@ export default function CalendarWithBars({
                     </span>
                   </div>
                 ))}
-                {todays.length>2 && <div className="text-[10px] text-gray-500">+{todays.length-2}</div>}
+                {todays.length>2 && <div className="text-[10px] text-muted">+{todays.length-2}</div>}
               </div>
             </button>
           );
@@ -109,9 +109,9 @@ function DayModal({ date, items, onClose }:{
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-lg w-full max-w-lg p-5">
         <div className="flex items-center justify-between mb-3">
           <div className="font-semibold">{date.getMonth()+1}月{date.getDate()}日の予約</div>
-          <button onClick={onClose} className="text-sm text-gray-500 hover:underline">閉じる</button>
+          <button onClick={onClose} className="text-sm text-muted hover:underline">閉じる</button>
         </div>
-        {!items.length && <div className="text-sm text-gray-500">この日の予約はありません。</div>}
+        {!items.length && <div className="text-sm text-muted">この日の予約はありません。</div>}
         <ul className="space-y-2">
           {items.map((s)=>(
             <li key={s.id} className="rounded-lg border p-3">
@@ -120,9 +120,9 @@ function DayModal({ date, items, onClose }:{
                 {hhmm(s.start)} – {hhmm(s.end)}　/　予約者: <span className="font-medium">{s.by}</span>
               </div>
               {s.participants?.length ? (
-                <div className="text-xs text-gray-500 mt-1">参加者: {s.participants.join(', ')}</div>
+                <div className="text-xs text-muted mt-1">参加者: {s.participants.join(', ')}</div>
               ) : null}
-              <a href={`/groups/${s.groupSlug}`} className="text-sm text-indigo-600 hover:underline mt-2 inline-block">
+              <a href={`/groups/${s.groupSlug}`} className="text-sm text-primary hover:underline mt-2 inline-block">
                 グループページへ
               </a>
             </li>

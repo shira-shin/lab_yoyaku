@@ -72,12 +72,12 @@ export default function UpcomingReservations({
           >
             {loading ? '更新中…' : '更新'}
           </button>
-          <a className="text-sm text-gray-500 hover:underline" href="/groups">すべてのグループへ</a>
+          <a className="text-sm text-muted hover:underline" href="/groups">すべてのグループへ</a>
         </div>
       </div>
 
       {!items.length ? (
-        <div className="text-gray-500 text-sm">直近の予約はありません。右上の「グループ参加」から始めましょう。</div>
+        <div className="text-muted text-sm">直近の予約はありません。右上の「グループ参加」から始めましょう。</div>
       ) : (
         <ul className="space-y-2">
           {items.map((r) => (
@@ -91,12 +91,12 @@ export default function UpcomingReservations({
                 style={{ backgroundColor: colorFromString(r.deviceId) }}
               />
               <div className="flex-1">
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted">
                   {fmtRange(r.start, r.end)}（{r.groupName}）
                 </div>
                 <div className="font-medium mt-0.5">機器：{r.deviceName ?? r.deviceId}</div>
                 {r.purpose && (
-                  <div className="text-sm text-gray-500">用途：{r.purpose}</div>
+                  <div className="text-sm text-muted">用途：{r.purpose}</div>
                 )}
               </div>
             </li>
@@ -171,14 +171,14 @@ function Modal({
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-lg w-full max-w-lg p-5 space-y-3">
         <div className="flex items-center justify-between mb-2">
           <div className="font-semibold">予約の詳細</div>
-          <button onClick={onClose} className="text-sm text-gray-500 hover:underline">
+          <button onClick={onClose} className="text-sm text-muted hover:underline">
             閉じる
           </button>
         </div>
         <div className="text-sm">{fmtRange(item.start, item.end)}（{item.groupName}）</div>
         <div className="font-medium">機器：{item.deviceName ?? item.deviceId}</div>
         {item.purpose && (
-          <div className="text-sm text-gray-600">用途：{item.purpose}</div>
+          <div className="text-sm text-muted">用途：{item.purpose}</div>
         )}
 
         <div className="mt-2 text-sm">
@@ -199,7 +199,7 @@ function Modal({
         <div className="flex justify-between items-center mt-4">
           <a
             href={`/groups/${item.groupSlug}`}
-            className="text-sm text-indigo-600 hover:underline"
+            className="text-sm text-primary hover:underline"
           >
             グループページへ
           </a>
