@@ -72,8 +72,11 @@ export default function CalendarWithBars({
                     className="h-4 rounded-sm flex items-center px-1 text-white print:text-black"
                     style={{backgroundColor:s.color}}
                   >
-                    <span className="text-[10px] leading-none truncate">
+                    <span className="text-[10px] leading-none truncate print:hidden">
                       {short(`${s.name}（${labelForDay(d, s.start, s.end)}） / ${s.by}`, 28)}
+                    </span>
+                    <span className="hidden text-[10px] leading-none truncate print:inline">
+                      {short(`${s.name} / ${s.by}`, 28)}
                     </span>
                   </div>
                 ))}

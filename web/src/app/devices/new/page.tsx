@@ -1,17 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { createDevice } from '@/lib/api';
-import QRCode from 'qrcode.react';
 
 export default function NewDevicePage() {
   const search = useSearchParams();
+  const router = useRouter();
   const [group, setGroup] = useState('');
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
   const [existing, setExisting] = useState('');
-  const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -27,11 +26,10 @@ export default function NewDevicePage() {
     try {
       const payload: any = { slug: group, name, note };
       if (existing) payload.deviceSlug = existing;
-      const r = await createDevice(payload);
-      setResult(r.data || r);
+      await createDevice(payload);
+      router.push(`/groups/${group}`);
     } catch (err: any) {
       setError(err?.message || '登録に失敗しました');
-      setResult(null);
     } finally {
       setLoading(false);
     }
@@ -76,14 +74,6 @@ export default function NewDevicePage() {
         </button>
       </form>
       {error && <div className="text-sm text-red-600">{error}</div>}
-      {result && (
-        <div className="space-y-2 border rounded p-3">
-          <p>
-            機器コード: <span className="font-mono">{result.slug}</span>
-          </p>
-          <QRCode value={result.slug} />
-        </div>
-      )}
     </div>
   );
 }
