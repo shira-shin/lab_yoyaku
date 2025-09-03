@@ -5,6 +5,9 @@ import { readUserFromCookie } from '@/lib/auth';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 import { getBaseUrl } from '@/lib/config';
 import PrintButton from '@/components/PrintButton';
+import BackButton from '@/components/BackButton';
+import ReservationList, { ReservationItem } from '@/components/ReservationList';
+import Image from 'next/image';
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
   const first = new Date(y, m, 1);
@@ -19,7 +22,7 @@ function buildMonth(base = new Date()) {
     }
     weeks.push(row);
   }
-  return { weeks, month: m };
+  return { weeks, month: m, year: y };
 }
 function colorFromString(s: string) {
   const palette = ['#2563eb', '#16a34a', '#f59e0b', '#ef4444', '#7c3aed', '#0ea5e9', '#f97316', '#14b8a6'];
@@ -51,7 +54,7 @@ export default async function GroupPage({ params }: { params: { slug: string } }
     readUserFromCookie(),
   ]);
 
-  const { weeks, month } = buildMonth(new Date());
+  const { weeks, month, year } = buildMonth(new Date());
   const devices = devicesRes.data || [];
   const spans: Span[] = (reservations ?? []).map((r: any) => {
     const dev = group.devices.find((d: any)=> d.id === r.deviceId);
@@ -68,39 +71,52 @@ export default async function GroupPage({ params }: { params: { slug: string } }
   });
 
   const pad = (n: number) => n.toString().padStart(2, '0');
-  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const listItems: ReservationItem[] = reservations.map((r: any) => {
+    const dev = group.devices.find((d: any) => d.id === r.deviceId);
+    return {
+      id: r.id,
+      deviceName: dev?.name ?? r.deviceId,
+      user: r.userName || r.user,
+      start: new Date(r.start),
+      end: new Date(r.end),
+    };
+  });
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
       <div className="print:hidden space-y-4">
-        <a href="/" className="text-blue-600 hover:underline">ホームに戻る</a>
+        <div className="flex gap-4">
+          <BackButton className="text-blue-600 hover:underline" />
+          <a href="/" className="text-blue-600 hover:underline">ホーム</a>
+          <a href="/groups" className="text-blue-600 hover:underline">グループ一覧</a>
+        </div>
         <GroupScreenClient
           initialGroup={group}
           initialDevices={devices}
           defaultReserver={me?.email}
         />
       </div>
-      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="flex justify-end mb-2 print:hidden">
-          <PrintButton className="btn-primary" />
-        </div>
-        <CalendarWithBars weeks={weeks} month={month} spans={spans} />
-        <div className="hidden print:block mt-4">
-          <h2 className="text-xl font-semibold mb-2">予約一覧</h2>
-          <ul className="list-disc pl-5 space-y-1">
-            {reservations.map((r: any) => {
-              const dev = group.devices.find((d: any) => d.id === r.deviceId);
-              const s = fmt(new Date(r.start));
-              const e = fmt(new Date(r.end));
-              return (
-                <li key={r.id}>{`機器: ${dev?.name ?? r.deviceId} / 予約者: ${r.userName || r.user} / 時間: ${s} - ${e}`}</li>
-              );
-            })}
-          </ul>
-          <div className="mt-4">
-            <img src={`/api/mock/groups/${group.slug}/qr`} alt="QRコード" className="w-32 h-32" />
+      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm relative">
+        <div className="flex justify-between items-center mb-2">
+          <div className="font-semibold">{group.name}　{year}年{month + 1}月</div>
+          <div className="print:hidden">
+            <PrintButton className="btn-primary" />
           </div>
         </div>
+        <CalendarWithBars weeks={weeks} month={month} spans={spans} />
+        <div className="mt-4">
+          <h2 className="text-xl font-semibold mb-2">予約一覧</h2>
+          <ReservationList items={listItems} />
+        </div>
+        <Image
+          src={`/api/mock/groups/${group.slug}/qr`}
+          alt="QRコード"
+          width={128}
+          height={128}
+          className="mt-4 ml-auto print:fixed print:right-5 print:bottom-5"
+        />
       </div>
     </div>
   );
