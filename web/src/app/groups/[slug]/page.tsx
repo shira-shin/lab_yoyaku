@@ -7,7 +7,6 @@ import { getBaseUrl } from '@/lib/config';
 import PrintButton from '@/components/PrintButton';
 import BackButton from '@/components/BackButton';
 import ReservationList, { ReservationItem } from '@/components/ReservationList';
-import Image from 'next/image';
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
   const first = new Date(y, m, 1);
@@ -31,7 +30,13 @@ function colorFromString(s: string) {
   return palette[h % palette.length];
 }
 
-export default async function GroupPage({ params }: { params: { slug: string } }) {
+export default async function GroupPage({
+  params,
+  searchParams,
+}: {
+  params: { slug: string };
+  searchParams: { month?: string };
+}) {
   const { slug } = params;
   const base = getBaseUrl();
 
@@ -43,7 +48,9 @@ export default async function GroupPage({ params }: { params: { slug: string } }
   const [devicesRes, reservations, me] = await Promise.all([
     listDevices(group.slug),
     (async () => {
-      const r = await fetch(`${base}/api/mock/reservations?slug=${slug}`, { cache: 'no-store' });
+      const r = await fetch(`${base}/api/mock/reservations?slug=${slug}`, {
+        cache: 'no-store',
+      });
       if (r.ok) {
         const json = await r.json();
         return json.data ?? [];
@@ -54,7 +61,20 @@ export default async function GroupPage({ params }: { params: { slug: string } }
     readUserFromCookie(),
   ]);
 
-  const { weeks, month, year } = buildMonth(new Date());
+  const baseMonth = (() => {
+    if (searchParams?.month) {
+      const [y, m] = searchParams.month.split('-').map(Number);
+      if (!isNaN(y) && !isNaN(m)) return new Date(y, m - 1, 1);
+    }
+    return new Date();
+  })();
+  const { weeks, month, year } = buildMonth(baseMonth);
+  const prev = new Date(baseMonth);
+  prev.setMonth(prev.getMonth() - 1);
+  const next = new Date(baseMonth);
+  next.setMonth(next.getMonth() + 1);
+  const pad2 = (n: number) => n.toString().padStart(2, '0');
+  const toParam = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
   const devices = devicesRes.data || [];
   const spans: Span[] = (reservations ?? []).map((r: any) => {
     const dev = group.devices.find((d: any)=> d.id === r.deviceId);
@@ -70,9 +90,6 @@ export default async function GroupPage({ params }: { params: { slug: string } }
     };
   });
 
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   const listItems: ReservationItem[] = reservations.map((r: any) => {
     const dev = group.devices.find((d: any) => d.id === r.deviceId);
     return {
@@ -100,9 +117,23 @@ export default async function GroupPage({ params }: { params: { slug: string } }
       </div>
       <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm relative">
         <div className="flex justify-between items-center mb-2">
+          <a
+            href={`?month=${toParam(prev)}`}
+            className="px-2 py-1 rounded border print:hidden"
+          >
+            ‹
+          </a>
           <div className="font-semibold">{group.name}　{year}年{month + 1}月</div>
-          <div className="print:hidden">
-            <PrintButton className="btn-primary" />
+          <div className="flex items-center gap-2">
+            <a
+              href={`?month=${toParam(next)}`}
+              className="px-2 py-1 rounded border print:hidden"
+            >
+              ›
+            </a>
+            <div className="print:hidden">
+              <PrintButton className="btn-primary" />
+            </div>
           </div>
         </div>
         <CalendarWithBars weeks={weeks} month={month} spans={spans} />
@@ -110,12 +141,12 @@ export default async function GroupPage({ params }: { params: { slug: string } }
           <h2 className="text-xl font-semibold mb-2">予約一覧</h2>
           <ReservationList items={listItems} />
         </div>
-        <Image
+        <img
           src={`/api/mock/groups/${group.slug}/qr`}
           alt="QRコード"
           width={128}
           height={128}
-          className="hidden print:block mt-4 ml-auto print:fixed print:right-5 print:bottom-5"
+          className="w-0 h-0 opacity-0 mt-4 ml-auto print:w-32 print:h-32 print:opacity-100 print:block print:fixed print:right-5 print:bottom-5"
         />
       </div>
     </div>
