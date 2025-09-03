@@ -83,7 +83,7 @@ export default async function DevicePage({ params }: { params: { slug: string } 
           alt="QRコード"
           width={128}
           height={128}
-          className="mt-4 ml-auto print:fixed print:right-5 print:bottom-5"
+          className="hidden print:block mt-4 ml-auto print:fixed print:right-5 print:bottom-5"
         />
       </div>
     </div>
