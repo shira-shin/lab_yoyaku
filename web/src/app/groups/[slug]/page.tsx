@@ -67,9 +67,13 @@ export default async function GroupPage({ params }: { params: { slug: string } }
     };
   });
 
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <div className="print:hidden">
+      <div className="print:hidden space-y-4">
+        <a href="/" className="text-blue-600 hover:underline">ホームに戻る</a>
         <GroupScreenClient
           initialGroup={group}
           initialDevices={devices}
@@ -81,6 +85,22 @@ export default async function GroupPage({ params }: { params: { slug: string } }
           <PrintButton className="btn-primary" />
         </div>
         <CalendarWithBars weeks={weeks} month={month} spans={spans} />
+        <div className="hidden print:block mt-4">
+          <h2 className="text-xl font-semibold mb-2">予約一覧</h2>
+          <ul className="list-disc pl-5 space-y-1">
+            {reservations.map((r: any) => {
+              const dev = group.devices.find((d: any) => d.id === r.deviceId);
+              const s = fmt(new Date(r.start));
+              const e = fmt(new Date(r.end));
+              return (
+                <li key={r.id}>{`機器: ${dev?.name ?? r.deviceId} / 予約者: ${r.userName || r.user} / 時間: ${s} - ${e}`}</li>
+              );
+            })}
+          </ul>
+          <div className="mt-4">
+            <img src={`/api/mock/groups/${group.slug}/qr`} alt="QRコード" className="w-32 h-32" />
+          </div>
+        </div>
       </div>
     </div>
   );
