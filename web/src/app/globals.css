@@ -18,8 +18,8 @@ html, body { height: 100%; }
 }
 
 /* 任意: 簡易ユーティリティ */
-.input { @apply border rounded-md px-3 py-2 w-full focus:border-primary focus:ring-1 focus:ring-primary; }
-.btn-primary { @apply inline-flex items-center justify-center rounded-md px-4 py-2 bg-primary text-white hover:bg-primary-dark; }
+.input { @apply border rounded-md px-3 py-2 w-full focus:border-primary focus:ring-1 focus:ring-primary transition shadow-sm; }
+.btn-primary { @apply inline-flex items-center justify-center rounded-md px-4 py-2 bg-primary text-white hover:bg-primary-dark transition; }
 .btn-danger { @apply inline-flex items-center justify-center rounded-md px-4 py-2 bg-red-600 text-white hover:bg-red-700; }
 
 @media print {
