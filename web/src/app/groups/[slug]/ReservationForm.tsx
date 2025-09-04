@@ -8,15 +8,19 @@ export default function ReservationForm({
   groupSlug,
   devices,
   defaultReserver,
+  defaultStart = '',
+  defaultEnd = '',
 }: {
   groupSlug: string;
   devices: any[];
   defaultReserver?: string;
+  defaultStart?: string;
+  defaultEnd?: string;
 }) {
   const [deviceId, setDeviceId] = useState('');
   const reserver = defaultReserver || '';
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
+  const [start, setStart] = useState(defaultStart);
+  const [end, setEnd] = useState(defaultEnd);
   const [title, setTitle] = useState('');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [addingReservation, setAddingReservation] = useState(false);
@@ -28,6 +32,14 @@ export default function ReservationForm({
     const preselect = searchParams.get('device');
     if (preselect) setDeviceId(preselect);
   }, [searchParams]);
+
+  useEffect(() => {
+    setStart(defaultStart);
+  }, [defaultStart]);
+
+  useEffect(() => {
+    setEnd(defaultEnd);
+  }, [defaultEnd]);
 
   async function handleAddReservation(e: React.FormEvent) {
     e.preventDefault();

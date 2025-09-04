@@ -145,6 +145,9 @@ export default async function GroupPage({
           month={month}
           spans={spans}
           listItems={listItems}
+          groupSlug={group.slug}
+          devices={devices}
+          defaultReserver={me?.email}
         />
         <Image
           src={`/api/mock/groups/${group.slug}/qr`}
