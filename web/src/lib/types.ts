@@ -28,4 +28,8 @@ export type Group = {
   members: Array<{ id: string; name: string; role: 'admin' | 'member' }>;
   devices: Device[];
   reservations: Reservation[];
+  reserveFrom?: string;
+  reserveTo?: string;
+  memo?: string;
+  host?: string;
 };

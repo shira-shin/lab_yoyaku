@@ -24,6 +24,12 @@ export default function GroupScreenClient({
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [addingReservation, setAddingReservation] = useState(false);
 
+  const [reserveFrom, setReserveFrom] = useState(group.reserveFrom || '');
+  const [reserveTo, setReserveTo] = useState(group.reserveTo || '');
+  const [memo, setMemo] = useState(group.memo || '');
+  const [savingSettings, setSavingSettings] = useState(false);
+  const isHost = defaultReserver && group.host === defaultReserver;
+
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -93,6 +99,44 @@ export default function GroupScreenClient({
     }
   }
 
+  async function handleSaveSettings(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingSettings(true);
+    try {
+      const r = await fetch(`/api/mock/groups/${group.slug}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          reserveFrom: reserveFrom || undefined,
+          reserveTo: reserveTo || undefined,
+          memo: memo || undefined,
+        }),
+      });
+      if (!r.ok) throw new Error('failed');
+      router.refresh();
+    } catch {
+      alert('保存に失敗しました');
+    } finally {
+      setSavingSettings(false);
+    }
+  }
+
+  function handleLineShare() {
+    const url = window.location.href;
+    window.open(
+      `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}`,
+      '_blank'
+    );
+  }
+
+  function handleMailShare() {
+    const url = window.location.href;
+    const subject = `${group.name}の共有`;
+    window.open(
+      `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(url)}`
+    );
+  }
+
   async function handleDeleteDevice(id: string) {
     if (!confirm('この機器を削除しますか？')) return;
     setRemovingId(id);
@@ -114,9 +158,76 @@ export default function GroupScreenClient({
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <header className="space-y-1">
-        <h1 className="text-3xl font-bold">{group.name}</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">{group.name}</h1>
+          <div className="flex gap-2">
+            <button
+              onClick={handleLineShare}
+              className="px-2 py-1 border rounded"
+            >
+              LINEで共有
+            </button>
+            <button
+              onClick={handleMailShare}
+              className="px-2 py-1 border rounded"
+            >
+              メールで共有
+            </button>
+          </div>
+        </div>
         <p className="text-sm text-neutral-500">slug: {group.slug}</p>
+        {group.host && (
+          <p className="text-sm text-neutral-500">ホスト: {group.host}</p>
+        )}
       </header>
+
+      {isHost ? (
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">グループ設定</h2>
+          <form onSubmit={handleSaveSettings} className="space-y-2 max-w-md">
+            <label className="block">
+              <div className="mb-1">予約開始（任意）</div>
+              <input
+                type="datetime-local"
+                value={reserveFrom}
+                onChange={(e) => setReserveFrom(e.target.value)}
+                className="input"
+              />
+            </label>
+            <label className="block">
+              <div className="mb-1">予約終了（任意）</div>
+              <input
+                type="datetime-local"
+                value={reserveTo}
+                onChange={(e) => setReserveTo(e.target.value)}
+                className="input"
+              />
+            </label>
+            <label className="block">
+              <div className="mb-1">メモ（任意）</div>
+              <textarea
+                value={memo}
+                onChange={(e) => setMemo(e.target.value)}
+                className="input"
+              />
+            </label>
+            <button type="submit" disabled={savingSettings} className="btn-primary">
+              保存
+            </button>
+          </form>
+        </section>
+      ) : (
+        (group.reserveFrom || group.reserveTo || group.memo) && (
+          <section className="space-y-2">
+            <h2 className="text-xl font-semibold">グループ情報</h2>
+            {group.reserveFrom && <div>予約開始: {group.reserveFrom}</div>}
+            {group.reserveTo && <div>予約終了: {group.reserveTo}</div>}
+            {group.memo && (
+              <div className="whitespace-pre-wrap">{group.memo}</div>
+            )}
+          </section>
+        )
+      )}
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">機器</h2>
