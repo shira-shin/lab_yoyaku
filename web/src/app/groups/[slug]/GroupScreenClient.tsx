@@ -52,10 +52,11 @@ export default function GroupScreenClient({
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <header className="space-y-1">
+      <header className="space-y-2">
+        <a href="/" className="text-sm text-primary hover:underline">&larr; ホームへ戻る</a>
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">{group.name}</h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
             <button
               onClick={handleLineShare}
               className="px-2 py-1 border rounded"
