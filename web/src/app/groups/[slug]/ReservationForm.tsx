@@ -127,7 +127,7 @@ export default function ReservationForm({
           required
         />
       </div>
-      <div className="flex-1">
+      <div className="flex-1 min-w-[8rem] focus-within:min-w-[16rem] transition-[min-width] duration-300">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
