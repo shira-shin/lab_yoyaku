@@ -1,11 +1,11 @@
 import { listDevices } from '@/lib/server-api';
 import { notFound } from 'next/navigation';
 import GroupScreenClient from './GroupScreenClient';
+import ReservationForm from './ReservationForm';
 import { readUserFromCookie } from '@/lib/auth';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 import { getBaseUrl } from '@/lib/config';
 import PrintButton from '@/components/PrintButton';
-import BackButton from '@/components/BackButton';
 import ReservationList, { ReservationItem } from '@/components/ReservationList';
 import Image from 'next/image';
 function buildMonth(base = new Date()) {
@@ -103,21 +103,23 @@ export default async function GroupPage({
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
-      <div className="print:hidden space-y-4">
-        <div className="flex gap-4">
-          <BackButton className="text-blue-600 hover:underline" />
-          <a href="/" className="text-blue-600 hover:underline">ホーム</a>
-          <a href="/groups" className="text-blue-600 hover:underline">グループ一覧</a>
-        </div>
+    <div className="mx-auto max-w-6xl px-6 py-8 space-y-8">
+      <div className="print:hidden">
         <GroupScreenClient
           initialGroup={group}
           initialDevices={devices}
           defaultReserver={me?.email}
         />
       </div>
-      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm relative">
-        <div className="flex justify-between items-center mb-2">
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm relative space-y-4">
+        <div className="print:hidden">
+          <ReservationForm
+            groupSlug={group.slug}
+            devices={devices}
+            defaultReserver={me?.email}
+          />
+        </div>
+        <div className="flex justify-between items-center">
           <a
             href={`?month=${toParam(prev)}`}
             className="px-2 py-1 rounded border print:hidden"
