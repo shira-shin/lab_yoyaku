@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Spinner from '@/components/ui/Spinner';
 
-const PURPOSE_SUGGESTIONS = ['PCR', '電気泳動', '解析', '培養', 'その他'];
-
 export default function ReservationForm({
   groupSlug,
   devices,
@@ -119,17 +117,11 @@ export default function ReservationForm({
       </div>
       <div className="flex-1">
         <input
-          list="purpose-options"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="用途（任意）"
           className="input"
         />
-        <datalist id="purpose-options">
-          {PURPOSE_SUGGESTIONS.map((p) => (
-            <option key={p} value={p} />
-          ))}
-        </datalist>
       </div>
       <button
         type="submit"
