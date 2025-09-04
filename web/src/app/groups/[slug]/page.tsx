@@ -7,6 +7,7 @@ import { getBaseUrl } from '@/lib/config';
 import PrintButton from '@/components/PrintButton';
 import BackButton from '@/components/BackButton';
 import ReservationList, { ReservationItem } from '@/components/ReservationList';
+import Image from 'next/image';
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
   const first = new Date(y, m, 1);
@@ -141,7 +142,7 @@ export default async function GroupPage({
           <h2 className="text-xl font-semibold mb-2">予約一覧</h2>
           <ReservationList items={listItems} />
         </div>
-        <img
+        <Image
           src={`/api/mock/groups/${group.slug}/qr`}
           alt="QRコード"
           width={128}

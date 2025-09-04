@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 import { getBaseUrl } from '@/lib/config';
 import PrintButton from '@/components/PrintButton';
+import Image from 'next/image';
 import BackButton from '@/components/BackButton';
 import ReservationList, { ReservationItem } from '@/components/ReservationList';
 
@@ -110,7 +111,7 @@ export default async function DevicePage({
           <h2 className="text-xl font-semibold mb-2">予約一覧</h2>
           <ReservationList items={listItems} />
         </div>
-        <img
+        <Image
           src={`/api/mock/devices/${slug}/qr`}
           alt="QRコード"
           width={128}

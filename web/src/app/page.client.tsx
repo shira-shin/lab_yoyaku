@@ -57,6 +57,7 @@ export default function DashboardClient({ initialItems, initialSpans }: { initia
       </section>
 
       <section className={card}>
+        <h2 className="font-medium mb-2">予約カレンダー</h2>
         <div className="flex items-center justify-between mb-2">
           <button className="px-2 py-1 rounded border" onClick={() => setAnchor((a) => addMonths(a, -1))}>
             ‹

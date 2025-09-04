@@ -63,32 +63,45 @@ export default function NewGroupPage() {
             required
           />
         </label>
-        <label className="block">
-          <div className="mb-1">予約開始（任意）</div>
-          <input
-            type="datetime-local"
-            value={reserveFrom}
-            onChange={(e) => setReserveFrom(e.target.value)}
-            className="w-full rounded-xl border p-3"
-          />
-        </label>
-        <label className="block">
-          <div className="mb-1">予約終了（任意）</div>
-          <input
-            type="datetime-local"
-            value={reserveTo}
-            onChange={(e) => setReserveTo(e.target.value)}
-            className="w-full rounded-xl border p-3"
-          />
-        </label>
-        <label className="block">
-          <div className="mb-1">メモ（任意）</div>
-          <textarea
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            className="w-full rounded-xl border p-3"
-          />
-        </label>
+        <div className="pt-2">
+          <div className="text-lg font-semibold mb-2">詳細設定</div>
+          <p className="text-sm text-muted mb-4">
+            予約期間の制限などについては
+            <a
+              href="/usage/reservation-settings"
+              className="text-blue-600 hover:underline ml-1"
+            >
+              こちら
+            </a>
+            を参照してください。
+          </p>
+          <label className="block">
+            <div className="mb-1">予約開始（任意）</div>
+            <input
+              type="datetime-local"
+              value={reserveFrom}
+              onChange={(e) => setReserveFrom(e.target.value)}
+              className="w-full rounded-xl border p-3"
+            />
+          </label>
+          <label className="block">
+            <div className="mb-1">予約終了（任意）</div>
+            <input
+              type="datetime-local"
+              value={reserveTo}
+              onChange={(e) => setReserveTo(e.target.value)}
+              className="w-full rounded-xl border p-3"
+            />
+          </label>
+          <label className="block">
+            <div className="mb-1">メモ（任意）</div>
+            <textarea
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              className="w-full rounded-xl border p-3"
+            />
+          </label>
+        </div>
         <button
           type="submit"
           disabled={pending}
