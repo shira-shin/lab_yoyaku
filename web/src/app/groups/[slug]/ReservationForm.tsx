@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Spinner from '@/components/ui/Spinner';
 
 export default function ReservationForm({
   groupSlug,
@@ -82,12 +83,12 @@ export default function ReservationForm({
   return (
     <form
       onSubmit={handleAddReservation}
-      className="grid grid-cols-1 md:grid-cols-5 gap-3 max-w-5xl"
+      className="flex flex-col gap-3 md:flex-row md:items-end max-w-5xl"
     >
       <select
         value={deviceId}
         onChange={(e) => setDeviceId(e.target.value)}
-        className="input"
+        className="input md:w-48"
         required
       >
         <option value="">機器を選択</option>
@@ -97,35 +98,39 @@ export default function ReservationForm({
           </option>
         ))}
       </select>
-      <input
-        type="datetime-local"
-        value={start}
-        onChange={(e) => setStart(e.target.value)}
-        className="input"
-        required
-      />
-      <input
-        type="datetime-local"
-        value={end}
-        onChange={(e) => setEnd(e.target.value)}
-        className="input"
-        required
-      />
+      <div className="flex flex-col sm:flex-row gap-2 flex-1">
+        <input
+          type="datetime-local"
+          value={start}
+          onChange={(e) => setStart(e.target.value)}
+          className="input flex-1"
+          required
+        />
+        <span className="hidden sm:flex items-center">〜</span>
+        <input
+          type="datetime-local"
+          value={end}
+          onChange={(e) => setEnd(e.target.value)}
+          className="input flex-1"
+          required
+        />
+      </div>
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="用途（任意）"
-        className="input md:col-span-2"
+        className="input flex-1"
       />
       <button
         type="submit"
         disabled={addingReservation}
-        className="btn-primary md:col-span-5 md:w-40"
+        className="btn-primary md:w-40 flex items-center justify-center gap-2"
       >
+        {addingReservation && <Spinner size={16} />}
         予約追加
       </button>
       {errorMsg && (
-        <div className="text-sm text-red-600 md:col-span-5 whitespace-pre-wrap">
+        <div className="text-sm text-red-600 whitespace-pre-wrap w-full">
           {errorMsg}
         </div>
       )}

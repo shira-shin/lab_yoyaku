@@ -28,13 +28,19 @@ function labelForDay(cell: Date, s: Date, e: Date) {
 }
 
 export default function CalendarWithBars({
-  weeks, month, spans,
+  weeks,
+  month,
+  spans,
+  onSelectDate,
+  showModal = true,
 }:{
   weeks: Date[][];
   month: number;
   spans: Span[];
+  onSelectDate?: (d: Date) => void;
+  showModal?: boolean;
 }) {
-  const [sel, setSel] = useState<Date|null>(null);
+  const [sel, setSel] = useState<Date | null>(null);
 
   const map = useMemo(()=>{
     const m = new Map<string, Span[]>();
@@ -57,14 +63,23 @@ export default function CalendarWithBars({
             <button
               key={i}
               className={clsx(
-                'h-16 rounded-lg border relative text-left px-1',
+                'h-16 rounded-lg border relative text-left px-1 transition-colors',
                 isSun && 'bg-red-50',
                 isSat && 'bg-blue-50',
+                todays.length > 0 && 'bg-primary/5',
                 isToday && 'border-2 border-primary'
               )}
-              onClick={()=>setSel(d)}
+              onClick={() => {
+                setSel(d);
+                onSelectDate?.(d);
+              }}
             >
               <div className="absolute left-1 top-1 text-xs">{d.getDate()}</div>
+              {todays.length > 0 && (
+                <div className="absolute top-1 right-1 text-[10px] bg-primary text-white rounded-full h-4 w-4 flex items-center justify-center">
+                  {todays.length}
+                </div>
+              )}
               <div className="absolute left-1 right-1 bottom-2 space-y-1">
                 {todays.slice(0,2).map((s)=>(
                   <div
@@ -87,7 +102,7 @@ export default function CalendarWithBars({
         })}
       </div>
 
-      {sel && (
+      {showModal && sel && (
         <DayModal
           date={sel}
           items={(map.get(sel.toDateString()) ?? []).sort((a,b)=>a.start.getTime()-b.start.getTime())}

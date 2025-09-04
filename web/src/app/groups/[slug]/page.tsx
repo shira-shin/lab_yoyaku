@@ -3,10 +3,11 @@ import { notFound } from 'next/navigation';
 import GroupScreenClient from './GroupScreenClient';
 import ReservationForm from './ReservationForm';
 import { readUserFromCookie } from '@/lib/auth';
-import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
+import type { Span } from '@/components/CalendarWithBars';
 import { getBaseUrl } from '@/lib/config';
 import PrintButton from '@/components/PrintButton';
-import ReservationList, { ReservationItem } from '@/components/ReservationList';
+import type { ReservationItem } from '@/components/ReservationList';
+import CalendarReservationSection from './CalendarReservationSection';
 import Image from 'next/image';
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
@@ -139,11 +140,12 @@ export default async function GroupPage({
             </div>
           </div>
         </div>
-        <CalendarWithBars weeks={weeks} month={month} spans={spans} />
-        <div className="mt-4">
-          <h2 className="text-xl font-semibold mb-2">予約一覧</h2>
-          <ReservationList items={listItems} />
-        </div>
+        <CalendarReservationSection
+          weeks={weeks}
+          month={month}
+          spans={spans}
+          listItems={listItems}
+        />
         <Image
           src={`/api/mock/groups/${group.slug}/qr`}
           alt="QRコード"
