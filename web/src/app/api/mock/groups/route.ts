@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     slug: s,
     name,
     password: password || undefined,
-    members: [],
+    members: me?.email ? [me.email] : [],
     devices: [],
     reservations: [],
     reserveFrom: reserveFrom || undefined,

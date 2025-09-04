@@ -23,11 +23,6 @@ export default function GroupScreenClient({
   const [title, setTitle] = useState('');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [addingReservation, setAddingReservation] = useState(false);
-
-  const [reserveFrom, setReserveFrom] = useState(group.reserveFrom || '');
-  const [reserveTo, setReserveTo] = useState(group.reserveTo || '');
-  const [memo, setMemo] = useState(group.memo || '');
-  const [savingSettings, setSavingSettings] = useState(false);
   const isHost = defaultReserver && group.host === defaultReserver;
 
   const searchParams = useSearchParams();
@@ -99,28 +94,6 @@ export default function GroupScreenClient({
     }
   }
 
-  async function handleSaveSettings(e: React.FormEvent) {
-    e.preventDefault();
-    setSavingSettings(true);
-    try {
-      const r = await fetch(`/api/mock/groups/${group.slug}`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          reserveFrom: reserveFrom || undefined,
-          reserveTo: reserveTo || undefined,
-          memo: memo || undefined,
-        }),
-      });
-      if (!r.ok) throw new Error('failed');
-      router.refresh();
-    } catch {
-      alert('保存に失敗しました');
-    } finally {
-      setSavingSettings(false);
-    }
-  }
-
   function handleLineShare() {
     const url = window.location.href;
     window.open(
@@ -181,52 +154,25 @@ export default function GroupScreenClient({
         )}
       </header>
 
-      {isHost ? (
-        <section className="space-y-3">
-          <h2 className="text-xl font-semibold">グループ設定</h2>
-          <form onSubmit={handleSaveSettings} className="space-y-2 max-w-md">
-            <label className="block">
-              <div className="mb-1">予約開始（任意）</div>
-              <input
-                type="datetime-local"
-                value={reserveFrom}
-                onChange={(e) => setReserveFrom(e.target.value)}
-                className="input"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-1">予約終了（任意）</div>
-              <input
-                type="datetime-local"
-                value={reserveTo}
-                onChange={(e) => setReserveTo(e.target.value)}
-                className="input"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-1">メモ（任意）</div>
-              <textarea
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-                className="input"
-              />
-            </label>
-            <button type="submit" disabled={savingSettings} className="btn-primary">
-              保存
-            </button>
-          </form>
+      {(group.reserveFrom || group.reserveTo || group.memo) && (
+        <section className="space-y-2">
+          <h2 className="text-xl font-semibold">グループ情報</h2>
+          {group.reserveFrom && <div>予約開始: {group.reserveFrom}</div>}
+          {group.reserveTo && <div>予約終了: {group.reserveTo}</div>}
+          {group.memo && (
+            <div className="whitespace-pre-wrap">{group.memo}</div>
+          )}
         </section>
-      ) : (
-        (group.reserveFrom || group.reserveTo || group.memo) && (
-          <section className="space-y-2">
-            <h2 className="text-xl font-semibold">グループ情報</h2>
-            {group.reserveFrom && <div>予約開始: {group.reserveFrom}</div>}
-            {group.reserveTo && <div>予約終了: {group.reserveTo}</div>}
-            {group.memo && (
-              <div className="whitespace-pre-wrap">{group.memo}</div>
-            )}
-          </section>
-        )
+      )}
+      {isHost && (
+        <div>
+          <a
+            href={`/groups/${group.slug}/settings`}
+            className="btn-primary inline-block"
+          >
+            設定を変更
+          </a>
+        </div>
       )}
 
       <section className="space-y-3">
