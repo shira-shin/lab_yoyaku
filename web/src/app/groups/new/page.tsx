@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 export default function NewGroupPage() {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
+  const [reserveFrom, setReserveFrom] = useState('');
+  const [reserveTo, setReserveTo] = useState('');
+  const [memo, setMemo] = useState('');
   const [pending, setPending] = useState(false);
   const router = useRouter();
 
@@ -16,7 +19,13 @@ export default function NewGroupPage() {
       const res = await fetch('/api/mock/groups', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), password }),
+        body: JSON.stringify({
+          name: name.trim(),
+          password,
+          reserveFrom: reserveFrom || undefined,
+          reserveTo: reserveTo || undefined,
+          memo: memo || undefined,
+        }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
@@ -52,6 +61,32 @@ export default function NewGroupPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-xl border p-3"
             required
+          />
+        </label>
+        <label className="block">
+          <div className="mb-1">予約開始（任意）</div>
+          <input
+            type="datetime-local"
+            value={reserveFrom}
+            onChange={(e) => setReserveFrom(e.target.value)}
+            className="w-full rounded-xl border p-3"
+          />
+        </label>
+        <label className="block">
+          <div className="mb-1">予約終了（任意）</div>
+          <input
+            type="datetime-local"
+            value={reserveTo}
+            onChange={(e) => setReserveTo(e.target.value)}
+            className="w-full rounded-xl border p-3"
+          />
+        </label>
+        <label className="block">
+          <div className="mb-1">メモ（任意）</div>
+          <textarea
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            className="w-full rounded-xl border p-3"
           />
         </label>
         <button

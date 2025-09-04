@@ -8,8 +8,16 @@ export type Reservation = {
   reminderMinutes?: number;
 };
 export type Group = {
-  slug: string; name: string; password?: string;
-  members: MemberId[]; devices: Device[]; reservations: Reservation[];
+  slug: string;
+  name: string;
+  password?: string;
+  members: MemberId[];
+  devices: Device[];
+  reservations: Reservation[];
+  reserveFrom?: string;
+  reserveTo?: string;
+  memo?: string;
+  host?: MemberId;
 };
 
 /** ← 追加：ユーザー */

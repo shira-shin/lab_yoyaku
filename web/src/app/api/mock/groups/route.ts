@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { loadDB, saveDB } from '@/lib/mockdb';
 import { makeSlug } from '@/lib/slug';
+import { readUserFromCookie } from '@/lib/auth';
 
 export async function GET() {
   const db = loadDB();
@@ -8,7 +9,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { name, password, slug } = await req.json();
+  const { name, password, slug, reserveFrom, reserveTo, memo } = await req.json();
   if (!name) {
     return NextResponse.json({ ok: false, error: 'invalid request' }, { status: 400 });
   }
@@ -17,6 +18,9 @@ export async function POST(req: Request) {
   if (db.groups.find((g: any) => g.slug === s)) {
     return NextResponse.json({ ok: false, error: 'slug already exists' }, { status: 409 });
   }
+
+  const me = await readUserFromCookie().catch(() => null);
+
   const g = {
     slug: s,
     name,
@@ -24,6 +28,10 @@ export async function POST(req: Request) {
     members: [],
     devices: [],
     reservations: [],
+    reserveFrom: reserveFrom || undefined,
+    reserveTo: reserveTo || undefined,
+    memo: memo || undefined,
+    host: me?.email,
   } as any;
   db.groups.push(g);
   saveDB(db);
