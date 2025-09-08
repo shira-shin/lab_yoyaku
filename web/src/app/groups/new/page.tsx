@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { makeSlug } from '@/lib/slug';
 import { useRouter } from 'next/navigation';
 
 export default function NewGroupPage() {
@@ -16,15 +17,12 @@ export default function NewGroupPage() {
     e.preventDefault();
     setPending(true);
     try {
-      const res = await fetch('/api/mock/groups', {
+      const res = await fetch('/api/me/groups', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
-          password,
-          reserveFrom: reserveFrom || undefined,
-          reserveTo: reserveTo || undefined,
-          memo: memo || undefined,
+          slug: makeSlug(name),
         }),
       });
       if (!res.ok) {
@@ -32,7 +30,7 @@ export default function NewGroupPage() {
         alert(j?.error || '作成に失敗しました');
         return;
       }
-      const { data } = await res.json();
+      const data = await res.json();
       router.push(`/groups/${data.slug}`);
       router.refresh();
     } finally {

@@ -29,8 +29,7 @@ export default async function Home() {
   try {
     const gRes = await fetch(`${base}/api/me/groups`, { cache: 'no-store' });
     if (gRes.ok) {
-      const gJson = await gRes.json();
-      myGroups = gJson.data ?? [];
+      myGroups = await gRes.json();
     }
   } catch (_) {
     // ignore
