@@ -11,9 +11,9 @@ export function createApi(getBaseURL: () => string) {
   }
 
   return {
-    listGroups: () => api('/api/mock/groups'),
+    listGroups: () => api('/api/me/groups'),
     createGroup: (body: any) =>
-      api('/api/mock/groups', { method: 'POST', body: JSON.stringify(body) }),
+      api('/api/me/groups', { method: 'POST', body: JSON.stringify(body) }),
     getGroup: (slug: string) => api(`/api/mock/groups/${slug}`),
     joinGroup: (payload: any) =>
       api('/api/mock/groups/join', {
