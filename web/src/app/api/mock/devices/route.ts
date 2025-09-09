@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { loadDB, saveDB, uid } from '@/lib/mockdb';
 import { makeSlug } from '@/lib/slug';
 
+export const runtime = 'nodejs';
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const slug = searchParams.get('slug');

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { loadDB, saveDB } from '@/lib/mockdb';
 import { readUserFromCookie } from '@/lib/auth';
 
+export const runtime = 'nodejs';
+
 export async function POST(req: Request) {
   const me = await readUserFromCookie();
   if (!me) return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });

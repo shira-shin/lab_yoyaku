@@ -13,6 +13,7 @@ __pycache__/
 .env
 .env.*
 !web/.env.local
+!web/.env.example
 
 # Misc
 .DS_Store

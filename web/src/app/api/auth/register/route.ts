@@ -3,6 +3,8 @@ import { hashPassword, signToken, setAuthCookie } from '@/lib/auth';
 import { loadUsers, saveUser } from '@/lib/db';
 import { isEmail, uid, UserRecord } from '@/lib/mockdb';
 
+export const runtime = 'nodejs';
+
 export async function POST(req: Request) {
   const { email, password, name } = await req.json().catch(() => ({}));
   if (!email || !password) {
