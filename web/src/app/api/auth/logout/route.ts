@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { clearAuthCookie } from '@/lib/auth';
 
+export const runtime = 'nodejs';
+
 async function doLogout(request: Request) {
   await clearAuthCookie();
   // ブラウザ遷移ならログインへ

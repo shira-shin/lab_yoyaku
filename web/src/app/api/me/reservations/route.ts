@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { readUserFromCookie } from '@/lib/auth';
 import { loadDB } from '@/lib/mockdb';
 
+export const runtime = 'nodejs';
+
 const norm = (v?: string) => (v ?? '').trim().toLowerCase();
 
 export async function GET() {

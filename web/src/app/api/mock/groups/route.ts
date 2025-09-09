@@ -3,6 +3,8 @@ import { loadDB, saveDB } from '@/lib/mockdb';
 import { makeSlug } from '@/lib/slug';
 import { readUserFromCookie } from '@/lib/auth';
 
+export const runtime = 'nodejs';
+
 export async function GET() {
   const db = loadDB();
   return NextResponse.json({ ok: true, data: db.groups });
