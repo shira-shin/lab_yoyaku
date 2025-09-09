@@ -1,32 +1,104 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Open+Sans:wght@400;600;700&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ------ shadcn 互換の CSS 変数（好みで値を調整可） ------ */
+:root{
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
 
-html, body { height: 100%; }
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
 
-@layer base {
-  body { @apply bg-background text-gray-900 font-sans; }
-  a { @apply text-primary; outline: none; }
-  a:hover { @apply text-primary-dark; }
-  a:focus-visible { box-shadow: 0 0 0 3px rgba(74,144,226,.5); border-radius: .5rem; }
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+
+  --ring: 215 20.2% 65.1%;
+  --radius: 0.5rem;
 }
 
-.app-container {
-  @apply max-w-[1040px] mx-auto px-4 sm:px-6;
+.dark{
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+
+  --ring: 217.2 32.6% 17.5%;
 }
 
-/* 任意: 簡易ユーティリティ */
-.input { @apply border rounded-md px-3 py-2 w-full focus:border-primary focus:ring-1 focus:ring-primary transition shadow-sm; }
-.btn-primary { @apply inline-flex items-center justify-center rounded-md px-4 py-2 bg-primary text-white hover:bg-primary-dark transition; }
-.btn-danger { @apply inline-flex items-center justify-center rounded-md px-4 py-2 bg-red-600 text-white hover:bg-red-700; }
+/* ------ v4 の @theme で Tailwind トークン化（←これが肝） ------ */
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
 
-@media print {
-  @page { size: A4; margin: 20mm; }
-  header { display: none; }
-  .max-w-6xl,
-  .max-w-4xl,
-  .max-w-3xl { max-width: 100% !important; }
-  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --radius: var(--radius);
 }
+
+/* ベース適用（border / 背景 / 文字色） */
+@layer base{
+  *{ @apply border-border; }
+  body{ @apply bg-background text-foreground; }
+}
+
