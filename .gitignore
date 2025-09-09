@@ -18,3 +18,5 @@ __pycache__/
 # Misc
 .DS_Store
 *.tsbuildinfo
+
+**/*.egg-info/
