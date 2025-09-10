@@ -1,5 +1,6 @@
-/* 入口は v4 推奨の1行 */
 @import "tailwindcss";
+
+/* 入口は v4 推奨の1行 */
 
 /* shadcn 互換のトークン。bg-background / text-foreground 等を使う画面のために必要 */
 :root{
