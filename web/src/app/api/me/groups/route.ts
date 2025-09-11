@@ -28,9 +28,12 @@ export async function POST(req: Request) {
     `
 
     return NextResponse.json({ group: rows[0] }, { status: 201 })
-  } catch (e) {
+  } catch (e: any) {
     console.error('create group failed', e)
-    return NextResponse.json({ error: 'create group failed' }, { status: 500 })
+    return NextResponse.json(
+      { error: e?.message ?? 'create group failed' },
+      { status: e?.status ?? 500 }
+    )
   }
 }
 
@@ -41,8 +44,11 @@ export async function GET() {
       select: { id: true, name: true, slug: true, createdAt: true }
     })
     return NextResponse.json(groups, { status: 200 })
-  } catch (e) {
+  } catch (e: any) {
     console.error('list groups failed', e)
-    return NextResponse.json({ error: 'list groups failed' }, { status: 500 })
+    return NextResponse.json(
+      { error: e?.message ?? 'list groups failed' },
+      { status: e?.status ?? 500 }
+    )
   }
 }

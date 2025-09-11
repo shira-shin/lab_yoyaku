@@ -53,7 +53,7 @@ export default function GroupScreenClient({
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <header className="space-y-2">
-        <a href="/" className="text-sm text-primary hover:underline">&larr; ホームへ戻る</a>
+        <a href="/" className="text-sm text-indigo-600 hover:underline">&larr; ホームへ戻る</a>
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">{group.name}</h1>
           <div className="flex gap-2 flex-wrap justify-end">
@@ -72,7 +72,7 @@ export default function GroupScreenClient({
             {isHost && (
               <a
                 href={`/groups/${group.slug}/settings`}
-                className="btn-primary"
+                className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2"
               >
                 設定を変更
               </a>
@@ -101,7 +101,7 @@ export default function GroupScreenClient({
           <h2 className="text-xl font-semibold">機器</h2>
           <a
             href={`/devices/new?group=${encodeURIComponent(group.slug)}`}
-            className="btn-primary"
+            className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2"
           >
             機器を追加
           </a>
@@ -126,13 +126,13 @@ export default function GroupScreenClient({
                   href={`/api/mock/devices/${d.slug}/qr`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-primary flex-1"
+                  className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2 flex-1"
                 >
                   QRコード
                 </a>
                 <button
                   onClick={() => handleDeleteDevice(d.id)}
-                  className="btn-danger flex-1"
+                  className="rounded-xl bg-rose-600 text-white hover:bg-rose-500 px-4 py-2 flex-1"
                   disabled={removingId === d.id}
                 >
                   削除

@@ -68,7 +68,7 @@ export default function NewDevicePage() {
         <button
           type="submit"
           disabled={loading}
-          className="btn-primary"
+          className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2"
         >
           登録
         </button>

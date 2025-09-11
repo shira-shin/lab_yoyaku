@@ -3,7 +3,7 @@ import { readUserFromCookie } from '@/lib/auth';
 export default async function Header() {
   const me = await readUserFromCookie();
   return (
-    <header className="bg-primary text-white shadow">
+    <header className="bg-indigo-600 text-white shadow">
       <div className="mx-auto max-w-6xl px-6 h-12 flex items-center justify-between">
         <a href="/" className="font-semibold tracking-tight">Lab Yoyaku</a>
         <nav className="flex items-center gap-4 text-sm">

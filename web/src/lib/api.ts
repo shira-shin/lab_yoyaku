@@ -2,7 +2,9 @@
 import { createApi } from './api-core';
 
 function getBaseURL() {
-  return process.env.NEXT_PUBLIC_API_BASE || '';
+  if (process.env.NEXT_PUBLIC_API_BASE) return process.env.NEXT_PUBLIC_API_BASE;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return '';
 }
 
 export async function apiGet(path: string, init?: RequestInit) {

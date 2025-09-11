@@ -72,7 +72,7 @@ export default function GroupJoinPage() {
           </p>
         )}
         <button
-          className="rounded-xl bg-primary hover:bg-primary-dark text-white px-5 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-5 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={loading || !group || !password}
           aria-disabled={loading || !group || !password}
         >
