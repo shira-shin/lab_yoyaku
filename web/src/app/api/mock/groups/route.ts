@@ -5,10 +5,18 @@ import { readUserFromCookie } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const url = new URL(req.url);
+    const mine = url.searchParams.get('mine') === '1';
     const db = loadDB();
-    return NextResponse.json({ ok: true, data: db.groups });
+    let groups = db.groups as any[];
+    if (mine) {
+      const me = await readUserFromCookie().catch(() => null);
+      if (!me?.email) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      groups = groups.filter((g) => Array.isArray(g.members) && g.members.some((m: any) => m === me.email));
+    }
+    return NextResponse.json({ groups });
   } catch (e: any) {
     console.error('list groups failed', e);
     return NextResponse.json(
@@ -37,18 +45,24 @@ export async function POST(req: Request) {
     }
 
     const me = await readUserFromCookie().catch(() => null);
+    if (!me?.email) {
+      return NextResponse.json(
+        { error: 'unauthorized' },
+        { status: 401 }
+      );
+    }
 
     const g = {
       slug: s,
       name,
       password: password || undefined,
-      members: me?.email ? [me.email] : [],
+      members: [me.email],
       devices: [],
       reservations: [],
       reserveFrom: reserveFrom || undefined,
       reserveTo: reserveTo || undefined,
       memo: memo || undefined,
-      host: me?.email,
+      host: me.email,
     } as any;
     db.groups.push(g);
     saveDB(db);

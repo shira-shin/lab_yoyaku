@@ -5,7 +5,7 @@ import { serverFetch } from '@/lib/server-fetch';
 export const dynamic = 'force-dynamic';
 
 export default async function GroupsPage() {
-  const res = await serverFetch('/api/mock/groups');
+  const res = await serverFetch('/api/mock/groups?mine=1');
   if (res.status === 401) redirect('/login?next=/groups');
   if (!res.ok) throw new Error(`failed: ${res.status}`);
   const data = await res.json();
@@ -15,8 +15,8 @@ export default async function GroupsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">グループ一覧</h1>
         <div className="flex gap-2">
-          <a href="/groups/new" className="rounded-lg border px-3 py-2 bg-indigo-600 text-white hover:bg-indigo-500">グループをつくる</a>
-          <a href="/" className="rounded-lg border px-3 py-2 hover:bg-gray-100">ホームに戻る</a>
+          <a href="/groups/new" className="btn btn-primary">グループをつくる</a>
+          <a href="/" className="btn btn-secondary">ホームに戻る</a>
         </div>
       </div>
       <ul className="list-disc pl-5 space-y-1">

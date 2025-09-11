@@ -15,9 +15,8 @@ export async function serverFetch(path: string, init: RequestInit = {}) {
   const cookie = headers().get('cookie') ?? '';
   const url = absoluteUrl(path);
   return fetch(url, {
-    cache: 'no-store',
-    next: { revalidate: 0 }, // キャッシュ無効化
+    cache: 'no-store', // 再検証オプションなしで警告を回避
     ...init,
-    headers: { ...(init.headers || {}), cookie }, // ← これが超重要
+    headers: { ...(init.headers || {}), cookie }, // Cookieで認証を引き継ぐ
   });
 }

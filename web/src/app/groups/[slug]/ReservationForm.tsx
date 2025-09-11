@@ -138,7 +138,7 @@ export default function ReservationForm({
       <button
         type="submit"
         disabled={addingReservation}
-        className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2 md:w-40 flex items-center justify-center gap-2"
+        className="btn btn-primary md:w-40 flex items-center justify-center gap-2"
       >
         {addingReservation && <Spinner size={16} />}
         予約追加

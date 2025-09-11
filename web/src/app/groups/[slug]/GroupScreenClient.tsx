@@ -57,22 +57,16 @@ export default function GroupScreenClient({
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">{group.name}</h1>
           <div className="flex gap-2 flex-wrap justify-end">
-            <button
-              onClick={handleLineShare}
-              className="px-2 py-1 border rounded"
-            >
+            <button onClick={handleLineShare} className="btn btn-ghost">
               LINEで共有
             </button>
-            <button
-              onClick={handleMailShare}
-              className="px-2 py-1 border rounded"
-            >
+            <button onClick={handleMailShare} className="btn btn-ghost">
               メールで共有
             </button>
             {isHost && (
               <a
                 href={`/groups/${group.slug}/settings`}
-                className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2"
+                className="btn btn-secondary"
               >
                 設定を変更
               </a>
@@ -101,7 +95,7 @@ export default function GroupScreenClient({
           <h2 className="text-xl font-semibold">機器</h2>
           <a
             href={`/devices/new?group=${encodeURIComponent(group.slug)}`}
-            className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2"
+            className="btn btn-primary"
           >
             機器を追加
           </a>
@@ -126,13 +120,13 @@ export default function GroupScreenClient({
                   href={`/api/mock/devices/${d.slug}/qr`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2 flex-1"
+                  className="btn btn-secondary flex-1"
                 >
                   QRコード
                 </a>
                 <button
                   onClick={() => handleDeleteDevice(d.id)}
-                  className="rounded-xl bg-rose-600 text-white hover:bg-rose-500 px-4 py-2 flex-1"
+                  className="btn btn-danger flex-1"
                   disabled={removingId === d.id}
                 >
                   削除

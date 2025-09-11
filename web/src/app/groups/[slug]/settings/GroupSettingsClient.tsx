@@ -84,7 +84,7 @@ export default function GroupSettingsClient({ initialGroup }: { initialGroup: an
         <button
           type="submit"
           disabled={saving}
-          className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2"
+          className="btn btn-primary"
         >
           保存
         </button>
