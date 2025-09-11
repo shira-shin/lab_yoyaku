@@ -1,15 +1,23 @@
 import { headers } from 'next/headers';
 
+// 相対パスを現在ホストの絶対URLに変換
+export function absoluteUrl(path: string) {
+  if (/^https?:\/\//i.test(path)) return path;
+  const h = headers();
+  const proto = h.get('x-forwarded-proto') ?? 'https';
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${proto}://${host}${p}`;
+}
+
+// SSR で認証 Cookie を必ず同封して叩く fetch
 export async function serverFetch(path: string, init: RequestInit = {}) {
-  const isAbsolute = /^https?:\/\//.test(path);
-  const url = isAbsolute ? path : path; // 相対のままでOK（同一オリジン想定）
   const cookie = headers().get('cookie') ?? '';
+  const url = absoluteUrl(path);
   return fetch(url, {
     cache: 'no-store',
+    next: { revalidate: 0 }, // キャッシュ無効化
     ...init,
-    headers: {
-      ...(init.headers || {}),
-      cookie, // ← これが超重要（認証を引き継ぐ）
-    },
+    headers: { ...(init.headers || {}), cookie }, // ← これが超重要
   });
 }
