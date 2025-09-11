@@ -12,7 +12,7 @@ export default async function Header() {
           {me ? (
             <>
               <a className="rounded-md px-3 py-1 hover:bg-white/20" href="/groups/new">グループをつくる</a>
-              <a className="rounded-md px-3 py-1 hover:bg-white/20" href="/">ダッシュボード</a>
+              <a className="rounded-md px-3 py-1 hover:bg-white/20" href="/">ホーム</a>
               <a className="rounded-md px-3 py-1 hover:bg-white/20" href="/groups">グループ</a>
               <span className="hidden sm:inline text-white/80">
                 {me.name || me.email}

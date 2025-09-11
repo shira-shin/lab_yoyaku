@@ -1,11 +1,11 @@
 import { loadDB } from '@/lib/mockdb';
-import { notFound } from 'next/navigation';
+import { redirect, notFound } from 'next/navigation';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 import PrintButton from '@/components/PrintButton';
 import Image from 'next/image';
 import BackButton from '@/components/BackButton';
 import ReservationList, { ReservationItem } from '@/components/ReservationList';
-import { serverGet } from '@/lib/server-api';
+import { serverFetch } from '@/lib/server-fetch';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,16 +33,19 @@ export default async function DevicePage({
   params: { slug: string };
   searchParams: { month?: string };
 }) {
-  const { slug } = params;
+  const slug = params.slug.toLowerCase();
   const db = loadDB();
   const group = db.groups.find((g: any) => (g.devices ?? []).some((d: any) => d.slug === slug));
   const device = group?.devices.find((d: any) => d.slug === slug);
   if (!group || !device) return notFound();
 
-  const r = await serverGet<{ data?: any[] }>(
+  const r = await serverFetch(
     `/api/mock/reservations?slug=${group.slug}&deviceId=${device.id}`
   );
-  const reservations = r?.data || [];
+  if (r.status === 401) redirect(`/login?next=/devices/${slug}`);
+  if (!r.ok) throw new Error(`failed: ${r.status}`);
+  const j = await r.json();
+  const reservations = j?.data || [];
 
   const baseMonth = (() => {
     if (searchParams?.month) {
@@ -82,7 +85,7 @@ export default async function DevicePage({
       <div className="print:hidden flex gap-4 mb-4">
         <BackButton className="text-blue-600 hover:underline" />
         <a href="/" className="text-blue-600 hover:underline">ホーム</a>
-        <a href={`/groups/${group.slug}`} className="text-blue-600 hover:underline">グループページ</a>
+        <a href={`/groups/${encodeURIComponent(group.slug.toLowerCase())}`} className="text-blue-600 hover:underline">グループページ</a>
       </div>
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm relative">
         <div className="flex justify-between items-center mb-2">
@@ -101,7 +104,7 @@ export default async function DevicePage({
               ›
             </a>
             <div className="print:hidden">
-              <PrintButton className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2" />
+              <PrintButton className="btn btn-secondary" />
             </div>
           </div>
         </div>

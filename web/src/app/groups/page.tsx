@@ -1,6 +1,7 @@
-import Link from "next/link";
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { serverFetch } from '@/lib/server-fetch';
+import Empty from '@/components/Empty';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,8 @@ export default async function GroupsPage() {
   if (!res.ok) throw new Error(`failed: ${res.status}`);
   const data = await res.json();
   const groups: any[] = Array.isArray(data) ? data : data?.groups ?? [];
+  if (groups.length === 0)
+    return <Empty>まだグループがありません。右上から作成/参加しましょう。</Empty>;
   return (
     <main className="mx-auto max-w-6xl px-6 py-8 space-y-4">
       <div className="flex items-center justify-between">
@@ -20,8 +23,15 @@ export default async function GroupsPage() {
         </div>
       </div>
       <ul className="list-disc pl-5 space-y-1">
-        {groups.map((g:any)=>(
-          <li key={g.slug}><Link href={`/groups/${g.slug}`} className="text-blue-600 hover:underline">{g.name}</Link></li>
+        {groups.map((g: any) => (
+          <li key={g.slug}>
+            <Link
+              href={`/groups/${encodeURIComponent(g.slug.toLowerCase())}`}
+              className="text-blue-600 hover:underline"
+            >
+              {g.name}
+            </Link>
+          </li>
         ))}
       </ul>
     </main>
