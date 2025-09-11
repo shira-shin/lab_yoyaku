@@ -4,7 +4,7 @@ import GroupScreenClient from './GroupScreenClient';
 import ReservationForm from './ReservationForm';
 import { readUserFromCookie } from '@/lib/auth';
 import type { Span } from '@/components/CalendarWithBars';
-import { getBaseUrl } from '@/lib/config';
+import { getBaseUrl } from '@/lib/base-url';
 import PrintButton from '@/components/PrintButton';
 import type { ReservationItem } from '@/components/ReservationList';
 import CalendarReservationSection from './CalendarReservationSection';

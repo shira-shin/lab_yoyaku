@@ -1,7 +1,7 @@
 import { readUserFromCookie } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import type { Span } from '@/components/CalendarWithBars';
-import { getBaseUrl } from '@/lib/config';
+import { getBaseUrl } from '@/lib/base-url';
 import DashboardClient from './page.client';
 
 type Mine = {
