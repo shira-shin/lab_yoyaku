@@ -12,7 +12,7 @@ function colorFromString(s: string) {
   return palette[h % palette.length];
 }
 
-export default function DashboardClient({ initialItems, initialSpans }: { initialItems: Item[]; initialSpans: Span[] }) {
+export default function DashboardClient({ initialItems, initialSpans, isLoggedIn }: { initialItems: Item[]; initialSpans: Span[]; isLoggedIn: boolean }) {
   const [spans, setSpans] = useState<Span[]>(initialSpans);
   const today = new Date();
   const [anchor, setAnchor] = useState(firstOfMonth(today.getFullYear(), today.getMonth()));
@@ -53,7 +53,11 @@ export default function DashboardClient({ initialItems, initialSpans }: { initia
   return (
     <div className="grid gap-6 md:grid-cols-3">
       <section className={`md:col-span-2 ${card}`}>
-        <UpcomingReservations initialItems={initialItems} onLoaded={handleLoaded} />
+        <UpcomingReservations
+          initialItems={initialItems}
+          onLoaded={handleLoaded}
+          isLoggedIn={isLoggedIn}
+        />
       </section>
 
       <section className={card}>
