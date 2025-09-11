@@ -1,5 +1,5 @@
-import { serverGet } from '@/lib/server-api';
-import { notFound } from 'next/navigation';
+import { redirect, notFound } from 'next/navigation';
+import { serverFetch } from '@/lib/server-fetch';
 import GroupScreenClient from './GroupScreenClient';
 import ReservationForm from './ReservationForm';
 import { readUserFromCookie } from '@/lib/auth';
@@ -48,24 +48,20 @@ export default async function GroupPage({
 }) {
   const { slug } = params;
 
-  const gRes = await serverGet<{ data: any }>(`/api/mock/groups/${slug}`);
-  const groupData = gRes?.data;
-  if (!groupData) return notFound();
-
-  const [devicesRes, reservations, me] = await Promise.all([
-    serverGet<{ data?: any[] }>(`/api/mock/devices?slug=${groupData.slug}`),
-    serverGet<any[]>(`/api/mock/reservations?slug=${slug}`),
-    readUserFromCookie(),
-  ]);
-
-  const devices = toArr(devicesRes?.data);
-  const reservationList = toArr(reservations);
+  const res = await serverFetch(`/api/mock/groups/${encodeURIComponent(slug)}`);
+  if (res.status === 401) redirect(`/login?next=/groups/${slug}`);
+  if (res.status === 404) return notFound();
+  if (!res.ok) throw new Error(`failed: ${res.status}`);
+  const json = await res.json();
   const group = {
-    ...groupData,
-    members: toArr(groupData.members),
-    devices: toArr(groupData.devices),
-    reservations: toArr(groupData.reservations),
+    ...json,
+    members: toArr(json.members),
+    devices: toArr(json.devices),
+    reservations: toArr(json.reservations),
   };
+  const devices = group.devices;
+  const reservationList = group.reservations;
+  const me = await readUserFromCookie();
 
   const baseMonth = (() => {
     if (searchParams?.month) {
