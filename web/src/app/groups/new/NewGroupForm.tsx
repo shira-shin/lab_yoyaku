@@ -60,7 +60,7 @@ export default function NewGroupForm() {
           <textarea name="memo" className="w-full rounded-xl border p-3" />
         </label>
       </div>
-      <button type="submit" className="rounded-xl px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-500">
+      <button type="submit" className="btn btn-primary">
         グループを作る
       </button>
     </form>

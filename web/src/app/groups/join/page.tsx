@@ -42,7 +42,7 @@ export default function GroupJoinPage() {
     <main className="mx-auto max-w-6xl px-6 py-8 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">グループに参加</h1>
-        <a href="/" className="rounded-lg border px-3 py-2 hover:bg-gray-100">ホームに戻る</a>
+        <a href="/" className="btn btn-secondary">ホームに戻る</a>
       </div>
       <form onSubmit={onSubmit} className="space-y-5">
         <label className="block">
@@ -72,7 +72,7 @@ export default function GroupJoinPage() {
           </p>
         )}
         <button
-          className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-5 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={loading || !group || !password}
           aria-disabled={loading || !group || !password}
         >

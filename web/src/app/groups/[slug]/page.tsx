@@ -46,22 +46,25 @@ export default async function GroupPage({
   params: { slug: string };
   searchParams: { month?: string };
 }) {
-  const { slug } = params;
+  const paramSlug = params.slug;
 
-  const res = await serverFetch(`/api/mock/groups/${encodeURIComponent(slug)}`);
-  if (res.status === 401) redirect(`/login?next=/groups/${slug}`);
+  const res = await serverFetch(`/api/mock/groups/${encodeURIComponent(paramSlug)}`);
+  if (res.status === 401) redirect(`/login?next=/groups/${paramSlug}`);
   if (res.status === 404) return notFound();
   if (!res.ok) throw new Error(`failed: ${res.status}`);
-  const json = await res.json();
+  const data = await res.json();
+  const raw = data?.data ?? data?.group ?? data;
   const group = {
-    ...json,
-    members: toArr(json.members),
-    devices: toArr(json.devices),
-    reservations: toArr(json.reservations),
+    ...raw,
+    slug: raw?.slug ?? paramSlug,
+    members: toArr(raw?.members),
+    devices: toArr(raw?.devices),
+    reservations: toArr(raw?.reservations),
   };
   const devices = group.devices;
   const reservationList = group.reservations;
   const me = await readUserFromCookie();
+  const qrUrl = `/api/mock/groups/${encodeURIComponent(paramSlug)}/qr`;
 
   const baseMonth = (() => {
     if (searchParams?.month) {
@@ -135,7 +138,7 @@ export default async function GroupPage({
               ›
             </a>
             <div className="print:hidden">
-              <PrintButton className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2" />
+              <PrintButton className="btn btn-secondary" />
             </div>
           </div>
         </div>
@@ -149,7 +152,7 @@ export default async function GroupPage({
           defaultReserver={me?.email}
         />
         <Image
-          src={`/api/mock/groups/${group.slug}/qr`}
+          src={qrUrl}
           alt="QRコード"
           width={128}
           height={128}
