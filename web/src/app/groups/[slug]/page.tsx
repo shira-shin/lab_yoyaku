@@ -46,7 +46,7 @@ export default async function GroupPage({
   params: { slug: string };
   searchParams: { month?: string };
 }) {
-  const paramSlug = params.slug;
+  const paramSlug = params.slug.toLowerCase();
 
   const res = await serverFetch(`/api/mock/groups/${encodeURIComponent(paramSlug)}`);
   if (res.status === 401) redirect(`/login?next=/groups/${paramSlug}`);

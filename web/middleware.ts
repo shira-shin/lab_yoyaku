@@ -4,6 +4,16 @@ import { NextResponse } from 'next/server';
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
+  const m = pathname.match(/^\/(groups|devices)\/([^\/]+)/);
+  if (m) {
+    const lower = m[2].toLowerCase();
+    if (m[2] !== lower) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/${m[1]}/${lower}${pathname.slice(m[0].length)}`;
+      return NextResponse.redirect(url, 301);
+    }
+  }
+
   // 許可ルート
   if (
     pathname.startsWith('/login') ||

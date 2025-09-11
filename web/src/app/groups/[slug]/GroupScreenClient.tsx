@@ -57,15 +57,15 @@ export default function GroupScreenClient({
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">{group.name}</h1>
           <div className="flex gap-2 flex-wrap justify-end">
-            <button onClick={handleLineShare} className="btn btn-ghost">
+            <button onClick={handleLineShare} className="btn btn-secondary">
               LINEで共有
             </button>
-            <button onClick={handleMailShare} className="btn btn-ghost">
+            <button onClick={handleMailShare} className="btn btn-secondary">
               メールで共有
             </button>
             {isHost && (
               <a
-                href={`/groups/${group.slug}/settings`}
+                href={`/groups/${encodeURIComponent(group.slug.toLowerCase())}/settings`}
                 className="btn btn-secondary"
               >
                 設定を変更
@@ -94,7 +94,7 @@ export default function GroupScreenClient({
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">機器</h2>
           <a
-            href={`/devices/new?group=${encodeURIComponent(group.slug)}`}
+            href={`/devices/new?group=${encodeURIComponent(group.slug.toLowerCase())}`}
             className="btn btn-primary"
           >
             機器を追加

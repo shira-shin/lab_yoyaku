@@ -16,16 +16,19 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { slug, name, note, deviceSlug } = body;
+  const { slug, name, caution, code, deviceSlug } = body;
   const db = loadDB();
   const g = db.groups.find((x: any) => x.slug === slug);
   if (!g) return NextResponse.json({ ok: false, error: 'group not found' }, { status: 404 });
   const dSlug = deviceSlug || makeSlug(name);
-  const d = { id: uid(), slug: dSlug, name, note, qrToken: uid() } as any;
+  const d = { id: uid(), slug: dSlug, name, caution, code, qrToken: uid() } as any;
   g.devices = g.devices || [];
   g.devices.push(d);
   saveDB(db);
-  return NextResponse.json({ ok: true, data: d });
+  return NextResponse.json(
+    { ok: true, device: { id: d.id, name: d.name, slug: d.slug, code: d.code, caution: d.caution } },
+    { status: 201 }
+  );
 }
 
 export async function DELETE(req: Request) {
