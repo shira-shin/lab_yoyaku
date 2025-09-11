@@ -10,6 +10,12 @@ import CalendarReservationSection from './CalendarReservationSection';
 import Image from 'next/image';
 
 export const dynamic = 'force-dynamic';
+
+function toArr<T>(v: T[] | Record<string, T> | null | undefined): T[] {
+  if (Array.isArray(v)) return v;
+  if (v && typeof v === 'object') return Object.values(v as Record<string, T>);
+  return [];
+}
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
   const first = new Date(y, m, 1);
@@ -43,17 +49,23 @@ export default async function GroupPage({
   const { slug } = params;
 
   const gRes = await serverGet<{ data: any }>(`/api/mock/groups/${slug}`);
-  const group = gRes?.data;
-  if (!group) return notFound();
+  const groupData = gRes?.data;
+  if (!groupData) return notFound();
 
   const [devicesRes, reservations, me] = await Promise.all([
-    serverGet<{ data?: any[] }>(`/api/mock/devices?slug=${group.slug}`),
+    serverGet<{ data?: any[] }>(`/api/mock/devices?slug=${groupData.slug}`),
     serverGet<any[]>(`/api/mock/reservations?slug=${slug}`),
     readUserFromCookie(),
   ]);
 
-  const devices = devicesRes?.data || [];
-  const reservationList = reservations ?? [];
+  const devices = toArr(devicesRes?.data);
+  const reservationList = toArr(reservations);
+  const group = {
+    ...groupData,
+    members: toArr(groupData.members),
+    devices: toArr(groupData.devices),
+    reservations: toArr(groupData.reservations),
+  };
 
   const baseMonth = (() => {
     if (searchParams?.month) {
@@ -70,7 +82,7 @@ export default async function GroupPage({
   const pad2 = (n: number) => n.toString().padStart(2, '0');
   const toParam = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
   const spans: Span[] = reservationList.map((r: any) => {
-    const dev = group.devices.find((d: any) => d.id === r.deviceId);
+    const dev = devices.find((d: any) => d.id === r.deviceId);
     return {
       id: r.id,
       name: dev?.name ?? r.deviceId,
@@ -84,7 +96,7 @@ export default async function GroupPage({
   });
 
   const listItems: ReservationItem[] = reservationList.map((r: any) => {
-    const dev = group.devices.find((d: any) => d.id === r.deviceId);
+    const dev = devices.find((d: any) => d.id === r.deviceId);
     return {
       id: r.id,
       deviceName: dev?.name ?? r.deviceId,
