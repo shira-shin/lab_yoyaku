@@ -9,11 +9,9 @@ export default async function Header() {
         <nav className="flex items-center gap-4 text-sm">
           <a className="hover:underline" href="/usage">使い方</a>
           <a className="hover:underline" href="/groups/join">グループ参加</a>
-          {me && (
-            <a className="hover:underline" href="/groups/new">グループ作成</a>
-          )}
           {me ? (
             <>
+              <a className="hover:underline" href="/groups/new">グループ作成</a>
               <a className="hover:underline" href="/">ダッシュボード</a>
               <a className="hover:underline" href="/groups">グループ</a>
               <span className="hidden sm:inline text-white/80">

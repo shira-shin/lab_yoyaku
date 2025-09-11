@@ -3,7 +3,7 @@ import Header from '@/components/Header';
 
 export const metadata = {
   icons: {
-    icon: '/favicon.svg',
+    icon: '/favicon.ico',
   },
 };
 

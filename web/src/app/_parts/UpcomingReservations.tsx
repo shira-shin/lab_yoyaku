@@ -35,18 +35,27 @@ function colorFromString(s: string) {
 export default function UpcomingReservations({
   initialItems,
   onLoaded,
+  isLoggedIn,
 }: {
   initialItems: Item[];
   onLoaded?: (payload: any) => void;
+  isLoggedIn: boolean;
 }) {
   const [items, setItems] = useState<Item[]>(initialItems);
   const [loading, setLoading] = useState(false);
   const [sel, setSel] = useState<Item | null>(null);
+  const [err, setErr] = useState<string | null>(isLoggedIn ? null : 'unauth');
 
   const load = async () => {
     setLoading(true);
+    setErr(null);
     try {
       const r = await fetch('/api/me/reservations', { cache: 'no-store' });
+      if (r.status === 401) {
+        setItems([]);
+        setErr('unauth');
+        return;
+      }
       const j = await r.json();
       const arr: Item[] = (j.data ?? []).sort((a: any, b: any) =>
         new Date(a.start).getTime() - new Date(b.start).getTime()
@@ -76,9 +85,17 @@ export default function UpcomingReservations({
         </div>
       </div>
 
-      {!items.length ? (
-        <div className="text-muted text-sm">直近の予約はありません。右上の「グループ参加」から始めましょう。</div>
-      ) : (
+      {err === 'unauth' && (
+        <p className="text-sm">
+          ログインが必要です。<a className="underline" href="/login">ログイン</a>
+        </p>
+      )}
+      {items.length === 0 && err !== 'unauth' ? (
+        <div className="text-muted text-sm">
+          直近の予約はありません。右上の「グループ参加」から始めましょう。
+        </div>
+      ) : null}
+      {items.length > 0 && (
         <ul className="space-y-2">
           {items.map((r) => (
             <li
