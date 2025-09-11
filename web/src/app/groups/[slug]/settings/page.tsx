@@ -1,4 +1,4 @@
-import { getBaseUrl } from '@/lib/config';
+import { getBaseUrl } from '@/lib/base-url';
 import { readUserFromCookie } from '@/lib/auth';
 import { notFound } from 'next/navigation';
 import GroupSettingsClient from './GroupSettingsClient';

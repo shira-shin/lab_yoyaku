@@ -1,7 +1,7 @@
 import { loadDB } from '@/lib/mockdb';
 import { notFound } from 'next/navigation';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
-import { getBaseUrl } from '@/lib/config';
+import { getBaseUrl } from '@/lib/base-url';
 import PrintButton from '@/components/PrintButton';
 import Image from 'next/image';
 import BackButton from '@/components/BackButton';

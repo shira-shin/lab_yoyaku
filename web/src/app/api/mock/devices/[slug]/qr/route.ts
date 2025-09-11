@@ -1,6 +1,6 @@
 import { loadDB } from '@/lib/mockdb';
 import QRCode from 'qrcode';
-import { getBaseUrl } from '@/lib/config';
+import { getBaseUrl } from '@/lib/base-url';
 
 export const runtime = 'nodejs';
 
