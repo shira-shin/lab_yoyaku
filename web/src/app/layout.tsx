@@ -1,6 +1,12 @@
 import './globals.css';
 import Header from '@/components/Header';
 
+export const metadata = {
+  icons: {
+    icon: '/favicon.svg',
+  },
+};
+
 export const viewport = { width: 'device-width', initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
