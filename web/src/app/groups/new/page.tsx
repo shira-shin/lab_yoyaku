@@ -1,6 +1,12 @@
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import NewGroupForm from './NewGroupForm';
 
-export default function NewGroupPage() {
+export default async function NewGroupPage() {
+  const cookie = headers().get('cookie') ?? '';
+  if (!cookie.includes('labyoyaku_token')) {
+    redirect('/login?next=/groups/new');
+  }
   return (
     <main className="mx-auto max-w-6xl px-6 py-8 space-y-6">
       <div className="flex items-center justify-between">

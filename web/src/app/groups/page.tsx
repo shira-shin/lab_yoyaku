@@ -1,10 +1,15 @@
 import Link from "next/link";
-import { serverGet } from '@/lib/server-api';
+import { redirect } from 'next/navigation';
+import { serverFetch } from '@/lib/server-fetch';
 
 export const dynamic = 'force-dynamic';
 
 export default async function GroupsPage() {
-  const groups = (await serverGet<any[]>('/api/mock/groups')) ?? [];
+  const res = await serverFetch('/api/mock/groups');
+  if (res.status === 401) redirect('/login?next=/groups');
+  if (!res.ok) throw new Error(`failed: ${res.status}`);
+  const data = await res.json();
+  const groups: any[] = Array.isArray(data) ? data : data?.groups ?? [];
   return (
     <main className="mx-auto max-w-6xl px-6 py-8 space-y-4">
       <div className="flex items-center justify-between">
