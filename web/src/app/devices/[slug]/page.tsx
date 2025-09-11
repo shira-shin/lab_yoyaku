@@ -6,6 +6,7 @@ import PrintButton from '@/components/PrintButton';
 import Image from 'next/image';
 import BackButton from '@/components/BackButton';
 import ReservationList, { ReservationItem } from '@/components/ReservationList';
+import { headers } from 'next/headers';
 
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
@@ -38,9 +39,10 @@ export default async function DevicePage({
   if (!group || !device) return notFound();
 
   const base = getBaseUrl();
+  const cookie = headers().get('cookie') ?? '';
   const r = await fetch(
     `${base}/api/mock/reservations?slug=${group.slug}&deviceId=${device.id}`,
-    { cache: 'no-store' }
+    { cache: 'no-store', headers: { cookie } }
   );
   const json = r.ok ? await r.json() : { data: [] };
   const reservations = json.data || [];

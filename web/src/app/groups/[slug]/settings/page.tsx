@@ -2,10 +2,15 @@ import { getBaseUrl } from '@/lib/base-url';
 import { readUserFromCookie } from '@/lib/auth';
 import { notFound } from 'next/navigation';
 import GroupSettingsClient from './GroupSettingsClient';
+import { headers } from 'next/headers';
 
 export default async function GroupSettingsPage({ params }: { params: { slug: string } }) {
   const base = getBaseUrl();
-  const res = await fetch(`${base}/api/mock/groups/${params.slug}`, { cache: 'no-store' });
+  const cookie = headers().get('cookie') ?? '';
+  const res = await fetch(`${base}/api/mock/groups/${params.slug}`, {
+    cache: 'no-store',
+    headers: { cookie },
+  });
   if (res.status === 404) return notFound();
   if (!res.ok) throw new Error(`API ${res.status} /api/mock/groups/${params.slug}`);
   const group = (await res.json()).data;

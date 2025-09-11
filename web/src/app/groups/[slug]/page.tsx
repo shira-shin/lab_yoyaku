@@ -9,6 +9,7 @@ import PrintButton from '@/components/PrintButton';
 import type { ReservationItem } from '@/components/ReservationList';
 import CalendarReservationSection from './CalendarReservationSection';
 import Image from 'next/image';
+import { headers } from 'next/headers';
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
   const first = new Date(y, m, 1);
@@ -42,7 +43,11 @@ export default async function GroupPage({
   const { slug } = params;
   const base = getBaseUrl();
 
-  const gRes = await fetch(`${base}/api/mock/groups/${slug}`, { cache: 'no-store' });
+  const cookie = headers().get('cookie') ?? '';
+  const gRes = await fetch(`${base}/api/mock/groups/${slug}`, {
+    cache: 'no-store',
+    headers: { cookie },
+  });
   if (gRes.status === 404) return notFound();
   if (!gRes.ok) throw new Error(`API ${gRes.status} /api/mock/groups/${slug}`);
   const group = (await gRes.json()).data;
@@ -52,6 +57,7 @@ export default async function GroupPage({
     (async () => {
       const r = await fetch(`${base}/api/mock/reservations?slug=${slug}`, {
         cache: 'no-store',
+        headers: { cookie },
       });
       if (r.ok) {
         const json = await r.json();
