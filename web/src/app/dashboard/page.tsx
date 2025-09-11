@@ -54,7 +54,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">ダッシュボード</h1>
         <div className="flex gap-2">

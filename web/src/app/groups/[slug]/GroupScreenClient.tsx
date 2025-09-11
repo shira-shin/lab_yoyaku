@@ -94,7 +94,7 @@ export default function GroupScreenClient({
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">機器</h2>
           <a
-            href={`/devices/new?group=${encodeURIComponent(group.slug.toLowerCase())}`}
+            href={`/groups/${encodeURIComponent(group.slug.toLowerCase())}/devices/new`}
             className="btn btn-primary"
           >
             機器を追加
@@ -108,7 +108,7 @@ export default function GroupScreenClient({
             >
               <div>
                 <a
-                  href={`/devices/${d.slug}`}
+                  href={`/groups/${encodeURIComponent(group.slug.toLowerCase())}/devices/${d.slug}`}
                   className="font-medium hover:underline"
                 >
                   {d.name}
