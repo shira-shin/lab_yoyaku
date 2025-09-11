@@ -1,8 +1,21 @@
-export function createApi(getBaseURL: () => string) {
+export function createApi(
+  getBaseURL: () => string,
+  getInit?: () => RequestInit
+) {
   async function api(path: string, init?: RequestInit) {
     const base = getBaseURL();
     const url = `${base}${path}`;
-    const res = await fetch(url, { ...init, cache: 'no-store' });
+    const extra = getInit?.() ?? {};
+    const headers = {
+      ...(extra.headers || {}),
+      ...(init?.headers || {}),
+    } as HeadersInit;
+    const res = await fetch(url, {
+      cache: 'no-store',
+      ...extra,
+      ...init,
+      headers,
+    });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(`API ${res.status} ${path} :: ${text || res.statusText}`);

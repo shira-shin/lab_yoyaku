@@ -11,6 +11,11 @@ function getBaseURL() {
   return `${proto}://${host}`;
 }
 
+function getInit() {
+  const cookie = headers().get('cookie') ?? '';
+  return { headers: { cookie } };
+}
+
 export const {
   listGroups,
   createGroup,
@@ -21,4 +26,4 @@ export const {
   listReservations,
   createReservation,
   listMyReservations,
-} = createApi(getBaseURL);
+} = createApi(getBaseURL, getInit);

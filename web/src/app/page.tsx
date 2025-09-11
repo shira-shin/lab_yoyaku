@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import type { Span } from '@/components/CalendarWithBars';
 import { getBaseUrl } from '@/lib/base-url';
 import DashboardClient from './page.client';
+import { headers } from 'next/headers';
 
 type Mine = {
   id:string; deviceId:string; deviceName?:string; user:string; userName?:string;
@@ -22,12 +23,19 @@ export default async function Home() {
   if (!me) redirect('/login?next=/');
 
   const base = getBaseUrl();
-  const res = await fetch(`${base}/api/me/reservations`, { cache:'no-store' });
+  const cookie = headers().get('cookie') ?? '';
+  const res = await fetch(`${base}/api/me/reservations`, {
+    cache:'no-store',
+    headers: { cookie },
+  });
   const json = await res.json();
 
   let myGroups: { slug: string; name: string }[] = [];
   try {
-    const gRes = await fetch(`${base}/api/me/groups`, { cache: 'no-store' });
+    const gRes = await fetch(`${base}/api/me/groups`, {
+      cache: 'no-store',
+      headers: { cookie },
+    });
     if (gRes.ok) {
       myGroups = await gRes.json();
     }
