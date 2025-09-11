@@ -127,7 +127,7 @@ export default async function GroupPage({
               ›
             </a>
             <div className="print:hidden">
-              <PrintButton className="btn-primary" />
+              <PrintButton className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2" />
             </div>
           </div>
         </div>

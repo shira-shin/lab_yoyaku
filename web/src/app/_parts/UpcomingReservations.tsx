@@ -216,7 +216,7 @@ function Modal({
         <div className="flex justify-between items-center mt-4">
           <a
             href={`/groups/${item.groupSlug}`}
-            className="text-sm text-primary hover:underline"
+            className="text-sm text-indigo-600 hover:underline"
           >
             グループページへ
           </a>

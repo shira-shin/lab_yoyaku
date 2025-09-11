@@ -17,22 +17,28 @@ export default function NewGroupPage() {
     e.preventDefault();
     setPending(true);
     try {
-      const res = await fetch('/api/me/groups', {
+      const auth = await fetch('/api/auth/me', { cache: 'no-store' });
+      if (!auth.ok) {
+        alert('ログインしてください');
+        router.push('/login');
+        return;
+      }
+
+      const res = await fetch('/api/mock/groups', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
           slug: makeSlug(name),
         }),
+        cache: 'no-store',
       });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        alert(j?.error || '作成に失敗しました');
-        return;
-      }
-      const data = await res.json();
-      router.push(`/groups/${data.slug}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+      router.push(`/groups/${data.data.slug}`);
       router.refresh();
+    } catch (e: any) {
+      alert(e.message || '作成に失敗しました');
     } finally {
       setPending(false);
     }
@@ -106,7 +112,7 @@ export default function NewGroupPage() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-xl bg-primary hover:bg-primary-dark text-white px-5 py-2"
+          className="rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 px-5 py-2"
         >
           作成する
         </button>

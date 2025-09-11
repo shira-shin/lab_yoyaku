@@ -147,7 +147,7 @@ export default function LoginPage() {
               />
               {lerr && <div className="text-sm text-red-600">{lerr}</div>}
               <button
-                className="w-full rounded-lg bg-primary hover:bg-primary-dark text-white px-4 py-2 disabled:opacity-60"
+                className="w-full rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2 disabled:opacity-60"
                 disabled={loadingLogin}
               >
                 {loadingLogin ? 'ログイン中…' : 'ログイン'}
@@ -190,7 +190,7 @@ export default function LoginPage() {
               <p className="text-sm text-muted mt-1">{PASSWORD_HINT}</p>
               {rerr && <div className="text-sm text-red-600">{rerr}</div>}
               <button
-                className="w-full rounded-lg bg-primary hover:bg-primary-dark text-white px-4 py-2 disabled:opacity-60"
+                className="w-full rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2 disabled:opacity-60"
                 disabled={loadingReg}
               >
                 {loadingReg ? '作成中…' : 'アカウントを作成'}

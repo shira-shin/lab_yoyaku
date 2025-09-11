@@ -66,8 +66,8 @@ export default function CalendarWithBars({
                 'h-16 rounded-lg border relative text-left px-1 transition-colors',
                 isSun && 'bg-red-50',
                 isSat && 'bg-blue-50',
-                todays.length > 0 && 'bg-primary/5',
-                isToday && 'border-2 border-primary'
+                todays.length > 0 && 'bg-indigo-600/5',
+                isToday && 'border-2 border-indigo-600'
               )}
               onClick={() => {
                 setSel(d);
@@ -76,7 +76,7 @@ export default function CalendarWithBars({
             >
               <div className="absolute left-1 top-1 text-xs">{d.getDate()}</div>
               {todays.length > 0 && (
-                <div className="absolute top-1 right-1 text-[10px] bg-primary text-white rounded-full h-4 w-4 flex items-center justify-center">
+                <div className="absolute top-1 right-1 text-[10px] bg-indigo-600 text-white rounded-full h-4 w-4 flex items-center justify-center">
                   {todays.length}
                 </div>
               )}
@@ -137,7 +137,7 @@ function DayModal({ date, items, onClose }:{
               {s.participants?.length ? (
                 <div className="text-xs text-muted mt-1">参加者: {s.participants.join(', ')}</div>
               ) : null}
-              <a href={`/groups/${s.groupSlug}`} className="text-sm text-primary hover:underline mt-2 inline-block">
+              <a href={`/groups/${s.groupSlug}`} className="text-sm text-indigo-600 hover:underline mt-2 inline-block">
                 グループページへ
               </a>
             </li>
