@@ -8,12 +8,12 @@ export default async function NewGroupPage() {
   const me = await serverFetch('/api/auth/me');
   if (me.status === 401) redirect('/login?next=/groups/new');
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8 space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">グループ作成</h1>
         <a href="/" className="btn btn-secondary">ホームに戻る</a>
       </div>
       <NewGroupForm />
-    </main>
+    </div>
   );
 }

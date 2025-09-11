@@ -80,7 +80,7 @@ export default function LoginPage() {
     'w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-800/10';
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="max-w-6xl mx-auto py-10">
       <header className="text-center mb-8">
         <h1 className="text-3xl font-semibold tracking-tight">Lab Yoyaku へようこそ</h1>
         <p className="text-gray-600 mt-2">研究室の機器をグループで管理し、予約と使用状況をカレンダーで可視化します。</p>

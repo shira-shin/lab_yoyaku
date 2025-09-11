@@ -1,7 +1,6 @@
 import { redirect, notFound } from 'next/navigation';
 import { serverFetch } from '@/lib/server-fetch';
 import GroupScreenClient from './GroupScreenClient';
-import ReservationForm from './ReservationForm';
 import { readUserFromCookie } from '@/lib/auth';
 import type { Span } from '@/components/CalendarWithBars';
 import PrintButton from '@/components/PrintButton';
@@ -106,7 +105,7 @@ export default async function GroupPage({
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8 space-y-8">
+    <div className="space-y-8">
       <div className="print:hidden">
         <GroupScreenClient
           initialGroup={group}
@@ -114,14 +113,7 @@ export default async function GroupPage({
           defaultReserver={me?.email}
         />
       </div>
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm relative space-y-4">
-        <div className="print:hidden">
-          <ReservationForm
-            groupSlug={group.slug}
-            devices={devices}
-            defaultReserver={me?.email}
-          />
-        </div>
+      <div className="rounded-2xl border p-4 md:p-6 bg-white space-y-4">
         <div className="flex justify-between items-center">
           <a
             href={`?month=${toParam(prev)}`}
@@ -129,7 +121,7 @@ export default async function GroupPage({
           >
             ‹
           </a>
-          <div className="font-semibold">{group.name}　{year}年{month + 1}月</div>
+          <div className="flex-1 text-center font-medium">{group.name}　{year}年{month + 1}月</div>
           <div className="flex items-center gap-2">
             <a
               href={`?month=${toParam(next)}`}

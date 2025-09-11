@@ -2,7 +2,6 @@
 import { useMemo, useState } from 'react';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 import ReservationList, { ReservationItem } from '@/components/ReservationList';
-import ReservationForm from './ReservationForm';
 
 export default function CalendarReservationSection({
   weeks,
@@ -22,14 +21,10 @@ export default function CalendarReservationSection({
   defaultReserver?: string;
 }) {
   const [selected, setSelected] = useState<Date | null>(null);
-  const [formDate, setFormDate] = useState<Date | null>(null);
   const handleSelect = (d: Date) => {
     setSelected(d);
-    setFormDate(d);
   };
   const pad = (n: number) => n.toString().padStart(2, '0');
-  const buildDateTime = (d: Date, h: number) =>
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(h)}:00`;
   const items = useMemo(() => {
     if (!selected) return listItems;
     return listItems.filter(
@@ -51,25 +46,24 @@ export default function CalendarReservationSection({
         </h2>
         <ReservationList items={items} />
       </div>
-      {formDate && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-5 shadow-lg space-y-4 w-full max-w-3xl">
-            <ReservationForm
-              groupSlug={groupSlug}
-              devices={devices}
-              defaultReserver={defaultReserver}
-              defaultStart={buildDateTime(formDate, 9)}
-              defaultEnd={buildDateTime(formDate, 10)}
-            />
-            <div className="text-right">
-              <button
-                onClick={() => setFormDate(null)}
-                className="px-3 py-1 rounded border"
-              >
-                閉じる
-              </button>
-            </div>
-          </div>
+      {selected && (
+        <div className="mt-3 text-right">
+          <a
+            className="btn btn-primary"
+            href={`/groups/${groupSlug}/reservations/new?${
+              devices.length === 1
+                ? `device=${encodeURIComponent(devices[0].slug)}&`
+                : ''
+            }date=${
+              selected.getFullYear() +
+              '-' +
+              pad(selected.getMonth() + 1) +
+              '-' +
+              pad(selected.getDate())
+            }`}
+          >
+            予約追加
+          </a>
         </div>
       )}
     </>

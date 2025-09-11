@@ -6,7 +6,7 @@ export default async function HomeDashboard() {
   const reservations = res.ok ? (res.data as any[]) : []
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
+    <div className="space-y-8">
       <h1 className="text-2xl font-bold">ホーム</h1>
 
       <section className="space-y-3">
@@ -23,7 +23,10 @@ export default async function HomeDashboard() {
                     {fmt(r.from)} – {fmt(r.to)}（用途: {r.purpose || '—'}）
                   </p>
                 </div>
-                <Link href={`/devices/${r.deviceSlug}`} className="text-blue-600 hover:underline text-sm">
+                <Link
+                  href={`/groups/${r.groupSlug}/devices/${r.deviceSlug}`}
+                  className="text-blue-600 hover:underline text-sm"
+                >
                   機器へ
                 </Link>
               </li>
@@ -38,7 +41,7 @@ export default async function HomeDashboard() {
         <Link className="px-3 py-2 rounded border" href="/dashboard">ダッシュボード</Link>
         <Link className="px-3 py-2 rounded border" href="/groups">グループ一覧</Link>
       </section>
-    </main>
+    </div>
   )
 }
 

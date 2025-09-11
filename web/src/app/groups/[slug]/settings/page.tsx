@@ -16,7 +16,7 @@ export default async function GroupSettingsPage({ params }: { params: { slug: st
   const me = await readUserFromCookie();
   if (!me || group.host !== me.email) return notFound();
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
+    <div className="mx-auto max-w-4xl">
       <GroupSettingsClient initialGroup={group} />
     </div>
   );

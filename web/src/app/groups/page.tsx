@@ -14,7 +14,7 @@ export default async function GroupsPage() {
   if (groups.length === 0)
     return <Empty>まだグループがありません。右上から作成/参加しましょう。</Empty>;
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8 space-y-4">
+    <div className="max-w-6xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">グループ一覧</h1>
         <div className="flex gap-2">
@@ -34,6 +34,6 @@ export default async function GroupsPage() {
           </li>
         ))}
       </ul>
-    </main>
+    </div>
   );
 }
