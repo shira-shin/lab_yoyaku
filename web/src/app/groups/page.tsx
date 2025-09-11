@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { listGroups } from '@/lib/server-api';
+import { serverGet } from '@/lib/server-api';
+
+export const dynamic = 'force-dynamic';
 
 export default async function GroupsPage() {
-  const groups = await listGroups();
+  const groups = (await serverGet<any[]>('/api/me/groups')) ?? [];
   return (
     <main className="mx-auto max-w-6xl px-6 py-8 space-y-4">
       <h1 className="text-2xl font-bold">グループ一覧</h1>
