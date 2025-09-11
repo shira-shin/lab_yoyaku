@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     db.groups.push(g);
     saveDB(db);
     return NextResponse.json(
-      { ok: true, data: { slug: g.slug, name: g.name } },
+      { ok: true, group: { slug: g.slug, name: g.name } },
       { status: 201 }
     );
   } catch (e: any) {

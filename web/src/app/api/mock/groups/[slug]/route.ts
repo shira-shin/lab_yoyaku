@@ -8,7 +8,16 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
   const db = loadDB();
   const g = db.groups.find((x: any) => x.slug === params.slug);
   if (!g) return NextResponse.json({ ok: false, error: 'group not found' }, { status: 404 });
-  return NextResponse.json({ ok: true, data: g });
+  const ensureArray = (v: any) => (Array.isArray(v) ? v : v ? Object.values(v) : []);
+  return NextResponse.json({
+    ok: true,
+    data: {
+      ...g,
+      members: ensureArray(g.members),
+      devices: ensureArray(g.devices),
+      reservations: ensureArray(g.reservations),
+    },
+  });
 }
 
 export async function PATCH(
