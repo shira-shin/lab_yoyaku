@@ -7,13 +7,13 @@ export default async function Header() {
       <div className="mx-auto max-w-6xl px-6 h-12 flex items-center justify-between">
         <a href="/" className="font-semibold tracking-tight">Lab Yoyaku</a>
         <nav className="flex items-center gap-4 text-sm">
-          <a className="hover:underline" href="/usage">使い方</a>
-          <a className="hover:underline" href="/groups/join">グループ参加</a>
+          <a className="rounded-md px-3 py-1 hover:bg-white/20" href="/usage">使い方</a>
+          <a className="rounded-md px-3 py-1 hover:bg-white/20" href="/groups/join">グループ参加</a>
           {me ? (
             <>
-              <a className="hover:underline" href="/groups/new">グループ作成</a>
-              <a className="hover:underline" href="/">ダッシュボード</a>
-              <a className="hover:underline" href="/groups">グループ</a>
+              <a className="rounded-md px-3 py-1 hover:bg-white/20" href="/groups/new">グループをつくる</a>
+              <a className="rounded-md px-3 py-1 hover:bg-white/20" href="/">ダッシュボード</a>
+              <a className="rounded-md px-3 py-1 hover:bg-white/20" href="/groups">グループ</a>
               <span className="hidden sm:inline text-white/80">
                 {me.name || me.email}
               </span>

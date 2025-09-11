@@ -40,7 +40,10 @@ export default function GroupJoinPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8 space-y-6">
-      <h1 className="text-3xl font-bold">グループに参加</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">グループに参加</h1>
+        <a href="/" className="rounded-lg border px-3 py-2 hover:bg-gray-100">ホームに戻る</a>
+      </div>
       <form onSubmit={onSubmit} className="space-y-5">
         <label className="block">
           <div className="mb-1">グループ名 または slug</div>
