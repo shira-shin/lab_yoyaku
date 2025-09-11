@@ -1,12 +1,13 @@
 import { loadDB } from '@/lib/mockdb';
 import { notFound } from 'next/navigation';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
-import { getBaseUrl } from '@/lib/base-url';
 import PrintButton from '@/components/PrintButton';
 import Image from 'next/image';
 import BackButton from '@/components/BackButton';
 import ReservationList, { ReservationItem } from '@/components/ReservationList';
-import { headers } from 'next/headers';
+import { serverGet } from '@/lib/server-api';
+
+export const dynamic = 'force-dynamic';
 
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
@@ -38,14 +39,10 @@ export default async function DevicePage({
   const device = group?.devices.find((d: any) => d.slug === slug);
   if (!group || !device) return notFound();
 
-  const base = getBaseUrl();
-  const cookie = headers().get('cookie') ?? '';
-  const r = await fetch(
-    `${base}/api/mock/reservations?slug=${group.slug}&deviceId=${device.id}`,
-    { cache: 'no-store', headers: { cookie } }
+  const r = await serverGet<{ data?: any[] }>(
+    `/api/mock/reservations?slug=${group.slug}&deviceId=${device.id}`
   );
-  const json = r.ok ? await r.json() : { data: [] };
-  const reservations = json.data || [];
+  const reservations = r?.data || [];
 
   const baseMonth = (() => {
     if (searchParams?.month) {

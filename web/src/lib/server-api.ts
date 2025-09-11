@@ -1,18 +1,10 @@
-// Server-side API helpers using runtime headers to determine base URL
-import { headers } from 'next/headers';
-import { createApi } from './api-core';
-
-function getBaseURL() {
-  if (process.env.NEXT_PUBLIC_API_BASE) return process.env.NEXT_PUBLIC_API_BASE;
-
-  const h = headers();
-  const proto = h.get('x-forwarded-proto') ?? 'http';
-  const host = h.get('x-forwarded-host') ?? h.get('host');
-  return `${proto}://${host}`;
-}
+// Server-side API helpers for RSC/SSR usage
+import { headers } from "next/headers";
+import { createApi } from "./api-core";
+import { getBaseUrl } from "@/lib/base-url";
 
 function getInit() {
-  const cookie = headers().get('cookie') ?? '';
+  const cookie = headers().get("cookie") ?? "";
   return { headers: { cookie } };
 }
 
@@ -26,4 +18,22 @@ export const {
   listReservations,
   createReservation,
   listMyReservations,
-} = createApi(getBaseURL, getInit);
+} = createApi(getBaseUrl, getInit);
+
+/** SSR/RSC から自分の API を叩くとき用。Cookie を必ず中継して例外にしない */
+export async function serverGet<T>(
+  path: string,
+  init: RequestInit = {}
+): Promise<T | null> {
+  const h = headers();
+  const res = await fetch(`${getBaseUrl()}${path}`, {
+    ...init,
+    headers: { ...(init.headers as any), cookie: h.get("cookie") ?? "" },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    console.warn(`[serverGet] ${path} -> ${res.status}`);
+    return null; // 401/500 でも throw せず null 返す
+  }
+  return res.json() as Promise<T>;
+}

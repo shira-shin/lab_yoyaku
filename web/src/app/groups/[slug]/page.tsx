@@ -1,15 +1,15 @@
-import { listDevices } from '@/lib/server-api';
+import { serverGet } from '@/lib/server-api';
 import { notFound } from 'next/navigation';
 import GroupScreenClient from './GroupScreenClient';
 import ReservationForm from './ReservationForm';
 import { readUserFromCookie } from '@/lib/auth';
 import type { Span } from '@/components/CalendarWithBars';
-import { getBaseUrl } from '@/lib/base-url';
 import PrintButton from '@/components/PrintButton';
 import type { ReservationItem } from '@/components/ReservationList';
 import CalendarReservationSection from './CalendarReservationSection';
 import Image from 'next/image';
-import { headers } from 'next/headers';
+
+export const dynamic = 'force-dynamic';
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
   const first = new Date(y, m, 1);
@@ -41,33 +41,19 @@ export default async function GroupPage({
   searchParams: { month?: string };
 }) {
   const { slug } = params;
-  const base = getBaseUrl();
 
-  const cookie = headers().get('cookie') ?? '';
-  const gRes = await fetch(`${base}/api/mock/groups/${slug}`, {
-    cache: 'no-store',
-    headers: { cookie },
-  });
-  if (gRes.status === 404) return notFound();
-  if (!gRes.ok) throw new Error(`API ${gRes.status} /api/mock/groups/${slug}`);
-  const group = (await gRes.json()).data;
+  const gRes = await serverGet<{ data: any }>(`/api/mock/groups/${slug}`);
+  const group = gRes?.data;
+  if (!group) return notFound();
 
   const [devicesRes, reservations, me] = await Promise.all([
-    listDevices(group.slug),
-    (async () => {
-      const r = await fetch(`${base}/api/mock/reservations?slug=${slug}`, {
-        cache: 'no-store',
-        headers: { cookie },
-      });
-      if (r.ok) {
-        const json = await r.json();
-        return json.data ?? [];
-      }
-      if (r.status === 404) return [];
-      throw new Error(`API ${r.status} /api/mock/reservations?slug=${slug}`);
-    })(),
+    serverGet<{ data?: any[] }>(`/api/mock/devices?slug=${group.slug}`),
+    serverGet<any[]>(`/api/mock/reservations?slug=${slug}`),
     readUserFromCookie(),
   ]);
+
+  const devices = devicesRes?.data || [];
+  const reservationList = reservations ?? [];
 
   const baseMonth = (() => {
     if (searchParams?.month) {
@@ -83,9 +69,8 @@ export default async function GroupPage({
   next.setMonth(next.getMonth() + 1);
   const pad2 = (n: number) => n.toString().padStart(2, '0');
   const toParam = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
-  const devices = devicesRes.data || [];
-  const spans: Span[] = (reservations ?? []).map((r: any) => {
-    const dev = group.devices.find((d: any)=> d.id === r.deviceId);
+  const spans: Span[] = reservationList.map((r: any) => {
+    const dev = group.devices.find((d: any) => d.id === r.deviceId);
     return {
       id: r.id,
       name: dev?.name ?? r.deviceId,
@@ -98,7 +83,7 @@ export default async function GroupPage({
     };
   });
 
-  const listItems: ReservationItem[] = reservations.map((r: any) => {
+  const listItems: ReservationItem[] = reservationList.map((r: any) => {
     const dev = group.devices.find((d: any) => d.id === r.deviceId);
     return {
       id: r.id,

@@ -1,9 +1,10 @@
 import { readUserFromCookie } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import type { Span } from '@/components/CalendarWithBars';
-import { getBaseUrl } from '@/lib/base-url';
 import DashboardClient from './page.client';
-import { headers } from 'next/headers';
+import { serverGet } from '@/lib/server-api';
+
+export const dynamic = 'force-dynamic';
 
 type Mine = {
   id:string; deviceId:string; deviceName?:string; user:string; userName?:string;
@@ -16,39 +17,22 @@ function colorFromString(s:string){
   let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0;
   return palette[h%palette.length];
 }
-const short = (s:string,len=10)=> s.length<=len ? s : s.slice(0,len-1)+'…';
-
 export default async function Home() {
   const me = await readUserFromCookie();
   if (!me) redirect('/login?next=/');
 
-  const base = getBaseUrl();
-  const cookie = headers().get('cookie') ?? '';
-  const res = await fetch(`${base}/api/me/reservations`, {
-    cache:'no-store',
-    headers: { cookie },
-  });
-  const json = await res.json();
+  const json = await serverGet<{ data: Mine[]; all: any[] }>(
+    '/api/me/reservations'
+  );
 
-  let myGroups: { slug: string; name: string }[] = [];
-  try {
-    const gRes = await fetch(`${base}/api/me/groups`, {
-      cache: 'no-store',
-      headers: { cookie },
-    });
-    if (gRes.ok) {
-      myGroups = await gRes.json();
-    }
-  } catch (_) {
-    // ignore
-  }
+  const upcomingRaw: Mine[] = json?.data ?? [];
+  upcomingRaw.sort(
+    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+  );
+  const upcoming = upcomingRaw.slice(0, 10);
 
-  const upcomingRaw: Mine[] = json.data ?? [];
-  upcomingRaw.sort((a,b)=> new Date(a.start).getTime() - new Date(b.start).getTime());
-  const upcoming = upcomingRaw.slice(0,10);
-
-  const mineAll = json.all ?? [];
-  const spans: Span[] = mineAll.map((r:any)=>({
+  const mineAll = json?.all ?? [];
+  const spans: Span[] = mineAll.map((r: any) => ({
     id: r.id,
     name: r.deviceName ?? r.deviceId,
     start: new Date(r.start),
@@ -58,6 +42,11 @@ export default async function Home() {
     by: r.userName || r.user,
     participants: r.participants ?? [],
   }));
+
+  const myGroups =
+    (await serverGet<{ slug: string; name: string }[]>(
+      '/api/me/groups'
+    )) ?? [];
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8 space-y-6">
