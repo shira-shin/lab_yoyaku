@@ -1,6 +1,7 @@
 import { redirect, notFound } from 'next/navigation';
 import { serverFetch } from '@/lib/server-fetch';
 import GroupScreenClient from './GroupScreenClient';
+import Link from 'next/link';
 import { readUserFromCookie } from '@/lib/auth';
 import type { Span } from '@/components/CalendarWithBars';
 import PrintButton from '@/components/PrintButton';
@@ -113,7 +114,7 @@ export default async function GroupPage({
           defaultReserver={me?.email}
         />
       </div>
-      <div className="rounded-2xl border p-4 md:p-6 bg-white space-y-4">
+      <div className="rounded-2xl border p-4 md:p-6 bg-white space-y-4 overflow-visible">
         <div className="flex justify-between items-center">
           <a
             href={`?month=${toParam(prev)}`}
@@ -122,7 +123,7 @@ export default async function GroupPage({
             ‹
           </a>
           <div className="flex-1 text-center font-medium">{group.name}　{year}年{month + 1}月</div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <a
               href={`?month=${toParam(next)}`}
               className="px-2 py-1 rounded border print:hidden"
@@ -132,6 +133,16 @@ export default async function GroupPage({
             <div className="print:hidden">
               <PrintButton className="btn btn-secondary" />
             </div>
+            <Link
+              href={`/groups/${encodeURIComponent(group.slug)}/reservations/new${
+                devices.length === 1
+                  ? `?device=${encodeURIComponent(devices[0].slug)}`
+                  : ''
+              }`}
+              className="btn btn-primary"
+            >
+              予約を追加
+            </Link>
           </div>
         </div>
         <CalendarReservationSection

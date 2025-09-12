@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 export default function GroupScreenClient({
   initialGroup,
@@ -15,6 +16,7 @@ export default function GroupScreenClient({
   const [devices, setDevices] = useState<any[]>(initialDevices);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const isHost = defaultReserver && group.host === defaultReserver;
+  const firstDevice = devices[0];
 
   function handleLineShare() {
     const url = window.location.href;
@@ -57,6 +59,14 @@ export default function GroupScreenClient({
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">{group.name}</h1>
           <div className="flex gap-2 flex-wrap justify-end">
+            <Link
+              href={`/groups/${encodeURIComponent(group.slug)}/reservations/new${
+                firstDevice ? `?device=${encodeURIComponent(firstDevice.slug)}` : ''
+              }`}
+              className="btn btn-primary"
+            >
+              予約を追加
+            </Link>
             <button onClick={handleLineShare} className="btn btn-secondary">
               LINEで共有
             </button>
@@ -116,6 +126,14 @@ export default function GroupScreenClient({
                 <div className="text-xs text-neutral-500">ID: {d.id}</div>
               </div>
               <div className="mt-3 flex gap-2">
+                <Link
+                  href={`/groups/${encodeURIComponent(group.slug)}/reservations/new?device=${encodeURIComponent(
+                    d.slug
+                  )}`}
+                  className="btn btn-secondary flex-1"
+                >
+                  予約
+                </Link>
                 <a
                   href={`/api/mock/devices/${d.slug}/qr`}
                   target="_blank"

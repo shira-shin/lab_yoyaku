@@ -46,26 +46,6 @@ export default function CalendarReservationSection({
         </h2>
         <ReservationList items={items} />
       </div>
-      {selected && (
-        <div className="mt-3 text-right">
-          <a
-            className="btn btn-primary"
-            href={`/groups/${groupSlug}/reservations/new?${
-              devices.length === 1
-                ? `device=${encodeURIComponent(devices[0].slug)}&`
-                : ''
-            }date=${
-              selected.getFullYear() +
-              '-' +
-              pad(selected.getMonth() + 1) +
-              '-' +
-              pad(selected.getDate())
-            }`}
-          >
-            予約追加
-          </a>
-        </div>
-      )}
-    </>
-  );
-}
+      </>
+    );
+  }
