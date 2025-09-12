@@ -1,4 +1,0 @@
-{
-  "buildCommand": "pnpm -C web build",
-  "installCommand": "pnpm install --frozen-lockfile"
-}
