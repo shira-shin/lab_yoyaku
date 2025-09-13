@@ -1,6 +1,10 @@
 import { loadDB, saveDB, uid } from '@/lib/mockdb';
 
 export const store = {
+  findGroupBySlug(slug: string) {
+    const db = loadDB();
+    return db.groups.find((g: any) => g.slug === slug) || null;
+  },
   findDeviceBySlug(slug: string) {
     const db = loadDB();
     for (const g of db.groups || []) {
@@ -41,6 +45,32 @@ export const store = {
     g.devices.push(device);
     saveDB(db);
     return device;
+  },
+  createReservation(payload: { groupSlug: string; deviceId: string; start: string; end: string; purpose?: string; userId: string }) {
+    const db = loadDB();
+    const g = db.groups.find((x: any) => x.slug === payload.groupSlug);
+    if (!g) return null;
+    const reservation: any = {
+      id: uid(),
+      deviceId: payload.deviceId,
+      start: payload.start,
+      end: payload.end,
+      purpose: payload.purpose,
+      user: payload.userId,
+    };
+    g.reservations = g.reservations || [];
+    g.reservations.push(reservation);
+    saveDB(db);
+    return reservation;
+  },
+  listReservationsByGroup(slug: string) {
+    const db = loadDB();
+    const g = db.groups.find((x: any) => x.slug === slug);
+    return g?.reservations || [];
+  },
+  currentUserId() {
+    const db = loadDB();
+    return db.users?.[0]?.id || 'user1';
   },
 };
 

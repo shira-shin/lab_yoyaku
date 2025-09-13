@@ -1,5 +1,5 @@
 'use client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 function slugify(name: string) {
   return name
@@ -11,6 +11,8 @@ function slugify(name: string) {
 
 export default function DeviceNew({ params }: { params: { slug: string } }) {
   const r = useRouter();
+  const sp = useSearchParams();
+  const next = sp.get('next');
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -19,7 +21,7 @@ export default function DeviceNew({ params }: { params: { slug: string } }) {
       alert('機器名は必須です');
       return;
     }
-      const slug = slugify(name);
+    const slug = slugify(name);
     const res = await fetch(`/api/mock/groups/${params.slug}/devices`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -36,7 +38,8 @@ export default function DeviceNew({ params }: { params: { slug: string } }) {
       alert(json?.error ?? `HTTP ${res.status}`);
       return;
     }
-    r.push(`/groups/${params.slug}/devices/${json?.device?.slug ?? slug}`);
+    const createdSlug = json?.device?.slug ?? slug;
+    r.push(next || `/groups/${params.slug}/devices/${createdSlug}`);
   }
   return (
     <div className="max-w-2xl">

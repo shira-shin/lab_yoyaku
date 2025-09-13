@@ -17,7 +17,7 @@ export default function ClientPage({ params }: { params: { slug: string } }) {
       end: String(fd.get('end') || ''),
       purpose: String(fd.get('purpose') || ''),
     };
-    const res = await fetch('/api/mock/reservations', {
+    const res = await fetch(`/api/mock/groups/${encodeURIComponent(params.slug)}/reservations`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
