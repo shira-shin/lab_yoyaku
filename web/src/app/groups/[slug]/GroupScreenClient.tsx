@@ -18,20 +18,22 @@ export default function GroupScreenClient({
   const isHost = defaultReserver && group.host === defaultReserver;
   const firstDevice = devices[0];
 
-  function handleLineShare() {
+  async function handleShareLink() {
     const url = window.location.href;
-    window.open(
-      `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}`,
-      '_blank'
-    );
-  }
-
-  function handleMailShare() {
-    const url = window.location.href;
-    const subject = `${group.name}の共有`;
-    window.open(
-      `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(url)}`
-    );
+    if (navigator.share) {
+      try {
+        await navigator.share({ url });
+      } catch {
+        /* noop */
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        alert('リンクをコピーしました');
+      } catch {
+        alert('リンクのコピーに失敗しました');
+      }
+    }
   }
 
   async function handleDeleteDevice(id: string) {
@@ -53,7 +55,7 @@ export default function GroupScreenClient({
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="space-y-8">
       <header className="space-y-2">
         <a href="/" className="text-sm text-indigo-600 hover:underline">&larr; ホームへ戻る</a>
         <div className="flex items-center justify-between">
@@ -67,11 +69,8 @@ export default function GroupScreenClient({
             >
               予約を追加
             </Link>
-            <button onClick={handleLineShare} className="btn btn-secondary">
-              LINEで共有
-            </button>
-            <button onClick={handleMailShare} className="btn btn-secondary">
-              メールで共有
+            <button onClick={handleShareLink} className="btn btn-secondary">
+              リンクをコピー
             </button>
             {isHost && (
               <a
