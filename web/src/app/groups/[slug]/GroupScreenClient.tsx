@@ -102,12 +102,12 @@ export default function GroupScreenClient({
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">機器</h2>
-          <a
-            href={`/groups/${encodeURIComponent(group.slug.toLowerCase())}/devices/new`}
+          <Link
+            href={`/groups/${encodeURIComponent(group.slug.toLowerCase())}/devices/new?next=${encodeURIComponent(`/groups/${group.slug.toLowerCase()}`)}`}
             className="btn btn-primary"
           >
             機器を追加
-          </a>
+          </Link>
         </div>
         <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {devices.map((d) => (
