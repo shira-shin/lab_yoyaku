@@ -106,7 +106,7 @@ export default async function GroupPage({
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-4xl mx-auto">
       <div className="print:hidden">
         <GroupScreenClient
           initialGroup={group}
