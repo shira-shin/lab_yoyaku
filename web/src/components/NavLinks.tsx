@@ -24,7 +24,7 @@ export default function NavLinks({ me }: { me: any }) {
           <a className={linkClass('/groups/new')} href="/groups/new">グループをつくる</a>
           <a className={linkClass('/')} href="/">ホーム</a>
           <a className={linkClass('/groups')} href="/groups">グループ</a>
-          <span className="hidden sm:inline text-white/80">{me.name || me.email}</span>
+          <span className="hidden sm:inline text-white/80">{me.name || me.email.split('@')[0]}</span>
           <form action="/api/auth/logout" method="post">
             <button className="rounded-md bg-white/10 px-3 py-1 hover:bg-white/20">ログアウト</button>
           </form>

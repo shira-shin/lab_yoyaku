@@ -1,5 +1,6 @@
 import './globals.css';
 import Header from '@/components/Header';
+import { Toaster } from '@/lib/toast';
 
 export const metadata = {
   icons: {
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full bg-background text-gray-900 font-sans">
         <Header />
         <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+        <Toaster />
       </body>
     </html>
   );

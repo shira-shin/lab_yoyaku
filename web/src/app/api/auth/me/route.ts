@@ -5,6 +5,7 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   const me = await readUserFromCookie();
-  return NextResponse.json({ ok: !!me, user: me });
+  if (!me) return NextResponse.json({ ok: false }, { status: 401 });
+  return NextResponse.json({ ok: true, user: me, profile: { displayName: me.name ?? null } });
 }
 

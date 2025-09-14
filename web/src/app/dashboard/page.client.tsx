@@ -35,16 +35,16 @@ export default function DashboardClient({ initialItems, initialSpans, isLoggedIn
 
   const handleLoaded = (j: any) => {
     const all = (j.all ?? []) as any[];
-    const updated: Span[] = all.map((r: any) => ({
-      id: r.id,
-      name: r.deviceName ?? r.deviceId,
-      start: new Date(r.start),
-      end: new Date(r.end),
-      color: colorFromString(r.deviceId),
-      groupSlug: r.groupSlug,
-      by: r.userName || r.user,
-      participants: r.participants ?? [],
-    }));
+      const updated: Span[] = all.map((r: any) => ({
+        id: r.id,
+        name: r.deviceName ?? r.deviceId,
+        start: new Date(r.start),
+        end: new Date(r.end),
+        color: colorFromString(r.deviceId),
+        groupSlug: r.groupSlug,
+        by: r.userName || r.user?.split('@')[0] || r.user,
+        participants: r.participants ?? [],
+      }));
     setSpans(updated);
   };
 

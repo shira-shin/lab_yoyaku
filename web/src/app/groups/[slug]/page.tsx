@@ -80,6 +80,11 @@ export default async function GroupPage({
   next.setMonth(next.getMonth() + 1);
   const pad2 = (n: number) => n.toString().padStart(2, '0');
   const toParam = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+  const nameOf = (r: any) => {
+    if (me && r.user === me.email) return me.name || me.email.split('@')[0];
+    return r.userName || r.user?.split('@')[0] || r.user;
+  };
+
   const spans: Span[] = reservationList.map((r: any) => {
     const dev = devices.find((d: any) => d.id === r.deviceId);
     return {
@@ -89,7 +94,7 @@ export default async function GroupPage({
       end: new Date(r.end),
       color: colorFromString(r.deviceId),
       groupSlug: group.slug,
-      by: r.userName || r.user,
+      by: nameOf(r),
       participants: r.participants ?? [],
     };
   });
@@ -99,7 +104,7 @@ export default async function GroupPage({
     return {
       id: r.id,
       deviceName: dev?.name ?? r.deviceId,
-      user: r.userName || r.user,
+      user: nameOf(r),
       start: new Date(r.start),
       end: new Date(r.end),
     };

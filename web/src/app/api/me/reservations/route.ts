@@ -34,6 +34,10 @@ export async function GET() {
           deviceName: dev?.name ?? r.deviceId,
           groupSlug: g.slug,
           groupName: g.name,
+          userName:
+            r.user === me.email
+              ? me.name || me.email.split('@')[0]
+              : r.userName || r.user,
         };
       })
   );

@@ -22,7 +22,13 @@ export async function readUserFromCookie(): Promise<User | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret);
-    return { id: String(payload.id), name: String(payload.name), email: String(payload.email) };
+    const user: User = { id: String(payload.id), name: String(payload.name), email: String(payload.email) };
+    try {
+      const users = await loadUsers();
+      const u = users.find((x) => x.id === user.id);
+      if (u && u.name) user.name = u.name;
+    } catch { /* ignore */ }
+    return user;
   } catch { return null; }
 }
 

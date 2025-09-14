@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from '@/lib/toast';
 
 export default function GroupSettingsClient({ initialGroup }: { initialGroup: any }) {
   const [reserveFrom, setReserveFrom] = useState(initialGroup.reserveFrom || '');
@@ -27,25 +28,48 @@ export default function GroupSettingsClient({ initialGroup }: { initialGroup: an
         }),
       });
       if (!r.ok) throw new Error('failed');
-      router.push(`/groups/${initialGroup.slug}`);
+      toast.success('保存しました');
       router.refresh();
     } catch (e) {
-      alert('保存に失敗しました');
+      toast.error('保存に失敗しました');
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">{initialGroup.name} の設定</h1>
-      <form onSubmit={onSubmit} className="space-y-4 max-w-md">
-        <label className="block">
+    <form onSubmit={onSubmit} className="max-w-3xl space-y-6">
+      <section className="rounded-2xl border p-6 bg-white">
+        <h2 className="text-lg font-semibold mb-4">予約窓</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="block">
+            <div className="mb-1">開始（任意）</div>
+            <input
+              type="datetime-local"
+              value={reserveFrom}
+              onChange={(e) => setReserveFrom(e.target.value)}
+              className="input w-full"
+            />
+          </label>
+          <label className="block">
+            <div className="mb-1">終了（任意）</div>
+            <input
+              type="datetime-local"
+              value={reserveTo}
+              onChange={(e) => setReserveTo(e.target.value)}
+              className="input w-full"
+            />
+          </label>
+        </div>
+      </section>
+      <section className="rounded-2xl border p-6 bg-white">
+      <h2 className="text-lg font-semibold mb-4">連絡先</h2>
+        <label className="block mb-4">
           <div className="mb-1">ホスト</div>
           <select
             value={host}
             onChange={(e) => setHost(e.target.value)}
-            className="input"
+            className="input w-full"
           >
             <option value="">未設定</option>
             {members.map((m) => (
@@ -55,40 +79,22 @@ export default function GroupSettingsClient({ initialGroup }: { initialGroup: an
             ))}
           </select>
         </label>
-        <label className="block">
-          <div className="mb-1">予約開始（任意）</div>
-          <input
-            type="datetime-local"
-            value={reserveFrom}
-            onChange={(e) => setReserveFrom(e.target.value)}
-            className="input"
-          />
-        </label>
-        <label className="block">
-          <div className="mb-1">予約終了（任意）</div>
-          <input
-            type="datetime-local"
-            value={reserveTo}
-            onChange={(e) => setReserveTo(e.target.value)}
-            className="input"
-          />
-        </label>
-        <label className="block">
-          <div className="mb-1">メモ（任意）</div>
-          <textarea
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            className="input"
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={saving}
-          className="btn btn-primary"
-        >
-          保存
-        </button>
-      </form>
-    </div>
+        <div className="text-sm text-gray-500">将来の共同管理者用の説明ラベル</div>
+      </section>
+      <section className="rounded-2xl border p-6 bg-white">
+        <h2 className="text-lg font-semibold mb-4">メモ</h2>
+        <textarea
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
+          className="input w-full"
+          rows={4}
+        />
+        <div className="mt-4">
+          <button type="submit" disabled={saving} className="btn btn-primary">
+            保存
+          </button>
+        </div>
+      </section>
+    </form>
   );
 }
