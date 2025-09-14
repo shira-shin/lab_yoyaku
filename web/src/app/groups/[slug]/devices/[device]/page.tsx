@@ -5,6 +5,7 @@ import PrintButton from '@/components/PrintButton';
 import Image from 'next/image';
 import BackButton from '@/components/BackButton';
 import ReservationList, { ReservationItem } from '@/components/ReservationList';
+import { readUserFromCookie } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +46,7 @@ export default async function DeviceDetail({
   const reservations: any[] = Array.isArray(json?.reservations)
     ? json.reservations
     : [];
+  const me = await readUserFromCookie();
 
   const baseMonth = (() => {
     if (searchParams?.month) {
@@ -60,6 +62,11 @@ export default async function DeviceDetail({
   next.setMonth(next.getMonth() + 1);
   const pad2 = (n: number) => n.toString().padStart(2, '0');
   const toParam = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+  const nameOf = (r: any) => {
+    if (me && r.user === me.email) return me.name || me.email.split('@')[0];
+    return r.userName || r.user?.split('@')[0] || r.user;
+  };
+
   const spans: Span[] = reservations.map((r: any) => ({
     id: r.id,
     name: dev?.name ?? r.deviceId,
@@ -67,14 +74,14 @@ export default async function DeviceDetail({
     end: new Date(r.end),
     color: '#2563eb',
     groupSlug: group,
-    by: r.userName || r.user,
+    by: nameOf(r),
     participants: r.participants ?? [],
   }));
 
   const listItems: ReservationItem[] = reservations.map((r: any) => ({
     id: r.id,
     deviceName: dev?.name ?? r.deviceId,
-    user: r.userName || r.user,
+    user: nameOf(r),
     start: new Date(r.start),
     end: new Date(r.end),
   }));

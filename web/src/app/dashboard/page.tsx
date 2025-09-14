@@ -34,6 +34,10 @@ export default async function DashboardPage() {
       upcoming = upcomingRaw.slice(0, 10);
 
       const mineAll = json?.all ?? [];
+      const nameOf = (r: any) => {
+        if (me && r.user === me.email) return me.name || me.email.split('@')[0];
+        return r.userName || r.user?.split('@')[0] || r.user;
+      };
       spans = mineAll.map((r: any) => ({
         id: r.id,
         name: r.deviceName ?? r.deviceId,
@@ -41,7 +45,7 @@ export default async function DashboardPage() {
         end: new Date(r.end),
         color: colorFromString(r.deviceId),
         groupSlug: r.groupSlug,
-        by: r.userName || r.user,
+        by: nameOf(r),
         participants: r.participants ?? [],
       }));
     }

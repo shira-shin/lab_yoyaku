@@ -20,6 +20,11 @@ export const store = {
     const d = (g.devices || []).find((x: any) => x.slug === deviceSlug);
     return d ? { ...d, groupSlug: g.slug } : null;
   },
+  listDevices(groupSlug: string) {
+    const db = loadDB();
+    const g = db.groups.find((x: any) => x.slug === groupSlug);
+    return g?.devices || [];
+  },
   findReservationsByDevice(deviceId: string) {
     const db = loadDB();
     const res: any[] = [];
@@ -46,7 +51,7 @@ export const store = {
     saveDB(db);
     return device;
   },
-  createReservation(payload: { groupSlug: string; deviceId: string; start: string; end: string; purpose?: string; userId: string }) {
+  createReservation(payload: { groupSlug: string; deviceId: string; start: string; end: string; purpose?: string; user: string; userName?: string }) {
     const db = loadDB();
     const g = db.groups.find((x: any) => x.slug === payload.groupSlug);
     if (!g) return null;
@@ -56,7 +61,8 @@ export const store = {
       start: payload.start,
       end: payload.end,
       purpose: payload.purpose,
-      user: payload.userId,
+      user: payload.user,
+      userName: payload.userName,
     };
     g.reservations = g.reservations || [];
     g.reservations.push(reservation);
