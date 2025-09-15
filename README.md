@@ -42,3 +42,22 @@ from information_schema.tables
 where table_schema = 'public'
 order by table_name;
 ```
+
+## Testing
+
+### Web
+
+Run the linter for the Next.js frontend:
+
+```bash
+pnpm --filter ./web lint
+```
+
+### API
+
+Execute the FastAPI unit tests:
+
+```bash
+cd api
+PYTHONPATH=. pytest -q
+```

@@ -18,9 +18,12 @@ jobs:
       - name: Install dependencies
         run: |
           corepack enable
-          pnpm install --frozen-lockfile || true
+          pnpm install --frozen-lockfile
           pip install fastapi uvicorn pytest
       - name: Lint web
-        run: pnpm --filter web lint || true
+        run: pnpm --filter ./web lint
       - name: Test api
-        run: pytest -q || true
+        working-directory: api
+        env:
+          PYTHONPATH: .
+        run: pytest -q
