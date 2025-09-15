@@ -52,9 +52,42 @@ model VerificationToken {
 }
 
 model Group {
-  id        String   @id
-  name      String
+  id        String   @id @default(cuid())
   slug      String   @unique
-  createdBy String?  @map("created_by")
-  createdAt DateTime @default(now()) @map("created_at")
+  name      String?
+  hostEmail String
+  devices   Device[]
+  createdAt DateTime @default(now())
+}
+
+model Device {
+  id        String   @id @default(cuid())
+  slug      String
+  name      String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId   String
+  reservations Reservation[]
+
+  @@unique([groupId, slug])
+}
+
+model Reservation {
+  id        String   @id @default(cuid())
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId  String
+  userEmail String
+  start     DateTime
+  end       DateTime
+  purpose   String?
+  createdAt DateTime @default(now())
+
+  @@index([deviceId, start])
+  @@index([start, end])
+}
+
+model UserProfile {
+  email String  @id
+  displayName String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
