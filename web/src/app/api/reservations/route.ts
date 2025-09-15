@@ -1,16 +1,74 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/src/lib/prisma'
-import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
 
-const Body = z.object({
-  groupSlug: z.string().min(1),
-  deviceSlug: z.string().min(1),
-  start: z.string().transform((s) => new Date(s)),
-  end: z.string().transform((s) => new Date(s)),
-  purpose: z.string().optional(),
-})
+type ReservationRequestBody = {
+  groupSlug: string
+  deviceSlug: string
+  start: Date
+  end: Date
+  purpose?: string
+}
+
+type ValidationResult =
+  | { ok: true; value: ReservationRequestBody }
+  | { ok: false; error: string }
+
+function parseReservationBody(payload: unknown): ValidationResult {
+  if (!payload || typeof payload !== 'object') {
+    return { ok: false, error: 'invalid body' }
+  }
+
+  const record = payload as Record<string, unknown>
+
+  const groupSlug = record.groupSlug
+  if (typeof groupSlug !== 'string' || groupSlug.length === 0) {
+    return { ok: false, error: 'groupSlug must be a non-empty string' }
+  }
+
+  const deviceSlug = record.deviceSlug
+  if (typeof deviceSlug !== 'string' || deviceSlug.length === 0) {
+    return { ok: false, error: 'deviceSlug must be a non-empty string' }
+  }
+
+  const start = record.start
+  if (typeof start !== 'string' || start.length === 0) {
+    return { ok: false, error: 'start must be a non-empty string' }
+  }
+  const startDate = new Date(start)
+  if (Number.isNaN(startDate.getTime())) {
+    return { ok: false, error: 'start must be a valid date string' }
+  }
+
+  const end = record.end
+  if (typeof end !== 'string' || end.length === 0) {
+    return { ok: false, error: 'end must be a non-empty string' }
+  }
+  const endDate = new Date(end)
+  if (Number.isNaN(endDate.getTime())) {
+    return { ok: false, error: 'end must be a valid date string' }
+  }
+
+  let purpose: string | undefined
+  if (record.purpose !== undefined) {
+    if (typeof record.purpose !== 'string') {
+      return { ok: false, error: 'purpose must be a string if provided' }
+    }
+    purpose = record.purpose
+  }
+
+  return {
+    ok: true,
+    value: {
+      groupSlug,
+      deviceSlug,
+      start: startDate,
+      end: endDate,
+      purpose,
+    },
+  }
+}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -24,7 +82,18 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const body = Body.parse(await req.json())
+  let parsed: unknown
+  try {
+    parsed = await req.json()
+  } catch (error) {
+    return NextResponse.json({ error: 'invalid body' }, { status: 400 })
+  }
+
+  const result = parseReservationBody(parsed)
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: 400 })
+  }
+  const body = result.value
 
   const device = await prisma.device.findFirst({
     where: { slug: body.deviceSlug, group: { slug: body.groupSlug } },
