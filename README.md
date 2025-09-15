@@ -23,6 +23,22 @@ Lab equipment reservation system monorepo.
    ```
 
 ### Environment
+Set `DATABASE_URL` in `web/.env.local` to point to your Neon (Postgres) instance.
+Prisma migrations are applied automatically during `pnpm build`.
 
-The web app uses SQLite for user persistence. Configure the database path
-via `DATABASE_PATH` in `web/.env.local` (default: `./data.db`).
+### DB health check
+
+Run the health endpoint to verify connectivity:
+
+```bash
+curl http://localhost:3000/api/health/db
+```
+
+In Neon SQL editor you can run:
+
+```sql
+select table_schema, table_name
+from information_schema.tables
+where table_schema = 'public'
+order by table_name;
+```
