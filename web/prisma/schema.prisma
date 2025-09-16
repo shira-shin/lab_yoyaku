@@ -55,8 +55,13 @@ model Group {
   id        String   @id @default(cuid())
   slug      String   @unique
   name      String?
+  passcode  String?
   hostEmail String
+  reserveFrom DateTime?
+  reserveTo DateTime?
+  memo      String?
   devices   Device[]
+  members   GroupMember[]
   createdAt DateTime @default(now())
 }
 
@@ -64,6 +69,10 @@ model Device {
   id        String   @id @default(cuid())
   slug      String
   name      String
+  caution   String?
+  code      String?
+  qrToken   String   @default(cuid())
+  createdAt DateTime @default(now())
   group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId   String
   reservations Reservation[]
@@ -76,6 +85,7 @@ model Reservation {
   device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
   deviceId  String
   userEmail String
+  userName  String?
   start     DateTime
   end       DateTime
   purpose   String?
@@ -83,6 +93,16 @@ model Reservation {
 
   @@index([deviceId, start])
   @@index([start, end])
+}
+
+model GroupMember {
+  id        String   @id @default(cuid())
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId   String
+  email     String
+  createdAt DateTime @default(now())
+
+  @@unique([groupId, email])
 }
 
 model UserProfile {

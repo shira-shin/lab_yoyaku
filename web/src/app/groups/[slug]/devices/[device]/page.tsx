@@ -36,7 +36,7 @@ export default async function DeviceDetail({
   const { slug, device } = params;
   const group = slug;
   const res = await serverFetch(
-    `/api/mock/groups/${encodeURIComponent(group)}/devices/${encodeURIComponent(device)}`
+    `/api/groups/${encodeURIComponent(group)}/devices/${encodeURIComponent(device)}`
   );
   if (res.status === 401) redirect(`/login?next=/groups/${group}/devices/${device}`);
   if (res.status === 404) return notFound();
@@ -63,13 +63,13 @@ export default async function DeviceDetail({
   const pad2 = (n: number) => n.toString().padStart(2, '0');
   const toParam = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
   const nameOf = (r: any) => {
-    if (me && r.user === me.email) return me.name || me.email.split('@')[0];
-    return r.userName || r.user?.split('@')[0] || r.user;
+    if (me && r.userEmail === me.email) return me.name || me.email.split('@')[0];
+    return r.userName || r.userEmail?.split('@')[0] || r.userName || '';
   };
 
   const spans: Span[] = reservations.map((r: any) => ({
     id: r.id,
-    name: dev?.name ?? r.deviceId,
+    name: dev?.name ?? r.deviceName ?? r.deviceId,
     start: new Date(r.start),
     end: new Date(r.end),
     color: '#2563eb',
@@ -80,7 +80,7 @@ export default async function DeviceDetail({
 
   const listItems: ReservationItem[] = reservations.map((r: any) => ({
     id: r.id,
-    deviceName: dev?.name ?? r.deviceId,
+    deviceName: dev?.name ?? r.deviceName ?? r.deviceId,
     user: nameOf(r),
     start: new Date(r.start),
     end: new Date(r.end),
@@ -127,7 +127,7 @@ export default async function DeviceDetail({
           <ReservationList items={listItems} />
         </div>
         <Image
-          src={`/api/mock/devices/${encodeURIComponent(device)}/qr`}
+          src={`/api/devices/${encodeURIComponent(device)}/qr`}
           alt="QRコード"
           width={128}
           height={128}

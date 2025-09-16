@@ -6,7 +6,7 @@ import Empty from '@/components/Empty';
 export const dynamic = 'force-dynamic';
 
 export default async function GroupsPage() {
-  const res = await serverFetch('/api/mock/groups?mine=1');
+  const res = await serverFetch('/api/groups?mine=1');
   if (res.status === 401) redirect('/login?next=/groups');
   if (!res.ok) throw new Error(`failed: ${res.status}`);
   const data = await res.json();

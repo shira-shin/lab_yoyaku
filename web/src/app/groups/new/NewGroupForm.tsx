@@ -16,11 +16,10 @@ export default function NewGroupForm() {
       memo: String(fd.get('memo') || ''),
     };
 
-    const res = await fetch('/api/mock/groups', {
+    const res = await fetch('/api/groups', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
-      cache: 'no-store',
     });
 
     if (res.status === 409) {

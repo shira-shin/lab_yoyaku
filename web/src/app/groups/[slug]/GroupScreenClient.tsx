@@ -14,7 +14,7 @@ export default function GroupScreenClient({
 }) {
   const group = initialGroup;
   const [devices, setDevices] = useState<any[]>(initialDevices);
-  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removingSlug, setRemovingSlug] = useState<string | null>(null);
   const isHost = defaultReserver && group.host === defaultReserver;
   const firstDevice = devices[0];
 
@@ -36,21 +36,22 @@ export default function GroupScreenClient({
     }
   }
 
-  async function handleDeleteDevice(id: string) {
+  async function handleDeleteDevice(device: { id: string; slug: string }) {
     if (!confirm('この機器を削除しますか？')) return;
-    setRemovingId(id);
+    setRemovingSlug(device.slug);
     try {
-      const r = await fetch('/api/mock/devices', {
-        method: 'DELETE',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ slug: group.slug, id }),
-      });
+      const r = await fetch(
+        `/api/groups/${encodeURIComponent(group.slug)}/devices/${encodeURIComponent(device.slug)}`,
+        {
+          method: 'DELETE',
+        }
+      );
       if (!r.ok) throw new Error('failed');
-      setDevices((prev) => prev.filter((d) => d.id !== id));
+      setDevices((prev) => prev.filter((d) => d.id !== device.id));
     } catch (e) {
       alert('削除に失敗しました');
     } finally {
-      setRemovingId(null);
+      setRemovingSlug(null);
     }
   }
 
@@ -134,7 +135,7 @@ export default function GroupScreenClient({
                   予約
                 </Link>
                 <a
-                  href={`/api/mock/devices/${d.slug}/qr`}
+                  href={`/api/devices/${d.slug}/qr`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-secondary flex-1"
@@ -142,9 +143,9 @@ export default function GroupScreenClient({
                   QRコード
                 </a>
                 <button
-                  onClick={() => handleDeleteDevice(d.id)}
+                  onClick={() => handleDeleteDevice(d)}
                   className="btn btn-danger flex-1"
-                  disabled={removingId === d.id}
+                  disabled={removingSlug === d.slug}
                 >
                   削除
                 </button>

@@ -2,12 +2,12 @@
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 
-export default function NavLinks({ me }: { me: any }) {
+export default function NavLinks({ me, displayName }: { me: any; displayName?: string | null }) {
   const pathname = usePathname();
   const linkClass = (href: string) =>
     clsx(
       'rounded-md px-3 py-1 hover:bg-white/20',
-      href === '/'
+      href === '/dashboard'
         ? pathname === '/' || pathname.startsWith('/dashboard')
           ? 'underline underline-offset-8'
           : undefined
@@ -22,9 +22,11 @@ export default function NavLinks({ me }: { me: any }) {
       {me ? (
         <>
           <a className={linkClass('/groups/new')} href="/groups/new">グループをつくる</a>
-          <a className={linkClass('/')} href="/">ホーム</a>
+          <a className={linkClass('/dashboard')} href="/dashboard">ホーム</a>
           <a className={linkClass('/groups')} href="/groups">グループ</a>
-          <span className="hidden sm:inline text-white/80">{me.name || me.email.split('@')[0]}</span>
+          <span className="hidden sm:inline text-white/80">
+            {displayName || me.name || me.email.split('@')[0]}
+          </span>
           <form action="/api/auth/logout" method="post">
             <button className="rounded-md bg-white/10 px-3 py-1 hover:bg-white/20">ログアウト</button>
           </form>

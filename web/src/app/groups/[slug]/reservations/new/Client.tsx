@@ -69,6 +69,7 @@ export default function NewReservationClient({
         nextDevice ? `?device=${encodeURIComponent(nextDevice)}` : ''
       }`
     );
+    r.refresh();
   }
 
   return (

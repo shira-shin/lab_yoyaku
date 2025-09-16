@@ -6,7 +6,7 @@ import { serverFetch } from '@/lib/server-fetch';
 export const dynamic = 'force-dynamic';
 
 type Mine = {
-  id:string; deviceId:string; deviceName?:string; user:string; userName?:string;
+  id:string; deviceId:string; deviceName?:string; userEmail:string; userName?:string;
   participants?: string[];
   start:string; end:string; purpose?:string; groupSlug:string; groupName:string;
 };
@@ -35,8 +35,8 @@ export default async function DashboardPage() {
 
       const mineAll = json?.all ?? [];
       const nameOf = (r: any) => {
-        if (me && r.user === me.email) return me.name || me.email.split('@')[0];
-        return r.userName || r.user?.split('@')[0] || r.user;
+        if (me && r.userEmail === me.email) return me.name || me.email.split('@')[0];
+        return r.userName || r.userEmail?.split('@')[0] || r.userName || '';
       };
       spans = mineAll.map((r: any) => ({
         id: r.id,
@@ -50,7 +50,7 @@ export default async function DashboardPage() {
       }));
     }
 
-    const gRes = await serverFetch('/api/mock/groups?mine=1');
+    const gRes = await serverFetch('/api/groups?mine=1');
     if (gRes.ok) {
       const gJson = await gRes.json();
       myGroups = Array.isArray(gJson) ? gJson : gJson?.groups ?? [];
