@@ -1,6 +1,6 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 export default function NewReservationClient({
   params,
@@ -12,6 +12,7 @@ export default function NewReservationClient({
   const r = useRouter();
   const sp = useSearchParams();
   const defaultDevice = sp.get('device') ?? '';
+  const [deviceSlug, setDeviceSlug] = useState(defaultDevice);
   const sorted = useMemo(
     () => devices.slice().sort((a, b) => a.name.localeCompare(b.name)),
     [devices]
@@ -20,20 +21,38 @@ export default function NewReservationClient({
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const device = String(fd.get('device') || '');
-    const start = String(fd.get('start') || '');
-    const end = String(fd.get('end') || '');
+    const startValue = String(fd.get('start') || '');
+    const endValue = String(fd.get('end') || '');
     const purpose = String(fd.get('purpose') || '');
-    if (new Date(start) >= new Date(end)) {
+    const startAt = new Date(startValue);
+    const endAt = new Date(endValue);
+    if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
+      alert('開始と終了の日時を正しく入力してください');
+      return;
+    }
+    if (startAt >= endAt) {
       alert('開始は終了より前である必要があります');
       return;
     }
 
-    const res = await fetch(`/api/mock/groups/${params.slug}/reservations`, {
+    const deviceValue = deviceSlug || String(fd.get('device') || '');
+    if (!deviceValue) {
+      alert('機器を選択してください');
+      return;
+    }
+
+    const payload = {
+      groupSlug: params.slug,
+      deviceSlug: deviceValue,
+      start: startAt.toISOString(),
+      end: endAt.toISOString(),
+      purpose,
+    };
+
+    const res = await fetch('/api/reservations', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ device, start, end, purpose }),
-      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
     const j = await res.json().catch(() => ({}));
     if (res.status === 401) {
@@ -41,10 +60,15 @@ export default function NewReservationClient({
       return;
     }
     if (!res.ok) {
-      alert(j?.error ?? `HTTP ${res.status}`);
+      alert(j?.error ?? '予約の作成に失敗しました');
       return;
     }
-    r.push(`/groups/${params.slug}?device=${encodeURIComponent(device)}`);
+    const nextDevice = payload.deviceSlug;
+    r.push(
+      `/groups/${params.slug}${
+        nextDevice ? `?device=${encodeURIComponent(nextDevice)}` : ''
+      }`
+    );
   }
 
   return (
@@ -56,7 +80,8 @@ export default function NewReservationClient({
         <label className="block text-sm font-medium mb-1">機器 *</label>
         <select
           name="device"
-          defaultValue={defaultDevice}
+          value={deviceSlug}
+          onChange={(event) => setDeviceSlug(event.target.value)}
           required
           className="w-full rounded-xl border px-3 py-2"
         >
