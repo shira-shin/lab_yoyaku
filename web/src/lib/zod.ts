@@ -1,0 +1,170 @@
+export type IssuePath = Array<string | number>
+
+export type FlattenedError = {
+  formErrors: string[]
+  fieldErrors: Record<string, string[]>
+}
+
+export class ZodError extends Error {
+  readonly issues: { path: IssuePath; message: string }[]
+
+  constructor(issues: { path: IssuePath; message: string }[]) {
+    super(issues.map(issue => `${issue.path.join('.') || 'root'}: ${issue.message}`).join('\n'))
+    this.issues = issues
+    this.name = 'ZodError'
+  }
+
+  flatten(): FlattenedError {
+    const formErrors: string[] = []
+    const fieldErrors: Record<string, string[]> = {}
+
+    for (const issue of this.issues) {
+      if (issue.path.length === 0) {
+        formErrors.push(issue.message)
+        continue
+      }
+      const key = issue.path.map(part => `${part}`).join('.')
+      if (!fieldErrors[key]) {
+        fieldErrors[key] = []
+      }
+      fieldErrors[key].push(issue.message)
+    }
+
+    return { formErrors, fieldErrors }
+  }
+}
+
+export interface SafeParseSuccess<T> { success: true; data: T }
+export interface SafeParseFailure { success: false; error: ZodError }
+export type SafeParseReturnType<T> = SafeParseSuccess<T> | SafeParseFailure
+
+abstract class BaseSchema<T> {
+  abstract internalParse(input: unknown, path: IssuePath): T
+
+  parse(input: unknown): T {
+    return this.internalParse(input, [])
+  }
+
+  safeParse(input: unknown): SafeParseReturnType<T> {
+    try {
+      return { success: true as const, data: this.internalParse(input, []) }
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return { success: false as const, error }
+      }
+      throw error
+    }
+  }
+
+  optional(): BaseSchema<T | undefined> {
+    return new OptionalSchema(this)
+  }
+}
+
+class OptionalSchema<T> extends BaseSchema<T | undefined> {
+  constructor(private readonly inner: BaseSchema<T>) {
+    super()
+  }
+
+  internalParse(input: unknown, path: IssuePath): T | undefined {
+    if (input === undefined) {
+      return undefined
+    }
+    return this.inner.internalParse(input, path)
+  }
+}
+
+class StringSchema extends BaseSchema<string> {
+  private readonly validators: Array<(value: string) => string | null> = []
+
+  min(length: number, message?: string): this {
+    this.validators.push(value => {
+      if (value.length < length) {
+        return message ?? `must contain at least ${length} character(s)`
+      }
+      return null
+    })
+    return this
+  }
+
+  internalParse(input: unknown, path: IssuePath): string {
+    if (typeof input !== 'string') {
+      throw new ZodError([{ path, message: 'expected string' }])
+    }
+
+    for (const validator of this.validators) {
+      const failure = validator(input)
+      if (failure) {
+        throw new ZodError([{ path, message: failure }])
+      }
+    }
+
+    return input
+  }
+}
+
+class DateSchema extends BaseSchema<Date> {
+  internalParse(input: unknown, path: IssuePath): Date {
+    let value: Date
+    if (input instanceof Date) {
+      value = input
+    } else if (typeof input === 'string' || typeof input === 'number') {
+      value = new Date(input)
+    } else {
+      throw new ZodError([{ path, message: 'expected date' }])
+    }
+
+    if (Number.isNaN(value.getTime())) {
+      throw new ZodError([{ path, message: 'invalid date' }])
+    }
+
+    return value
+  }
+}
+
+type Shape = Record<string, BaseSchema<any>>
+
+type InferShape<S extends Shape> = { [K in keyof S]: InferSchema<S[K]> }
+
+type InferSchema<S> = S extends BaseSchema<infer T> ? T : never
+
+class ObjectSchema<S extends Shape> extends BaseSchema<InferShape<S>> {
+  constructor(private readonly shape: S) {
+    super()
+  }
+
+  internalParse(input: unknown, path: IssuePath): InferShape<S> {
+    if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+      throw new ZodError([{ path, message: 'expected object' }])
+    }
+
+    const record = input as Record<string, unknown>
+    const result: Record<string, unknown> = {}
+
+    for (const key of Object.keys(this.shape) as Array<keyof S>) {
+      const schema = this.shape[key]
+      try {
+        result[key as string] = schema.internalParse(record[key as string], [...path, key as string])
+      } catch (error) {
+        if (error instanceof ZodError) {
+          throw error
+        }
+        throw error
+      }
+    }
+
+    return result as InferShape<S>
+  }
+}
+
+const coerce = {
+  date: () => new DateSchema(),
+}
+
+export const z = {
+  object: <S extends Shape>(shape: S) => new ObjectSchema(shape),
+  string: () => new StringSchema(),
+  coerce,
+}
+
+export type infer<T extends BaseSchema<any>> = T extends BaseSchema<infer U> ? U : never

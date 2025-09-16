@@ -25,6 +25,9 @@
       ],
       "@/src/*": [
         "src/*"
+      ],
+      "zod": [
+        "src/lib/zod"
       ]
     },
     "plugins": [
