@@ -1,5 +1,5 @@
 'use client';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 function slugify(name: string) {
   return name
@@ -11,8 +11,7 @@ function slugify(name: string) {
 
 export default function DeviceNew({ params }: { params: { slug: string } }) {
   const r = useRouter();
-  const sp = useSearchParams();
-  const next = sp.get('next');
+  useSearchParams();
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -22,7 +21,7 @@ export default function DeviceNew({ params }: { params: { slug: string } }) {
       return;
     }
     const slug = slugify(name);
-    const res = await fetch(`/api/mock/groups/${params.slug}/devices`, {
+    const res = await fetch(`/api/groups/${encodeURIComponent(params.slug)}/devices`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -31,15 +30,13 @@ export default function DeviceNew({ params }: { params: { slug: string } }) {
         caution: String(fd.get('caution') || ''),
         code: String(fd.get('code') || ''),
       }),
-      cache: 'no-store',
     });
     const json = await res.json().catch(() => ({} as any));
     if (!res.ok) {
       alert(json?.error ?? `HTTP ${res.status}`);
       return;
     }
-    const createdSlug = json?.device?.slug ?? slug;
-    r.push(next || `/groups/${params.slug}/devices/${createdSlug}`);
+    r.push(`/groups/${params.slug}`);
   }
   return (
     <div className="max-w-2xl">

@@ -1,10 +1,18 @@
 'use client';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from '@/lib/toast';
 
-export default function ProfileClient({ initialDisplayName }: { initialDisplayName: string }) {
+export default function ProfileClient({
+  initialDisplayName,
+  email,
+}: {
+  initialDisplayName: string;
+  email: string;
+}) {
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -17,6 +25,7 @@ export default function ProfileClient({ initialDisplayName }: { initialDisplayNa
       });
       if (!res.ok) throw new Error('failed');
       toast.success('保存しました');
+      router.refresh();
     } catch (e) {
       toast.error('保存に失敗しました');
     } finally {
@@ -26,6 +35,14 @@ export default function ProfileClient({ initialDisplayName }: { initialDisplayNa
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      <label className="block">
+        <div className="mb-1">メールアドレス</div>
+        <input
+          value={email}
+          readOnly
+          className="input w-full bg-gray-100 text-gray-500"
+        />
+      </label>
       <label className="block">
         <div className="mb-1">表示名</div>
         <input

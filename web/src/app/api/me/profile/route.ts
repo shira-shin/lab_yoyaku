@@ -1,25 +1,31 @@
-import { NextResponse } from 'next/server';
-import { readUserFromCookie } from '@/lib/auth';
-import { loadDB, saveDB } from '@/lib/mockdb';
+import { NextResponse } from 'next/server'
+import { readUserFromCookie } from '@/lib/auth'
+import { prisma } from '@/src/lib/prisma'
 
 export async function GET() {
-  const me = await readUserFromCookie();
-  if (!me) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  const db = loadDB();
-  const u = (db.users || []).find((x: any) => x.email === me.email);
-  return NextResponse.json({ displayName: u?.name ?? null });
+  const me = await readUserFromCookie()
+  if (!me?.email) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
+  const profile = await prisma.userProfile.findUnique({ where: { email: me.email } })
+  return NextResponse.json({ displayName: profile?.displayName ?? null, email: me.email })
 }
 
 export async function PUT(req: Request) {
-  const me = await readUserFromCookie();
-  if (!me) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  const body = await req.json().catch(() => ({}));
-  const displayName = String(body.displayName || '').trim();
-  const db = loadDB();
-  const u = (db.users || []).find((x: any) => x.email === me.email);
-  if (u) {
-    u.name = displayName;
-    saveDB(db);
+  const me = await readUserFromCookie()
+  if (!me?.email) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
-  return NextResponse.json({ ok: true, displayName });
+
+  const body = await req.json().catch(() => ({}))
+  const displayName = String(body?.displayName || '').trim()
+
+  const updated = await prisma.userProfile.upsert({
+    where: { email: me.email },
+    update: { displayName: displayName || null },
+    create: { email: me.email, displayName: displayName || null },
+  })
+
+  return NextResponse.json({ ok: true, displayName: updated.displayName ?? null })
 }

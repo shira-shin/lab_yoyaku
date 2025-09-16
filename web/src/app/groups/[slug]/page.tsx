@@ -11,11 +11,6 @@ import Image from 'next/image';
 
 export const dynamic = 'force-dynamic';
 
-function toArr<T>(v: T[] | Record<string, T> | null | undefined): T[] {
-  if (Array.isArray(v)) return v;
-  if (v && typeof v === 'object') return Object.values(v as Record<string, T>);
-  return [];
-}
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
   const first = new Date(y, m, 1);
@@ -48,23 +43,28 @@ export default async function GroupPage({
 }) {
   const paramSlug = params.slug.toLowerCase();
 
-  const res = await serverFetch(`/api/mock/groups/${encodeURIComponent(paramSlug)}`);
+  const res = await serverFetch(`/api/groups/${encodeURIComponent(paramSlug)}`);
   if (res.status === 401) redirect(`/login?next=/groups/${paramSlug}`);
   if (res.status === 404) return notFound();
   if (!res.ok) throw new Error(`failed: ${res.status}`);
   const data = await res.json();
-  const raw = data?.data ?? data?.group ?? data;
+  const raw = data?.group ?? {};
   const group = {
-    ...raw,
+    id: raw?.id,
     slug: raw?.slug ?? paramSlug,
-    members: toArr(raw?.members),
-    devices: toArr(raw?.devices),
-    reservations: toArr(raw?.reservations),
+    name: raw?.name ?? paramSlug,
+    host: raw?.host ?? null,
+    reserveFrom: raw?.reserveFrom ?? null,
+    reserveTo: raw?.reserveTo ?? null,
+    memo: raw?.memo ?? null,
+    members: Array.isArray(raw?.members) ? raw.members : [],
+    devices: Array.isArray(raw?.devices) ? raw.devices : [],
+    reservations: Array.isArray(raw?.reservations) ? raw.reservations : [],
   };
   const devices = group.devices;
   const reservationList = group.reservations;
   const me = await readUserFromCookie();
-  const qrUrl = `/api/mock/groups/${encodeURIComponent(paramSlug)}/qr`;
+  const qrUrl = `/api/groups/${encodeURIComponent(paramSlug)}/qr`;
 
   const baseMonth = (() => {
     if (searchParams?.month) {
@@ -81,15 +81,15 @@ export default async function GroupPage({
   const pad2 = (n: number) => n.toString().padStart(2, '0');
   const toParam = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
   const nameOf = (r: any) => {
-    if (me && r.user === me.email) return me.name || me.email.split('@')[0];
-    return r.userName || r.user?.split('@')[0] || r.user;
+    if (me && r.userEmail === me.email) return me.name || me.email.split('@')[0];
+    return r.userName || r.userEmail?.split('@')[0] || r.userName || '';
   };
 
   const spans: Span[] = reservationList.map((r: any) => {
-    const dev = devices.find((d: any) => d.id === r.deviceId);
+    const dev = devices.find((d: any) => d.id === r.deviceId || d.slug === r.deviceSlug);
     return {
       id: r.id,
-      name: dev?.name ?? r.deviceId,
+      name: dev?.name ?? r.deviceName ?? r.deviceId,
       start: new Date(r.start),
       end: new Date(r.end),
       color: colorFromString(r.deviceId),
@@ -100,10 +100,10 @@ export default async function GroupPage({
   });
 
   const listItems: ReservationItem[] = reservationList.map((r: any) => {
-    const dev = devices.find((d: any) => d.id === r.deviceId);
+    const dev = devices.find((d: any) => d.id === r.deviceId || d.slug === r.deviceSlug);
     return {
       id: r.id,
-      deviceName: dev?.name ?? r.deviceId,
+      deviceName: dev?.name ?? r.deviceName ?? r.deviceId,
       user: nameOf(r),
       start: new Date(r.start),
       end: new Date(r.end),

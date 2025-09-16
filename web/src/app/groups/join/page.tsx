@@ -15,7 +15,7 @@ export default function GroupJoinPage() {
     setErr('');
     setLoading(true);
     try {
-      const res = await fetch('/api/mock/groups/join', {
+      const res = await fetch('/api/groups/join', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ query: group, password }),

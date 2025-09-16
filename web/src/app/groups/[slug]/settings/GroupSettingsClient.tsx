@@ -17,7 +17,7 @@ export default function GroupSettingsClient({ initialGroup }: { initialGroup: an
     e.preventDefault();
     setSaving(true);
     try {
-      const r = await fetch(`/api/mock/groups/${initialGroup.slug}`, {
+      const r = await fetch(`/api/groups/${encodeURIComponent(initialGroup.slug)}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({

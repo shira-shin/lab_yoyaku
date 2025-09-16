@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/src/lib/prisma'
 import { z } from 'zod'
+import { readUserFromCookie } from '@/lib/auth'
+import type { Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,10 +17,20 @@ const ReservationBodySchema = z.object({
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const groupSlug = searchParams.get('group') ?? ''
+  const deviceSlug = searchParams.get('device') ?? ''
+  const deviceFilter: Prisma.DeviceWhereInput = {}
+  if (groupSlug) deviceFilter.group = { slug: groupSlug.toLowerCase() }
+  if (deviceSlug) deviceFilter.slug = deviceSlug.toLowerCase()
+  const where: Prisma.ReservationWhereInput = {}
+  if (Object.keys(deviceFilter).length > 0) where.device = deviceFilter
   const rows = await prisma.reservation.findMany({
-    where: { device: { group: { slug: groupSlug } } },
-    include: { device: { select: { slug: true, group: { select: { slug: true } } } } },
-    orderBy: { createdAt: 'desc' },
+    where: Object.keys(where).length > 0 ? where : undefined,
+    include: {
+      device: {
+        select: { slug: true, name: true, group: { select: { slug: true } } },
+      },
+    },
+    orderBy: { start: 'asc' },
   })
   return NextResponse.json(rows)
 }
@@ -38,6 +50,11 @@ export async function POST(req: Request) {
   }
   const body = parsedResult.data
 
+  const me = await readUserFromCookie()
+  if (!me?.email) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
   const device = await prisma.device.findFirst({
     where: { slug: body.deviceSlug, group: { slug: body.groupSlug } },
     select: { id: true },
@@ -46,21 +63,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'device not found' }, { status: 404 })
   }
 
-  const me = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/auth/me`, { cache: 'no-store' }).then(r => r.json())
-  const userEmail = me?.email ?? 'unknown@example.com'
-
   if (body.start >= body.end) {
     return NextResponse.json({ error: 'invalid time range' }, { status: 400 })
   }
 
+  const profile = await prisma.userProfile.findUnique({ where: { email: me.email } })
+  const displayName = profile?.displayName || me.name || me.email.split('@')[0]
+
   const created = await prisma.reservation.create({
     data: {
       deviceId: device.id,
-      userEmail,
+      userEmail: me.email,
+      userName: displayName,
       start: body.start,
       end: body.end,
       purpose: body.purpose,
     },
+    include: {
+      device: {
+        select: {
+          slug: true,
+          name: true,
+          group: { select: { slug: true } },
+        },
+      },
+    },
   })
-  return NextResponse.json(created, { status: 201 })
+  return NextResponse.json({ reservation: created }, { status: 201 })
 }

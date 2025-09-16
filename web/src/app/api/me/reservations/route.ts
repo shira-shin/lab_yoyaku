@@ -1,56 +1,83 @@
-import { NextResponse } from 'next/server';
-import { readUserFromCookie } from '@/lib/auth';
-import { loadDB } from '@/lib/mockdb';
+import { NextResponse } from 'next/server'
+import { readUserFromCookie } from '@/lib/auth'
+import { prisma } from '@/src/lib/prisma'
+import type { Prisma } from '@prisma/client'
 
-export const runtime = 'nodejs';
-
-const norm = (v?: string) => (v ?? '').trim().toLowerCase();
+export const runtime = 'nodejs'
 
 export async function GET() {
-  const me = await readUserFromCookie();
-  if (!me) return NextResponse.json({ ok: false }, { status: 401 });
+  const me = await readUserFromCookie()
+  if (!me?.email) return NextResponse.json({ ok: false }, { status: 401 })
 
-  // 照合キー：email と name の両方（大小無視）
-  const meKeys = new Set([norm(me.email), norm(me.name)]);
+  const memberships = await prisma.groupMember.findMany({
+    where: { email: me.email },
+    select: { groupId: true },
+  })
+  const memberGroupIds = memberships.map((m) => m.groupId)
 
-  // 予約の「このユーザーが関与しているか」判定
-  function involved(r: any) {
-    const pool: string[] = [];
-    if (r.user) pool.push(r.user);
-    if (r.userName) pool.push(r.userName);
-    if (Array.isArray(r.participants)) pool.push(...r.participants);
-    if (Array.isArray(r.participantNames)) pool.push(...r.participantNames);
-    return pool.map(norm).some((k) => meKeys.has(k));
+  const orConditions: Prisma.GroupWhereInput[] = [{ hostEmail: me.email }]
+  if (memberGroupIds.length) {
+    orConditions.push({ id: { in: memberGroupIds } })
   }
 
-  const db = loadDB();
-  const mine = (db.groups ?? []).flatMap((g: any) =>
-    (g.reservations ?? [])
-      .filter(involved)
-      .map((r: any) => {
-        const dev = (g.devices ?? []).find((d: any) => d.id === r.deviceId);
-        return {
-          ...r,
-          deviceName: dev?.name ?? r.deviceId,
-          groupSlug: g.slug,
-          groupName: g.name,
-          userName:
-            r.user === me.email
-              ? me.name || me.email.split('@')[0]
-              : r.userName || r.user,
-        };
-      })
-  );
+  const groups = await prisma.group.findMany({
+    where: { OR: orConditions },
+    select: { id: true, slug: true, name: true },
+  })
 
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const nowSlack = new Date(now.getTime() - 60 * 1000);
-  const upcoming = mine.filter((r: any) => {
-    const start = new Date(r.start);
-    const end = new Date(r.end);
-    return end >= nowSlack || start >= today;
-  });
+  if (groups.length === 0) {
+    return NextResponse.json({ ok: true, data: [], all: [] })
+  }
 
-  return NextResponse.json({ ok: true, data: upcoming, all: mine });
+  const groupIdMap = new Map(groups.map((g) => [g.id, g]))
+  const reservations = await prisma.reservation.findMany({
+    where: { device: { groupId: { in: Array.from(groupIdMap.keys()) } } },
+    include: {
+      device: {
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          groupId: true,
+        },
+      },
+    },
+    orderBy: { start: 'asc' },
+  })
+
+  const profileEmails = Array.from(new Set(reservations.map((r) => r.userEmail)))
+  const profiles = profileEmails.length
+    ? await prisma.userProfile.findMany({ where: { email: { in: profileEmails } } })
+    : []
+  const displayNameMap = new Map(profiles.map((profile) => [profile.email, profile.displayName || '']))
+
+  const all = reservations.map((reservation) => {
+    const group = groupIdMap.get(reservation.device.groupId)!
+    const userName =
+      reservation.userName ||
+      displayNameMap.get(reservation.userEmail) ||
+      reservation.userEmail.split('@')[0]
+    return {
+      id: reservation.id,
+      deviceId: reservation.deviceId,
+      deviceSlug: reservation.device.slug,
+      deviceName: reservation.device.name,
+      groupSlug: group.slug,
+      groupName: group.name ?? group.slug,
+      start: reservation.start.toISOString(),
+      end: reservation.end.toISOString(),
+      purpose: reservation.purpose ?? null,
+      userEmail: reservation.userEmail,
+      userName,
+    }
+  })
+
+  const now = Date.now()
+  const upcoming = all
+    .filter((reservation) => new Date(reservation.end).getTime() >= now)
+    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+    .slice(0, 10)
+
+  return NextResponse.json({ ok: true, data: upcoming, all })
 }
 

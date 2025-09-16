@@ -11,7 +11,10 @@ export default async function ProfilePage() {
   return (
     <div className="max-w-md space-y-4">
       <h1 className="text-2xl font-bold">プロフィール</h1>
-      <ProfileClient initialDisplayName={json?.displayName ?? ''} />
+      <ProfileClient
+        initialDisplayName={json?.displayName ?? ''}
+        email={json?.email ?? ''}
+      />
     </div>
   );
 }

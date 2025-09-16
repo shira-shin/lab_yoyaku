@@ -24,45 +24,39 @@ export function createApi(
   }
 
   return {
-    listGroups: () => api('/api/mock/groups'),
+    listGroups: () => api('/api/groups'),
     createGroup: (body: any) =>
-      api('/api/mock/groups', { method: 'POST', body: JSON.stringify(body) }),
-    getGroup: (slug: string) => api(`/api/mock/groups/${slug}`),
+      api('/api/groups', { method: 'POST', body: JSON.stringify(body) }),
+    getGroup: (slug: string) => api(`/api/groups/${slug}`),
     joinGroup: (payload: any) =>
-      api('/api/mock/groups/join', {
+      api('/api/groups/join', {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
     listDevices: (slug: string) =>
-      api(`/api/mock/devices?slug=${encodeURIComponent(slug)}`),
-    createDevice: (body: any) =>
-      api('/api/mock/devices', { method: 'POST', body: JSON.stringify(body) }),
-    listReservations: (slug: string, deviceId?: string) =>
-      api(
-        `/api/mock/reservations?slug=${encodeURIComponent(slug)}${
-          deviceId ? `&deviceId=${encodeURIComponent(deviceId)}` : ''
-        }`
-      ),
-    createReservation: (body: any) =>
-      api('/api/mock/reservations', {
+      api(`/api/groups/${encodeURIComponent(slug)}/devices`),
+    createDevice: (slug: string, body: any) =>
+      api(`/api/groups/${encodeURIComponent(slug)}/devices`, {
         method: 'POST',
         body: JSON.stringify(body),
       }),
-    updateReservation: (body: any) =>
-      api('/api/mock/reservations', {
-        method: 'PATCH',
-        body: JSON.stringify(body),
-      }),
-    deleteReservation: (body: any) =>
-      api('/api/mock/reservations', {
-        method: 'DELETE',
-        body: JSON.stringify(body),
-      }),
-    listMyReservations: (from?: string, limit?: number) =>
+    listReservations: (slug: string, deviceId?: string) =>
       api(
-        `/api/mock/reservations?me=1${
-          from ? `&from=${encodeURIComponent(from)}` : ''
-        }${limit ? `&limit=${limit}` : ''}`
+        `/api/reservations?group=${encodeURIComponent(slug)}${
+          deviceId ? `&device=${encodeURIComponent(deviceId)}` : ''
+        }`
       ),
+    createReservation: (body: any) =>
+      api('/api/reservations', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    updateReservation: () => {
+      throw new Error('updateReservation is not implemented');
+    },
+    deleteReservation: () => {
+      throw new Error('deleteReservation is not implemented');
+    },
+    listMyReservations: () => api('/api/me/reservations'),
   };
 }
