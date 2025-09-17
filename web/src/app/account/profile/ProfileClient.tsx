@@ -22,6 +22,7 @@ export default function ProfileClient({
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ displayName }),
+        credentials: 'same-origin',
       });
       if (!res.ok) throw new Error('failed');
       toast.success('保存しました');

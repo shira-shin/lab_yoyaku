@@ -44,6 +44,7 @@ export default function GroupScreenClient({
         `/api/groups/${encodeURIComponent(group.slug)}/devices/${encodeURIComponent(device.slug)}`,
         {
           method: 'DELETE',
+          credentials: 'same-origin',
         }
       );
       if (!r.ok) throw new Error('failed');

@@ -50,7 +50,10 @@ export default function UpcomingReservations({
     setLoading(true);
     setErr(null);
     try {
-      const r = await fetch('/api/me/reservations', { cache: 'no-store' });
+      const r = await fetch('/api/me/reservations', {
+        cache: 'no-store',
+        credentials: 'same-origin',
+      });
       if (r.status === 401) {
         setItems([]);
         setErr('unauth');

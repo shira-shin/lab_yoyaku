@@ -25,7 +25,8 @@ export default function GroupJoinPage() {
       const res = await fetch('/api/groups/join', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ query: group, password }),
+        body: JSON.stringify({ query: group, slug: group, password }),
+        credentials: 'same-origin',
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));

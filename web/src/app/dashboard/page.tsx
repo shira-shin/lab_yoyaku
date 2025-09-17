@@ -2,6 +2,7 @@ import { readUserFromCookie } from '@/lib/auth';
 import type { Span } from '@/components/CalendarWithBars';
 import DashboardClient from './page.client';
 import { serverFetch } from '@/lib/serverFetch';
+import { redirect } from 'next/navigation';
 
 export const revalidate = 0;
 export const fetchCache = 'default-no-store';
@@ -21,43 +22,44 @@ function colorFromString(s:string){
 }
 export default async function DashboardPage() {
   const me = await readUserFromCookie();
+  if (!me) redirect('/login?next=/dashboard');
 
   let upcoming: Mine[] = [];
   let spans: Span[] = [];
   let myGroups: { slug: string; name: string }[] = [];
 
-  if (me) {
-    const res = await serverFetch('/api/me/reservations');
-    if (res.ok) {
-      const json = await res.json();
-      const upcomingRaw: Mine[] = json?.data ?? [];
-      upcomingRaw.sort(
-        (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
-      );
-      upcoming = upcomingRaw.slice(0, 10);
+  const res = await serverFetch('/api/me/reservations');
+  if (res.status === 401) redirect('/login?next=/dashboard');
+  if (!res.ok) redirect('/login?next=/dashboard');
 
-      const mineAll = json?.all ?? [];
-      const nameOf = (r: any) => {
-        if (me && r.userEmail === me.email) return me.name || me.email.split('@')[0];
-        return r.userName || r.userEmail?.split('@')[0] || r.userName || '';
-      };
-      spans = mineAll.map((r: any) => ({
-        id: r.id,
-        name: r.deviceName ?? r.deviceId,
-        start: new Date(r.start),
-        end: new Date(r.end),
-        color: colorFromString(r.deviceId),
-        groupSlug: r.groupSlug,
-        by: nameOf(r),
-        participants: r.participants ?? [],
-      }));
-    }
+  const json = await res.json();
+  const upcomingRaw: Mine[] = json?.data ?? [];
+  upcomingRaw.sort(
+    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+  );
+  upcoming = upcomingRaw.slice(0, 10);
 
-    const gRes = await serverFetch('/api/groups?mine=1');
-    if (gRes.ok) {
-      const gJson = await gRes.json();
-      myGroups = Array.isArray(gJson) ? gJson : gJson?.groups ?? [];
-    }
+  const mineAll = json?.all ?? [];
+  const nameOf = (r: any) => {
+    if (me && r.userEmail === me.email) return me.name || me.email.split('@')[0];
+    return r.userName || r.userEmail?.split('@')[0] || r.userName || '';
+  };
+  spans = mineAll.map((r: any) => ({
+    id: r.id,
+    name: r.deviceName ?? r.deviceId,
+    start: new Date(r.start),
+    end: new Date(r.end),
+    color: colorFromString(r.deviceId),
+    groupSlug: r.groupSlug,
+    by: nameOf(r),
+    participants: r.participants ?? [],
+  }));
+
+  const gRes = await serverFetch('/api/groups?mine=1');
+  if (gRes.status === 401) redirect('/login?next=/dashboard');
+  if (gRes.ok) {
+    const gJson = await gRes.json();
+    myGroups = Array.isArray(gJson) ? gJson : gJson?.groups ?? [];
   }
 
   return (

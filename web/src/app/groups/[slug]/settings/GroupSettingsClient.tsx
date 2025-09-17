@@ -26,6 +26,7 @@ export default function GroupSettingsClient({ initialGroup }: { initialGroup: an
           memo: memo || undefined,
           host: host || undefined,
         }),
+        credentials: 'same-origin',
       });
       if (!r.ok) throw new Error('failed');
       toast.success('保存しました');
