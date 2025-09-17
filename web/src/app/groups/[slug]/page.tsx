@@ -61,6 +61,7 @@ export default async function GroupPage({
 
   const res = await serverFetch(`/api/groups/${encodeURIComponent(paramSlug)}`);
   if (res.status === 401) redirect(`/login?next=/groups/${paramSlug}`);
+  if (res.status === 403) redirect(`/groups/join?slug=${encodeURIComponent(paramSlug)}`);
   if (res.status === 404) return notFound();
   if (!res.ok) throw new Error(`failed: ${res.status}`);
   const data = await res.json();
@@ -109,6 +110,9 @@ export default async function GroupPage({
   const reservationsRes = await serverFetch(`/api/reservations?${reservationParams.toString()}`);
   if (reservationsRes.status === 401) {
     redirect(`/login?next=/groups/${paramSlug}`);
+  }
+  if (reservationsRes.status === 403) {
+    redirect(`/groups/join?slug=${encodeURIComponent(paramSlug)}`);
   }
   if (reservationsRes.status === 404) {
     return notFound();
