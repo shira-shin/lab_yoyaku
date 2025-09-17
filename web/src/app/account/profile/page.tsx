@@ -1,12 +1,16 @@
-import { serverFetch } from '@/lib/server-fetch';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'default-no-store';
+
 import { redirect } from 'next/navigation';
+import { getUserFromCookies } from '@/lib/auth/server';
+import { serverFetch } from '@/lib/server-fetch';
 import ProfileClient from './ProfileClient';
 
-export const dynamic = 'force-dynamic';
-
 export default async function ProfilePage() {
+  const user = await getUserFromCookies();
+  if (!user) redirect('/login?next=/account/profile');
   const res = await serverFetch('/api/me/profile');
-  if (res.status === 401) redirect('/login?next=/account/profile');
   const json = await res.json();
   return (
     <div className="max-w-md space-y-4">

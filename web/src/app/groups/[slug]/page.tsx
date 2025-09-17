@@ -1,15 +1,17 @@
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'default-no-store';
+
 import { redirect, notFound } from 'next/navigation';
 import { serverFetch } from '@/lib/server-fetch';
 import GroupScreenClient from './GroupScreenClient';
 import Link from 'next/link';
-import { readUserFromCookie } from '@/lib/auth';
+import { getUserFromCookies } from '@/lib/auth/server';
 import type { Span } from '@/components/CalendarWithBars';
 import PrintButton from '@/components/PrintButton';
 import type { ReservationItem } from '@/components/ReservationList';
 import CalendarReservationSection from './CalendarReservationSection';
 import Image from 'next/image';
-
-export const dynamic = 'force-dynamic';
 
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
@@ -54,6 +56,8 @@ export default async function GroupPage({
   searchParams: { month?: string };
 }) {
   const paramSlug = params.slug.toLowerCase();
+  const user = await getUserFromCookies();
+  if (!user) redirect(`/login?next=/groups/${paramSlug}`);
 
   const res = await serverFetch(`/api/groups/${encodeURIComponent(paramSlug)}`);
   if (res.status === 401) redirect(`/login?next=/groups/${paramSlug}`);
@@ -74,7 +78,7 @@ export default async function GroupPage({
     reservations: Array.isArray(raw?.reservations) ? raw.reservations : [],
   };
   const devices = group.devices;
-  const me = await readUserFromCookie();
+  const me = user;
   const qrUrl = `/api/groups/${encodeURIComponent(paramSlug)}/qr`;
 
   const baseMonth = (() => {

@@ -1,12 +1,14 @@
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'default-no-store';
+
 import { redirect } from 'next/navigation';
-import { serverFetch } from '@/lib/server-fetch';
+import { getUserFromCookies } from '@/lib/auth/server';
 import NewGroupForm from './NewGroupForm';
 
-export const dynamic = 'force-dynamic';
-
 export default async function NewGroupPage() {
-  const me = await serverFetch('/api/auth/me');
-  if (me.status === 401) redirect('/login?next=/groups/new');
+  const user = await getUserFromCookies();
+  if (!user) redirect('/login?next=/groups/new');
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">

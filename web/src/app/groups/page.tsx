@@ -1,13 +1,17 @@
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'default-no-store';
+
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { getUserFromCookies } from '@/lib/auth/server';
 import { serverFetch } from '@/lib/server-fetch';
 import Empty from '@/components/Empty';
 
-export const dynamic = 'force-dynamic';
-
 export default async function GroupsPage() {
+  const user = await getUserFromCookies();
+  if (!user) redirect('/login?next=/groups');
   const res = await serverFetch('/api/groups?mine=1');
-  if (res.status === 401) redirect('/login?next=/groups');
   if (!res.ok) throw new Error(`failed: ${res.status}`);
   const data = await res.json();
   const groups: any[] = Array.isArray(data) ? data : data?.groups ?? [];
