@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { loadDB, saveDB } from '@/lib/mockdb';
 import { readUserFromCookie } from '@/lib/auth';

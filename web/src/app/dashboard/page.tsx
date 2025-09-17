@@ -1,13 +1,12 @@
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 import { readUserFromCookie } from '@/lib/auth';
 import type { Span } from '@/components/CalendarWithBars';
 import DashboardClient from './page.client';
 import { serverFetch } from '@/lib/serverFetch';
 import { redirect } from 'next/navigation';
-
-export const revalidate = 0;
-export const fetchCache = 'default-no-store';
-
-export const dynamic = 'force-dynamic';
 
 type Mine = {
   id:string; deviceId:string; deviceName?:string; userEmail:string; userName?:string;

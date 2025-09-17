@@ -1,10 +1,10 @@
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server'
 import { prisma } from '@/src/lib/prisma'
 import { z } from 'zod'
 import { readUserFromCookie } from '@/lib/auth'
 import type { Prisma } from '@prisma/client'
-
-export const dynamic = 'force-dynamic'
 
 const ReservationBodySchema = z.object({
   groupSlug: z.string().min(1),
