@@ -26,6 +26,18 @@ function buildMonth(base = new Date()) {
   return { weeks, month: m, year: y };
 }
 
+type ReservationResponse = {
+  id: string;
+  deviceId: string;
+  deviceSlug: string;
+  deviceName: string;
+  start: string;
+  end: string;
+  purpose: string | null;
+  userEmail: string;
+  userName: string;
+};
+
 export default async function DeviceDetail({
   params,
   searchParams,
@@ -43,9 +55,6 @@ export default async function DeviceDetail({
   if (!res.ok) throw new Error(`failed: ${res.status}`);
   const json = await res.json();
   const dev = json?.device;
-  const reservations: any[] = Array.isArray(json?.reservations)
-    ? json.reservations
-    : [];
   const me = await readUserFromCookie();
 
   const baseMonth = (() => {
@@ -62,12 +71,38 @@ export default async function DeviceDetail({
   next.setMonth(next.getMonth() + 1);
   const pad2 = (n: number) => n.toString().padStart(2, '0');
   const toParam = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+  const rangeStart = new Date(weeks[0][0]);
+  rangeStart.setHours(0, 0, 0, 0);
+  const rangeEnd = new Date(weeks[weeks.length - 1][6]);
+  rangeEnd.setHours(0, 0, 0, 0);
+  rangeEnd.setDate(rangeEnd.getDate() + 1);
+
+  const query = new URLSearchParams({
+    groupSlug: group,
+    deviceSlug: device,
+    from: rangeStart.toISOString(),
+    to: rangeEnd.toISOString(),
+  });
+  const reservationsRes = await serverFetch(`/api/reservations?${query.toString()}`);
+  if (reservationsRes.status === 401) {
+    redirect(`/login?next=/groups/${group}/devices/${device}`);
+  }
+  if (reservationsRes.status === 404) {
+    return notFound();
+  }
+  if (!reservationsRes.ok) {
+    throw new Error(`failed: ${reservationsRes.status}`);
+  }
+  const reservationsJson = await reservationsRes.json();
+  const reservations: ReservationResponse[] = Array.isArray(reservationsJson?.reservations)
+    ? reservationsJson.reservations
+    : [];
   const nameOf = (r: any) => {
     if (me && r.userEmail === me.email) return me.name || me.email.split('@')[0];
     return r.userName || r.userEmail?.split('@')[0] || r.userName || '';
   };
 
-  const spans: Span[] = reservations.map((r: any) => ({
+  const spans: Span[] = reservations.map((r) => ({
     id: r.id,
     name: dev?.name ?? r.deviceName ?? r.deviceId,
     start: new Date(r.start),
@@ -75,10 +110,9 @@ export default async function DeviceDetail({
     color: '#2563eb',
     groupSlug: group,
     by: nameOf(r),
-    participants: r.participants ?? [],
   }));
 
-  const listItems: ReservationItem[] = reservations.map((r: any) => ({
+  const listItems: ReservationItem[] = reservations.map((r) => ({
     id: r.id,
     deviceName: dev?.name ?? r.deviceName ?? r.deviceId,
     user: nameOf(r),

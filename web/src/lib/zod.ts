@@ -59,6 +59,10 @@ abstract class BaseSchema<T> {
   optional(): BaseSchema<T | undefined> {
     return new OptionalSchema(this)
   }
+
+  nullable(): BaseSchema<T | null> {
+    return new NullableSchema(this)
+  }
 }
 
 class OptionalSchema<T> extends BaseSchema<T | undefined> {
@@ -69,6 +73,19 @@ class OptionalSchema<T> extends BaseSchema<T | undefined> {
   internalParse(input: unknown, path: IssuePath): T | undefined {
     if (input === undefined) {
       return undefined
+    }
+    return this.inner.internalParse(input, path)
+  }
+}
+
+class NullableSchema<T> extends BaseSchema<T | null> {
+  constructor(private readonly inner: BaseSchema<T>) {
+    super()
+  }
+
+  internalParse(input: unknown, path: IssuePath): T | null {
+    if (input === null) {
+      return null
     }
     return this.inner.internalParse(input, path)
   }

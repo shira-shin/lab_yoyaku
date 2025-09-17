@@ -1,6 +1,15 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
+import { toast } from '@/lib/toast';
+import { z } from 'zod';
+
+const ReservationFormSchema = z.object({
+  deviceSlug: z.string().min(1),
+  start: z.coerce.date(),
+  end: z.coerce.date(),
+  purpose: z.string().optional(),
+});
 
 export default function NewReservationClient({
   params,
@@ -18,58 +27,81 @@ export default function NewReservationClient({
     [devices]
   );
 
+  const [submitting, setSubmitting] = useState(false);
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const startValue = String(fd.get('start') || '');
-    const endValue = String(fd.get('end') || '');
-    const purpose = String(fd.get('purpose') || '');
-    const startAt = new Date(startValue);
-    const endAt = new Date(endValue);
-    if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
-      alert('開始と終了の日時を正しく入力してください');
-      return;
-    }
-    if (startAt >= endAt) {
-      alert('開始は終了より前である必要があります');
+    const deviceValue = deviceSlug || String(fd.get('device') || '');
+    const parsed = ReservationFormSchema.safeParse({
+      deviceSlug: deviceValue,
+      start: String(fd.get('start') || ''),
+      end: String(fd.get('end') || ''),
+      purpose: String(fd.get('purpose') ?? ''),
+    });
+
+    if (!parsed.success) {
+      const flattened = 'error' in parsed ? parsed.error.flatten() : { formErrors: ['入力内容を確認してください'], fieldErrors: {} };
+      const message =
+        flattened.formErrors[0] ||
+        Object.values(flattened.fieldErrors)[0]?.[0] ||
+        '入力内容を確認してください';
+      toast.error(message);
       return;
     }
 
-    const deviceValue = deviceSlug || String(fd.get('device') || '');
-    if (!deviceValue) {
-      alert('機器を選択してください');
+    const { start, end } = parsed.data;
+    const purpose = parsed.data.purpose?.trim() ?? '';
+    if (start >= end) {
+      toast.error('終了時刻は開始時刻より後に設定してください');
       return;
     }
 
     const payload = {
       groupSlug: params.slug,
-      deviceSlug: deviceValue,
-      start: startAt.toISOString(),
-      end: endAt.toISOString(),
+      deviceSlug: parsed.data.deviceSlug,
+      start: start.toISOString(),
+      end: end.toISOString(),
       purpose,
     };
 
-    const res = await fetch('/api/reservations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const j = await res.json().catch(() => ({}));
-    if (res.status === 401) {
-      location.assign(`/login?next=/groups/${params.slug}/reservations/new`);
-      return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        location.assign(`/login?next=/groups/${params.slug}/reservations/new`);
+        return;
+      }
+      if (res.status === 409) {
+        toast.error('既存の予約と時間が重複しています');
+        return;
+      }
+      if (!res.ok) {
+        const errorMessage =
+          (typeof j?.error === 'string' && j.error) ||
+          j?.error?.formErrors?.[0] ||
+          '予約の作成に失敗しました';
+        toast.error(errorMessage);
+        return;
+      }
+      toast.success('予約を作成しました');
+      const nextDevice = payload.deviceSlug;
+      r.push(
+        `/groups/${params.slug}${
+          nextDevice ? `?device=${encodeURIComponent(nextDevice)}` : ''
+        }`
+      );
+      r.refresh();
+    } catch (error) {
+      toast.error('予約の作成に失敗しました');
+    } finally {
+      setSubmitting(false);
     }
-    if (!res.ok) {
-      alert(j?.error ?? '予約の作成に失敗しました');
-      return;
-    }
-    const nextDevice = payload.deviceSlug;
-    r.push(
-      `/groups/${params.slug}${
-        nextDevice ? `?device=${encodeURIComponent(nextDevice)}` : ''
-      }`
-    );
-    r.refresh();
   }
 
   return (
@@ -125,8 +157,8 @@ export default function NewReservationClient({
         />
       </div>
       <div className="flex gap-2">
-        <button className="btn btn-primary" type="submit">
-          作成
+        <button className="btn btn-primary" type="submit" disabled={submitting}>
+          {submitting ? '作成中…' : '作成'}
         </button>
         <a className="btn btn-secondary" href={`/groups/${params.slug}`}>
           キャンセル
