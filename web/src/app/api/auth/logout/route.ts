@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { clearAuthCookie } from '@/lib/auth';
+import { clearSessionCookie } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
 async function doLogout(request: Request) {
-  await clearAuthCookie();
-  // ブラウザ遷移ならログインへ
-  return NextResponse.redirect(new URL('/login', request.url));
+  const res = NextResponse.redirect(new URL('/login', request.url));
+  res.cookies.set(clearSessionCookie());
+  return res;
 }
 
 export async function GET(request: Request)  { return doLogout(request); }
