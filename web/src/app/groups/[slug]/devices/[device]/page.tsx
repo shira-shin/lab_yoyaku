@@ -1,3 +1,7 @@
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'default-no-store';
+
 import { serverFetch } from '@/lib/server-fetch';
 import { notFound, redirect } from 'next/navigation';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
@@ -5,9 +9,7 @@ import PrintButton from '@/components/PrintButton';
 import Image from 'next/image';
 import BackButton from '@/components/BackButton';
 import ReservationList, { ReservationItem } from '@/components/ReservationList';
-import { readUserFromCookie } from '@/lib/auth';
-
-export const dynamic = 'force-dynamic';
+import { getUserFromCookies } from '@/lib/auth/server';
 
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
@@ -47,6 +49,8 @@ export default async function DeviceDetail({
 }) {
   const { slug, device } = params;
   const group = slug;
+  const user = await getUserFromCookies();
+  if (!user) redirect(`/login?next=/groups/${group}/devices/${device}`);
   const res = await serverFetch(
     `/api/groups/${encodeURIComponent(group)}/devices/${encodeURIComponent(device)}`
   );
@@ -55,7 +59,7 @@ export default async function DeviceDetail({
   if (!res.ok) throw new Error(`failed: ${res.status}`);
   const json = await res.json();
   const dev = json?.device;
-  const me = await readUserFromCookie();
+  const me = user;
 
   const baseMonth = (() => {
     if (searchParams?.month) {
