@@ -1,15 +1,34 @@
 import { headers } from 'next/headers';
+import { getBaseUrl } from './base-url';
 
+function resolveBaseURL() {
+  const base = getBaseUrl();
+  if (!base) {
+    return 'http://localhost:3000';
+  }
+  return base;
+}
+
+/**
+ * RSC/SSR から内部 API を叩くための安全な fetch
+ * - 絶対URLに変換
+ * - Cookie を前方転送
+ * - キャッシュをしない（認証系なので）
+ */
 export async function serverFetch(input: string, init: RequestInit = {}) {
-  const cookie = headers().get('cookie') ?? '';
-  const mergedHeaders = {
-    ...(init.headers as Record<string, string> | undefined),
-    cookie,
-  };
+  const base = resolveBaseURL();
+  const url = input.startsWith('http') ? input : new URL(input, base).toString();
 
-  return fetch(input, {
+  const headerInit = new Headers(init.headers);
+  const cookie = headers().get('cookie');
+  if (cookie) {
+    headerInit.set('cookie', cookie);
+  }
+
+  return fetch(url, {
     ...init,
-    headers: mergedHeaders,
+    headers: headerInit,
     cache: 'no-store',
+    credentials: 'include',
   });
 }

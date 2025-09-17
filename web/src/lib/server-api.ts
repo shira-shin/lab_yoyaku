@@ -2,10 +2,18 @@
 import { headers } from "next/headers";
 import { createApi } from "./api-core";
 import { getBaseUrl } from "@/lib/base-url";
+import { serverFetch } from "./serverFetch";
 
 function getInit() {
-  const cookie = headers().get("cookie") ?? "";
-  return { headers: { cookie } };
+  const cookie = headers().get("cookie");
+  const headerInit: Record<string, string> = {};
+  if (cookie) {
+    headerInit.cookie = cookie;
+  }
+  return {
+    headers: headerInit,
+    credentials: "include" as RequestCredentials,
+  } satisfies RequestInit;
 }
 
 export const {
@@ -25,12 +33,7 @@ export async function serverGet<T>(
   path: string,
   init: RequestInit = {}
 ): Promise<T | null> {
-  const h = headers();
-  const res = await fetch(path, {
-    ...init,
-    headers: { ...(init.headers as any), cookie: h.get("cookie") ?? "" },
-    cache: "no-store",
-  });
+  const res = await serverFetch(path, init);
   if (!res.ok) {
     console.warn(`[serverGet] ${path} -> ${res.status}`);
     return null; // 401/500 でも throw せず null 返す
