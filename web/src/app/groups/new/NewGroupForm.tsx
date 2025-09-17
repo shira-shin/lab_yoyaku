@@ -32,7 +32,19 @@ export default function NewGroupForm() {
     if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
 
     const slug = json?.group?.slug ?? json?.slug ?? (name || '').toLowerCase();
-    r.push(`/groups/${encodeURIComponent(slug)}`);
+
+    const joinRes = await fetch('/api/groups/join', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query: slug, password: payload.password }),
+    });
+
+    if (!joinRes.ok) {
+      const joinJson = await joinRes.json().catch(() => ({} as any));
+      throw new Error(joinJson?.error ?? `HTTP ${joinRes.status}`);
+    }
+
+    r.replace(`/groups/${encodeURIComponent(slug)}`);
   }
 
   return (

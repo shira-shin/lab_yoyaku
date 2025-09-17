@@ -1,14 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function GroupJoinPage() {
-  const [group, setGroup] = useState(""); // name or slug
+  const searchParams = useSearchParams();
+  const [group, setGroup] = useState(() => searchParams.get("slug") || ""); // name or slug
   const [password, setPassword] = useState("");
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const slugParam = searchParams.get("slug") || "";
+
+  useEffect(() => {
+    setGroup(slugParam);
+  }, [slugParam]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
