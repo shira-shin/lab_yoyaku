@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'default-no-store';
 
-import { serverFetch } from '@/lib/server-fetch';
+import { serverFetch } from '@/lib/serverFetch';
 import { notFound, redirect } from 'next/navigation';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 import PrintButton from '@/components/PrintButton';
@@ -55,8 +55,9 @@ export default async function DeviceDetail({
     `/api/groups/${encodeURIComponent(group)}/devices/${encodeURIComponent(device)}`
   );
   if (res.status === 401) redirect(`/login?next=/groups/${group}/devices/${device}`);
+  if (res.status === 403) redirect(`/groups/join?slug=${encodeURIComponent(group)}`);
   if (res.status === 404) return notFound();
-  if (!res.ok) throw new Error(`failed: ${res.status}`);
+  if (!res.ok) redirect(`/login?next=/groups/${group}/devices/${device}`);
   const json = await res.json();
   const dev = json?.device;
   const me = user;
@@ -91,11 +92,14 @@ export default async function DeviceDetail({
   if (reservationsRes.status === 401) {
     redirect(`/login?next=/groups/${group}/devices/${device}`);
   }
+  if (reservationsRes.status === 403) {
+    redirect(`/groups/join?slug=${encodeURIComponent(group)}`);
+  }
   if (reservationsRes.status === 404) {
     return notFound();
   }
   if (!reservationsRes.ok) {
-    throw new Error(`failed: ${reservationsRes.status}`);
+    redirect(`/login?next=/groups/${group}/devices/${device}`);
   }
   const reservationsJson = await reservationsRes.json();
   const reservations: ReservationResponse[] = Array.isArray(reservationsJson?.reservations)

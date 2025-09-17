@@ -5,14 +5,15 @@ export const fetchCache = 'default-no-store';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getUserFromCookies } from '@/lib/auth/server';
-import { serverFetch } from '@/lib/server-fetch';
+import { serverFetch } from '@/lib/serverFetch';
 import Empty from '@/components/Empty';
 
 export default async function GroupsPage() {
   const user = await getUserFromCookies();
   if (!user) redirect('/login?next=/groups');
   const res = await serverFetch('/api/groups?mine=1');
-  if (!res.ok) throw new Error(`failed: ${res.status}`);
+  if (res.status === 401) redirect('/login?next=/groups');
+  if (!res.ok) redirect('/login?next=/groups');
   const data = await res.json();
   const groups: any[] = Array.isArray(data) ? data : data?.groups ?? [];
   if (groups.length === 0)
