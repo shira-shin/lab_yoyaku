@@ -5,7 +5,8 @@ import { createHash } from 'crypto';
 import { loadUsers } from './db';
 
 const secret = new TextEncoder().encode(process.env.AUTH_SECRET || 'dev-secret');
-const COOKIE = 'labyoyaku_token';
+export const SESSION_COOKIE = 'session';
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
 export type User = { id: string; name: string; email: string };
 
@@ -18,7 +19,7 @@ export async function signToken(user: User) {
 }
 
 export async function readUserFromCookie(): Promise<User | null> {
-  const token = (await cookies()).get(COOKIE)?.value;
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret);
@@ -32,12 +33,29 @@ export async function readUserFromCookie(): Promise<User | null> {
   } catch { return null; }
 }
 
-export async function setAuthCookie(token: string) {
-  (await cookies()).set(COOKIE, token, {
-    httpOnly: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 7,
-  });
+export function createSessionCookie(token: string) {
+  return {
+    name: SESSION_COOKIE,
+    value: token,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: COOKIE_MAX_AGE,
+  };
 }
-export async function clearAuthCookie() { (await cookies()).delete(COOKIE); }
+
+export function clearSessionCookie() {
+  return {
+    name: SESSION_COOKIE,
+    value: '',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: 0,
+  };
+}
 
 /** emailでユーザーを探す（DB） */
 export async function findUserByEmail(email: string) {

@@ -29,7 +29,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  const token = req.cookies.get('labyoyaku_token')?.value
+  const token = req.cookies.get('session')?.value
   if (!token) {
     const url = new URL('/login', req.url)
     const next = pathname + (search || '')
