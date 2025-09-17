@@ -6,21 +6,22 @@ export function createApi(
     const base = getBaseURL();
     const url = path.startsWith('http')
       ? path
-      : path.startsWith('/')
-        ? path
-        : base
-          ? `${base}${path.startsWith('/') ? path : `/${path}`}`
+      : base
+        ? new URL(path, base).toString()
+        : path.startsWith('/')
+          ? path
           : `/${path}`;
     const extra = getInit?.() ?? {};
     const headers = {
       ...(extra.headers || {}),
       ...(init?.headers || {}),
     } as HeadersInit;
+    const credentials = init?.credentials ?? extra.credentials ?? 'same-origin';
     const res = await fetch(url, {
       cache: 'no-store',
       ...extra,
       ...init,
-      credentials: 'same-origin',
+      credentials,
       headers,
     });
     if (!res.ok) {
