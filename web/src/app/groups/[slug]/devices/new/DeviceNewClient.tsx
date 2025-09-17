@@ -31,6 +31,7 @@ export default function DeviceNewClient({ slug }: { slug: string }) {
         caution: String(fd.get('caution') || ''),
         code: String(fd.get('code') || ''),
       }),
+      credentials: 'same-origin',
     });
     const json = await res.json().catch(() => ({} as any));
     if (!res.ok) {

@@ -34,6 +34,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: lemail, password: lpass }),
+        credentials: 'same-origin',
       });
       if (!res.ok) throw new Error();
       router.replace(next || '/');
@@ -61,6 +62,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: remail, password: rpass, name: rname }),
+        credentials: 'same-origin',
       });
       if (!res.ok) {
         const t = await res.text();

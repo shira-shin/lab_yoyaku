@@ -16,7 +16,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: 'invalid body' }, { status: 400 })
     }
 
-    const queryRaw = String((body as any).query || '').trim()
+    const slugRaw = String((body as any).slug || '').trim()
+    const queryRaw = String((body as any).query || slugRaw).trim()
     const passwordRaw = String((body as any).password || '')
     if (!queryRaw) {
       return NextResponse.json({ ok: false, error: 'query is required' }, { status: 400 })

@@ -4,7 +4,13 @@ export function createApi(
 ) {
   async function api(path: string, init?: RequestInit) {
     const base = getBaseURL();
-    const url = `${base}${path}`;
+    const url = path.startsWith('http')
+      ? path
+      : path.startsWith('/')
+        ? path
+        : base
+          ? `${base}${path.startsWith('/') ? path : `/${path}`}`
+          : `/${path}`;
     const extra = getInit?.() ?? {};
     const headers = {
       ...(extra.headers || {}),
@@ -14,6 +20,7 @@ export function createApi(
       cache: 'no-store',
       ...extra,
       ...init,
+      credentials: 'same-origin',
       headers,
     });
     if (!res.ok) {

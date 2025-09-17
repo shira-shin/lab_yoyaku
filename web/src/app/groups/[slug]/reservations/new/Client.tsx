@@ -71,6 +71,7 @@ export default function NewReservationClient({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        credentials: 'same-origin',
       });
       const j = await res.json().catch(() => ({}));
       if (res.status === 401) {

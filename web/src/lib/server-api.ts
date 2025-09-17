@@ -26,7 +26,7 @@ export async function serverGet<T>(
   init: RequestInit = {}
 ): Promise<T | null> {
   const h = headers();
-  const res = await fetch(`${getBaseUrl()}${path}`, {
+  const res = await fetch(path, {
     ...init,
     headers: { ...(init.headers as any), cookie: h.get("cookie") ?? "" },
     cache: "no-store",
