@@ -3,8 +3,9 @@ import type { NextRequest } from 'next/server'
 
 export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
-  if (process.env.NODE_ENV === 'production' && pathname.startsWith('/api/mock')) {
-    return new NextResponse('Mock APIs are disabled in production', { status: 410 })
+  const mockEnabled = process.env.USE_MOCK === 'true'
+  if ((process.env.NODE_ENV === 'production' || !mockEnabled) && pathname.startsWith('/api/mock')) {
+    return new NextResponse('Mock APIs are disabled', { status: 410 })
   }
 
   const { search } = req.nextUrl

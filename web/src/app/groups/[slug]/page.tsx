@@ -34,6 +34,18 @@ function colorFromString(s: string) {
   return palette[h % palette.length];
 }
 
+type ReservationResponse = {
+  id: string;
+  deviceId: string;
+  deviceSlug: string;
+  deviceName: string;
+  start: string;
+  end: string;
+  purpose: string | null;
+  userEmail: string;
+  userName: string;
+};
+
 export default async function GroupPage({
   params,
   searchParams,
@@ -62,7 +74,6 @@ export default async function GroupPage({
     reservations: Array.isArray(raw?.reservations) ? raw.reservations : [],
   };
   const devices = group.devices;
-  const reservationList = group.reservations;
   const me = await readUserFromCookie();
   const qrUrl = `/api/groups/${encodeURIComponent(paramSlug)}/qr`;
 
@@ -80,12 +91,37 @@ export default async function GroupPage({
   next.setMonth(next.getMonth() + 1);
   const pad2 = (n: number) => n.toString().padStart(2, '0');
   const toParam = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+  const rangeStart = new Date(weeks[0][0]);
+  rangeStart.setHours(0, 0, 0, 0);
+  const rangeEnd = new Date(weeks[weeks.length - 1][6]);
+  rangeEnd.setHours(0, 0, 0, 0);
+  rangeEnd.setDate(rangeEnd.getDate() + 1);
+
+  const reservationParams = new URLSearchParams({
+    groupSlug: group.slug,
+    from: rangeStart.toISOString(),
+    to: rangeEnd.toISOString(),
+  });
+  const reservationsRes = await serverFetch(`/api/reservations?${reservationParams.toString()}`);
+  if (reservationsRes.status === 401) {
+    redirect(`/login?next=/groups/${paramSlug}`);
+  }
+  if (reservationsRes.status === 404) {
+    return notFound();
+  }
+  if (!reservationsRes.ok) {
+    throw new Error(`failed: ${reservationsRes.status}`);
+  }
+  const reservationsJson = await reservationsRes.json();
+  const reservations: ReservationResponse[] = Array.isArray(reservationsJson?.reservations)
+    ? reservationsJson.reservations
+    : [];
   const nameOf = (r: any) => {
     if (me && r.userEmail === me.email) return me.name || me.email.split('@')[0];
     return r.userName || r.userEmail?.split('@')[0] || r.userName || '';
   };
 
-  const spans: Span[] = reservationList.map((r: any) => {
+  const spans: Span[] = reservations.map((r) => {
     const dev = devices.find((d: any) => d.id === r.deviceId || d.slug === r.deviceSlug);
     return {
       id: r.id,
@@ -95,11 +131,10 @@ export default async function GroupPage({
       color: colorFromString(r.deviceId),
       groupSlug: group.slug,
       by: nameOf(r),
-      participants: r.participants ?? [],
     };
   });
 
-  const listItems: ReservationItem[] = reservationList.map((r: any) => {
+  const listItems: ReservationItem[] = reservations.map((r) => {
     const dev = devices.find((d: any) => d.id === r.deviceId || d.slug === r.deviceSlug);
     return {
       id: r.id,

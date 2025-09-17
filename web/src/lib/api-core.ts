@@ -40,21 +40,31 @@ export function createApi(
         method: 'POST',
         body: JSON.stringify(body),
       }),
-    listReservations: (slug: string, deviceId?: string) =>
-      api(
-        `/api/reservations?group=${encodeURIComponent(slug)}${
-          deviceId ? `&device=${encodeURIComponent(deviceId)}` : ''
-        }`
-      ),
+    listReservations: (
+      slug: string,
+      options: {
+        deviceSlug?: string;
+        date?: string;
+        from?: string;
+        to?: string;
+      } = {}
+    ) => {
+      const params = new URLSearchParams({ groupSlug: slug });
+      if (options.deviceSlug) params.set('deviceSlug', options.deviceSlug);
+      if (options.date) params.set('date', options.date);
+      if (options.from) params.set('from', options.from);
+      if (options.to) params.set('to', options.to);
+      return api(`/api/reservations?${params.toString()}`);
+    },
     createReservation: (body: any) =>
       api('/api/reservations', {
         method: 'POST',
         body: JSON.stringify(body),
       }),
-    updateReservation: () => {
+    updateReservation: async (_body?: any): Promise<any> => {
       throw new Error('updateReservation is not implemented');
     },
-    deleteReservation: () => {
+    deleteReservation: async (_body?: any): Promise<any> => {
       throw new Error('deleteReservation is not implemented');
     },
     listMyReservations: () => api('/api/me/reservations'),
