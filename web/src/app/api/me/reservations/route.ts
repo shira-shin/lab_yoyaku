@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server'
 import { readUserFromCookie } from '@/lib/auth'
 import { prisma } from '@/src/lib/prisma'

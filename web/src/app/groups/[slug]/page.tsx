@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-export const fetchCache = 'default-no-store';
+export const fetchCache = 'force-no-store';
 
 import { redirect } from 'next/navigation';
 import { serverFetch } from '@/lib/serverFetch';
