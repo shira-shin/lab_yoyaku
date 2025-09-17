@@ -1,6 +1,6 @@
 import { readUserFromCookie } from '@/lib/auth';
 import NavLinks from './NavLinks';
-import { serverFetch } from '@/lib/server-fetch';
+import { serverFetch } from '@/lib/serverFetch';
 
 export default async function Header() {
   const me = await readUserFromCookie();

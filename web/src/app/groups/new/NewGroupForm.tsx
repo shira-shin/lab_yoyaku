@@ -45,6 +45,7 @@ export default function NewGroupForm() {
     }
 
     r.replace(`/groups/${encodeURIComponent(slug)}`);
+    r.refresh();
   }
 
   return (

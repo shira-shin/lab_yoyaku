@@ -1,7 +1,10 @@
 import { readUserFromCookie } from '@/lib/auth';
 import type { Span } from '@/components/CalendarWithBars';
 import DashboardClient from './page.client';
-import { serverFetch } from '@/lib/server-fetch';
+import { serverFetch } from '@/lib/serverFetch';
+
+export const revalidate = 0;
+export const fetchCache = 'default-no-store';
 
 export const dynamic = 'force-dynamic';
 
