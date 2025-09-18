@@ -7,6 +7,7 @@ import { serverFetch } from '@/lib/serverFetch';
 import GroupScreenClient from './GroupScreenClient';
 import Link from 'next/link';
 import { getUserFromCookies } from '@/lib/auth/server';
+import { prisma } from '@/src/lib/prisma';
 import type { Span } from '@/components/CalendarWithBars';
 import PrintButton from '@/components/PrintButton';
 import type { ReservationItem } from '@/components/ReservationList';
@@ -57,15 +58,37 @@ export default async function GroupPage({
 }) {
   const paramSlug = params.slug.toLowerCase();
   const user = await getUserFromCookies();
-  if (!user) redirect(`/login?next=/groups/${paramSlug}`);
+  if (!user) redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
+
+  const groupRecord = await prisma.group.findUnique({
+    where: { slug: paramSlug },
+    select: {
+      id: true,
+      slug: true,
+      hostEmail: true,
+      members: { select: { email: true } },
+    },
+  });
+
+  if (!groupRecord) {
+    redirect('/groups');
+  }
+
+  const isMember =
+    groupRecord.hostEmail === user.email ||
+    groupRecord.members.some((member) => member.email === user.email);
+
+  if (!isMember) {
+    redirect(`/groups/join?slug=${encodeURIComponent(paramSlug)}`);
+  }
 
   const res = await serverFetch(`/api/groups/${encodeURIComponent(paramSlug)}`);
-  if (res.status === 401) redirect(`/login?next=/groups/${paramSlug}`);
+  if (res.status === 401) redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
   if (res.status === 403 || res.status === 404) {
     redirect(`/groups/join?slug=${encodeURIComponent(paramSlug)}`);
   }
   if (!res.ok) {
-    redirect(`/login?next=/groups/${paramSlug}`);
+    redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
   }
   const data = await res.json();
   const raw = data?.group ?? {};
@@ -112,13 +135,13 @@ export default async function GroupPage({
   });
   const reservationsRes = await serverFetch(`/api/reservations?${reservationParams.toString()}`);
   if (reservationsRes.status === 401) {
-    redirect(`/login?next=/groups/${paramSlug}`);
+    redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
   }
   if (reservationsRes.status === 403 || reservationsRes.status === 404) {
     redirect(`/groups/join?slug=${encodeURIComponent(paramSlug)}`);
   }
   if (!reservationsRes.ok) {
-    redirect(`/login?next=/groups/${paramSlug}`);
+    redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
   }
   const reservationsJson = await reservationsRes.json();
   const reservations: ReservationResponse[] = Array.isArray(reservationsJson?.reservations)

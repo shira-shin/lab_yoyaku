@@ -1,7 +1,7 @@
 // Server-side API helpers for RSC/SSR usage
 import { headers } from "next/headers";
 import { createApi } from "./api-core";
-import { getBaseUrl } from "@/lib/base-url";
+import { getBaseUrl } from "@/lib/http/base-url";
 import { serverFetch } from "./serverFetch";
 
 function getInit() {

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createSessionCookie, findUserByEmail, hashPassword, signToken } from '@/lib/auth';
+import { findUserByEmail, hashPassword, signToken } from '@/lib/auth';
+import { setSessionCookie } from '@/lib/auth/cookies';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
@@ -9,9 +12,8 @@ export async function POST(req: Request) {
   // デモショートカット：demo/demo でもログイン可（任意）
   if (email === 'demo' && password === 'demo') {
     const token = await signToken({ id: 'u-demo', name: 'demo', email: 'demo@example.com' });
-    const res = NextResponse.json({ ok: true });
-    res.cookies.set(createSessionCookie(token));
-    return res;
+    setSessionCookie(token);
+    return NextResponse.json({ ok: true });
   }
 
   const user = email ? await findUserByEmail(String(email)) : null;
@@ -19,8 +21,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok:false, error:'invalid credentials' }, { status:401 });
   }
   const token = await signToken({ id: user.id, name: user.name || '', email: user.email });
-  const res = NextResponse.json({ ok:true });
-  res.cookies.set(createSessionCookie(token));
-  return res;
+  setSessionCookie(token);
+  return NextResponse.json({ ok:true });
 }
 
