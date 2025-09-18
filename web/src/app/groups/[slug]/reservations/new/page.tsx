@@ -3,11 +3,13 @@ export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
 import { serverFetch } from '@/lib/serverFetch';
+import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getUserFromCookies } from '@/lib/auth/server';
 import NewReservationClient from './Client';
 
 export default async function NewReservationPage({ params }: { params: { slug: string } }) {
+  noStore();
   const user = await getUserFromCookies();
   if (!user) redirect(`/login?next=/groups/${params.slug}/reservations/new`);
   const res = await serverFetch(

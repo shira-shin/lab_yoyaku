@@ -6,6 +6,7 @@ import { readUserFromCookie } from '@/lib/auth';
 import type { Span } from '@/components/CalendarWithBars';
 import DashboardClient from './page.client';
 import { serverFetch } from '@/lib/serverFetch';
+import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 type Mine = {
@@ -20,6 +21,7 @@ function colorFromString(s:string){
   return palette[h%palette.length];
 }
 export default async function DashboardPage() {
+  noStore();
   const me = await readUserFromCookie();
   if (!me) redirect('/login?next=/dashboard');
 

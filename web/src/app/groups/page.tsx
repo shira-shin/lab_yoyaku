@@ -3,12 +3,14 @@ export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
 import Link from 'next/link';
+import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getUserFromCookies } from '@/lib/auth/server';
 import { serverFetch } from '@/lib/serverFetch';
 import Empty from '@/components/Empty';
 
 export default async function GroupsPage() {
+  noStore();
   const user = await getUserFromCookies();
   if (!user) redirect('/login?next=/groups');
   const res = await serverFetch('/api/groups?mine=1');

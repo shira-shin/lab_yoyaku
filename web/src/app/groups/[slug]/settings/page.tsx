@@ -4,10 +4,12 @@ export const fetchCache = 'force-no-store';
 
 import { serverFetch } from '@/lib/serverFetch';
 import { getUserFromCookies } from '@/lib/auth/server';
+import { unstable_noStore as noStore } from 'next/cache';
 import { redirect, notFound } from 'next/navigation';
 import GroupSettingsClient from './GroupSettingsClient';
 
 export default async function GroupSettingsPage({ params }: { params: { slug: string } }) {
+  noStore();
   const slug = params.slug.toLowerCase();
   const user = await getUserFromCookies();
   if (!user) redirect(`/login?next=/groups/${slug}/settings`);
