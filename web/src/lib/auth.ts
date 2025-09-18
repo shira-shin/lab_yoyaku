@@ -22,15 +22,33 @@ export async function readUserFromCookie(): Promise<User | null> {
   const token = cookies().get(SESSION_COOKIE)?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secret);
-    const user: User = { id: String(payload.id), name: String(payload.name), email: String(payload.email) };
-    try {
-      const users = await loadUsers();
-      const u = users.find((x) => x.id === user.id);
-      if (u && u.name) user.name = u.name;
-    } catch { /* ignore */ }
-    return user;
+    return await decodeSession(token);
   } catch { return null; }
+}
+
+export async function decodeSession(token: string): Promise<User> {
+  const { payload } = await jwtVerify(token, secret);
+  const id = payload?.id;
+  const email = payload?.email;
+  if (!id || !email) throw new Error('invalid session');
+
+  const user: User = {
+    id: String(id),
+    email: String(email),
+    name: typeof payload?.name === 'string' ? String(payload.name) : '',
+  };
+
+  try {
+    const users = await loadUsers();
+    const found = users.find((candidate) => candidate.id === user.id);
+    if (found?.name) {
+      user.name = found.name;
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return user;
 }
 
 /** emailでユーザーを探す（DB） */
