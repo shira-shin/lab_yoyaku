@@ -1,10 +1,11 @@
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const runtime = 'nodejs';
 export const fetchCache = 'force-no-store';
 
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { serverFetch } from '@/lib/http/server-fetch';
+import { serverFetch } from '@/lib/http/serverFetch';
 import GroupScreenClient from './GroupScreenClient';
 import Link from 'next/link';
 import { prisma } from '@/src/lib/prisma';
