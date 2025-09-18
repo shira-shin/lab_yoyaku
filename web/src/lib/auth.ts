@@ -3,10 +3,10 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { createHash } from 'crypto';
 import { loadUsers } from './db';
+import { AUTH_COOKIE } from './auth/cookies';
 
 const secret = new TextEncoder().encode(process.env.AUTH_SECRET || 'dev-secret');
-export const SESSION_COOKIE = 'session';
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+export const SESSION_COOKIE = AUTH_COOKIE;
 
 export type User = { id: string; name: string; email: string };
 
@@ -19,7 +19,7 @@ export async function signToken(user: User) {
 }
 
 export async function readUserFromCookie(): Promise<User | null> {
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const token = cookies().get(SESSION_COOKIE)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret);
@@ -31,30 +31,6 @@ export async function readUserFromCookie(): Promise<User | null> {
     } catch { /* ignore */ }
     return user;
   } catch { return null; }
-}
-
-export function createSessionCookie(token: string) {
-  return {
-    name: SESSION_COOKIE,
-    value: token,
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    path: '/',
-    maxAge: COOKIE_MAX_AGE,
-  };
-}
-
-export function clearSessionCookie() {
-  return {
-    name: SESSION_COOKIE,
-    value: '',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    path: '/',
-    maxAge: 0,
-  };
 }
 
 /** emailでユーザーを探す（DB） */

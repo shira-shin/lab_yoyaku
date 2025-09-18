@@ -1,4 +1,4 @@
-import { getBaseUrl } from '@/lib/base-url';
+import { getBaseUrl } from '@/lib/http/base-url';
 // eslint-disable-next-line import/no-unresolved
 const { QRCodeCanvas } = require('qrcode.react');
 

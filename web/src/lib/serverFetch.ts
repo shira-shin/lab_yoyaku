@@ -1,16 +1,12 @@
 import { headers } from 'next/headers';
-
-function resolveBaseURL() {
-  const envUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
-  return envUrl ?? 'http://localhost:3000';
-}
+import { getBaseUrl } from './http/base-url';
 
 /** SSR/RSC から内部APIを叩くための安全な fetch */
 export async function serverFetch(input: string, init: RequestInit = {}) {
-  const base = resolveBaseURL();
-  const url = input.startsWith('http') ? input : new URL(input, base).toString();
+  const base = getBaseUrl();
+  const url = input.startsWith('http')
+    ? input
+    : `${base}${input.startsWith('/') ? '' : '/'}${input}`;
 
   const h = new Headers(init.headers);
   const cookie = headers().get('cookie');

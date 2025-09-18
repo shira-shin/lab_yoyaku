@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createSessionCookie, hashPassword, signToken } from '@/lib/auth';
+import { hashPassword, signToken } from '@/lib/auth';
+import { setSessionCookie } from '@/lib/auth/cookies';
 import { loadUsers, saveUser } from '@/lib/db';
 import { isEmail, uid, UserRecord } from '@/lib/mockdb';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
@@ -32,7 +35,6 @@ export async function POST(req: Request) {
 
   // 自動ログイン
   const token = await signToken({ id: user.id, name: user.name || '', email: user.email });
-  const res = NextResponse.json({ ok:true });
-  res.cookies.set(createSessionCookie(token));
-  return res;
+  setSessionCookie(token);
+  return NextResponse.json({ ok:true });
 }

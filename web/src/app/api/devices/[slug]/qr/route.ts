@@ -1,6 +1,6 @@
 import QRCode from 'qrcode'
 import { prisma } from '@/src/lib/prisma'
-import { getBaseUrl } from '@/lib/base-url'
+import { getBaseUrl } from '@/lib/http/base-url'
 
 export const runtime = 'nodejs'
 
