@@ -1,8 +1,10 @@
 import { readUserFromCookie } from '@/lib/auth';
 import NavLinks from './NavLinks';
 import { serverFetch } from '@/lib/serverFetch';
+import { unstable_noStore as noStore } from 'next/cache';
 
 export default async function Header() {
+  noStore();
   const me = await readUserFromCookie();
   let displayName: string | null = null;
   if (me?.email) {
