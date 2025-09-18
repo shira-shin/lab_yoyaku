@@ -1,27 +1,24 @@
-import { cookies } from 'next/headers';
+import { cookies } from 'next/headers'
 
-export const AUTH_COOKIE = process.env.NEXT_PUBLIC_AUTH_COOKIE_NAME ?? 'lab_session';
+const COOKIE_NAME = 'lab_session'
+export const AUTH_COOKIE = COOKIE_NAME
 
 export function setSessionCookie(token: string, maxAgeSec = 60 * 60 * 24 * 30) {
-  cookies().set({
-    name: AUTH_COOKIE,
-    value: token,
+  cookies().set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'lax',
     path: '/',
     maxAge: maxAgeSec,
-  });
+  })
 }
 
 export function clearSessionCookie() {
-  cookies().set({
-    name: AUTH_COOKIE,
-    value: '',
+  cookies().set(COOKIE_NAME, '', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'lax',
     path: '/',
     maxAge: 0,
-  });
+  })
 }
