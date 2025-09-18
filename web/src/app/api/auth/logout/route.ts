@@ -16,8 +16,9 @@ function resolveLoginUrl(request: Request) {
 }
 
 async function doLogout(request: Request) {
-  clearSessionCookie();
-  return NextResponse.redirect(resolveLoginUrl(request));
+  const res = NextResponse.redirect(resolveLoginUrl(request));
+  clearSessionCookie(res);
+  return res;
 }
 
 export async function GET(request: Request)  { return doLogout(request); }
