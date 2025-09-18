@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/src/lib/prisma'
@@ -20,6 +21,11 @@ export async function GET(req: Request) {
 
     if (mine) {
       const me = await readUserFromCookie()
+      console.info('[api.groups.GET]', {
+        mine: true,
+        hasUserId: Boolean(me?.id),
+        hasEmail: Boolean(me?.email),
+      })
       if (!me?.email) {
         return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
       }
@@ -44,6 +50,11 @@ export async function GET(req: Request) {
       orderBy: { createdAt: 'desc' },
       select: { slug: true, name: true },
     })
+    console.info('[api.groups.GET]', {
+      mine: false,
+      hasUserId: false,
+      hasEmail: false,
+    })
     return NextResponse.json({ groups })
   } catch (error) {
     console.error('list groups failed', error)
@@ -54,6 +65,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const me = await readUserFromCookie()
+    console.info('[api.groups.POST]', {
+      hasUserId: Boolean(me?.id),
+      hasEmail: Boolean(me?.email),
+    })
     if (!me?.email) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }

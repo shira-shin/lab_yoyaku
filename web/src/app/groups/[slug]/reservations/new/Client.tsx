@@ -75,7 +75,7 @@ export default function NewReservationClient({
       });
       const j = await res.json().catch(() => ({}));
       if (res.status === 401) {
-        location.assign(`/login?next=/groups/${params.slug}/reservations/new`);
+        toast.error('認証が必要です。ページを再読み込みしてください。');
         return;
       }
       if (res.status === 409) {

@@ -5,8 +5,10 @@ export const fetchCache = 'force-no-store';
 import { redirect } from 'next/navigation';
 import { getUserFromCookies } from '@/lib/auth/server';
 import NewGroupForm from './NewGroupForm';
+import { unstable_noStore as noStore } from 'next/cache';
 
 export default async function NewGroupPage() {
+  noStore();
   const user = await getUserFromCookies();
   if (!user) redirect('/login?next=/groups/new');
   return (

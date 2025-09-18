@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { readUserFromCookie } from '@/lib/auth'
@@ -7,6 +8,10 @@ import { prisma } from '@/src/lib/prisma'
 
 export async function GET() {
   const me = await readUserFromCookie()
+  console.info('[api.me.profile.GET]', {
+    hasUserId: Boolean(me?.id),
+    hasEmail: Boolean(me?.email),
+  })
   if (!me?.email) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
@@ -17,6 +22,10 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   const me = await readUserFromCookie()
+  console.info('[api.me.profile.PUT]', {
+    hasUserId: Boolean(me?.id),
+    hasEmail: Boolean(me?.email),
+  })
   if (!me?.email) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }

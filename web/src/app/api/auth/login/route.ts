@@ -8,6 +8,14 @@ export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   const { email, password } = await req.json().catch(() => ({}));
+  const requestUrl = new URL(req.url);
+  const host = requestUrl.host;
+  const domain = process.env.NEXT_PUBLIC_COOKIE_DOMAIN ?? requestUrl.hostname;
+  console.info('[api.auth.login.POST]', {
+    host,
+    domain,
+    setCookiePath: '/',
+  });
 
   // デモショートカット：demo/demo でもログイン可（任意）
   if (email === 'demo' && password === 'demo') {

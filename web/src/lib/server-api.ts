@@ -2,7 +2,7 @@
 import { headers } from "next/headers";
 import { createApi } from "./api-core";
 import { getBaseUrl } from "@/lib/http/base-url";
-import { serverFetch } from "./serverFetch";
+import { serverFetch } from "@/lib/http/server-fetch";
 
 function getInit() {
   const cookie = headers().get("cookie");

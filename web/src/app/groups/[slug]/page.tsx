@@ -4,7 +4,7 @@ export const fetchCache = 'force-no-store';
 
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { serverFetch } from '@/lib/serverFetch';
+import { serverFetch } from '@/lib/http/server-fetch';
 import GroupScreenClient from './GroupScreenClient';
 import Link from 'next/link';
 import { prisma } from '@/src/lib/prisma';

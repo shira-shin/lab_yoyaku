@@ -10,6 +10,10 @@ export const runtime = 'nodejs'
 
 export async function GET() {
   const me = await readUserFromCookie()
+  console.info('[api.me.reservations.GET]', {
+    hasUserId: Boolean(me?.id),
+    hasEmail: Boolean(me?.email),
+  })
   if (!me?.email) return NextResponse.json({ ok: false }, { status: 401 })
 
   const memberships = await prisma.groupMember.findMany({

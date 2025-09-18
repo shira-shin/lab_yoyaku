@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
-import { serverFetch } from '@/lib/serverFetch';
+import { serverFetch } from '@/lib/http/server-fetch';
 import { getUserFromCookies } from '@/lib/auth/server';
 import { unstable_noStore as noStore } from 'next/cache';
 import { redirect, notFound } from 'next/navigation';

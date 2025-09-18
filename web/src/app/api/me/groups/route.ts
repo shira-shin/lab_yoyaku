@@ -10,6 +10,10 @@ export const runtime = 'nodejs'
 export async function POST(req: Request) {
   try {
     const me = await readUserFromCookie()
+    console.info('[api.me.groups.POST]', {
+      hasUserId: Boolean(me?.id),
+      hasEmail: Boolean(me?.email),
+    })
     const body = await req.json()
 
     const name: string = body?.name ?? ''
@@ -42,6 +46,11 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
+    const me = await readUserFromCookie()
+    console.info('[api.me.groups.GET]', {
+      hasUserId: Boolean(me?.id),
+      hasEmail: Boolean(me?.email),
+    })
     const groups = await prisma.group.findMany({
       orderBy: { createdAt: 'desc' },
       select: { id: true, name: true, slug: true, createdAt: true }

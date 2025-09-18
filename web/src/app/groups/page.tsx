@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getUserFromCookies } from '@/lib/auth/server';
-import { serverFetch } from '@/lib/serverFetch';
+import { serverFetch } from '@/lib/http/server-fetch';
 import Empty from '@/components/Empty';
 
 export default async function GroupsPage() {
