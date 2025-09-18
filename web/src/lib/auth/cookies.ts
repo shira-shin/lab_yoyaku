@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 
-export const AUTH_COOKIE = 'lab_session';
+export const AUTH_COOKIE = process.env.NEXT_PUBLIC_AUTH_COOKIE_NAME ?? 'lab_session';
 
 export function setSessionCookie(token: string, maxAgeSec = 60 * 60 * 24 * 30) {
   cookies().set({

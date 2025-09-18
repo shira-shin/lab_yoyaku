@@ -3,16 +3,18 @@ export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { serverFetch } from '@/lib/serverFetch';
 import GroupScreenClient from './GroupScreenClient';
 import Link from 'next/link';
-import { getUserFromCookies } from '@/lib/auth/server';
 import { prisma } from '@/src/lib/prisma';
 import type { Span } from '@/components/CalendarWithBars';
 import PrintButton from '@/components/PrintButton';
 import type { ReservationItem } from '@/components/ReservationList';
 import CalendarReservationSection from './CalendarReservationSection';
 import Image from 'next/image';
+import { AUTH_COOKIE } from '@/lib/auth/cookies';
+import { decodeSession } from '@/lib/auth';
 
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
@@ -57,7 +59,16 @@ export default async function GroupPage({
   searchParams: { month?: string };
 }) {
   const paramSlug = params.slug.toLowerCase();
-  const user = await getUserFromCookies();
+  const token = cookies().get(AUTH_COOKIE)?.value;
+  let user: Awaited<ReturnType<typeof decodeSession>> | null = null;
+  if (token) {
+    try {
+      user = await decodeSession(token);
+    } catch {
+      user = null;
+    }
+  }
+
   if (!user) redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
 
   const groupRecord = await prisma.group.findUnique({
