@@ -20,3 +20,7 @@ pnpm -C web dev
 - `src/app/globals.css` で `@import "tailwindcss";` を使用します。
 - `postcss.config.js` は `@tailwindcss/postcss` プラグインのみを読み込みます。
 - v4 から `@tailwind base` などは不要です。
+
+## 検証時の注意
+
+- プレビューと本番ではクッキーがホスト単位で分離されます。同じホスト（例: `https://labyoyaku.vercel.app`）に固定してログイン状態を確認してください。

@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/src/lib/prisma'
@@ -10,6 +11,10 @@ const normalize = (value: string) => value.trim().toLowerCase()
 export async function POST(req: Request) {
   try {
     const me = await readUserFromCookie()
+    console.info('[api.groups.join.POST]', {
+      hasUserId: Boolean(me?.id),
+      hasEmail: Boolean(me?.email),
+    })
     if (!me?.email) {
       return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
     }

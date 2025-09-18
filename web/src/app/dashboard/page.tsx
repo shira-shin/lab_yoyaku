@@ -5,7 +5,7 @@ export const fetchCache = 'force-no-store';
 import { readUserFromCookie } from '@/lib/auth';
 import type { Span } from '@/components/CalendarWithBars';
 import DashboardClient from './page.client';
-import { serverFetch } from '@/lib/serverFetch';
+import { serverFetch } from '@/lib/http/server-fetch';
 import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 

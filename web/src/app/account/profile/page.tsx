@@ -5,7 +5,7 @@ export const fetchCache = 'force-no-store';
 import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getUserFromCookies } from '@/lib/auth/server';
-import { serverFetch } from '@/lib/serverFetch';
+import { serverFetch } from '@/lib/http/server-fetch';
 import ProfileClient from './ProfileClient';
 
 export default async function ProfilePage() {

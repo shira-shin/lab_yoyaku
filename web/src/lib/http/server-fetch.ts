@@ -1,5 +1,5 @@
 import { headers } from 'next/headers';
-import { getBaseUrl } from './http/base-url';
+import { getBaseUrl } from './base-url';
 
 type ServerFetchInit = RequestInit & { next?: Record<string, unknown> };
 
@@ -11,8 +11,12 @@ export async function serverFetch(input: string, init: ServerFetchInit = {}) {
     : `${base}${input.startsWith('/') ? '' : '/'}${input}`;
 
   const h = new Headers(init.headers);
-  const cookie = headers().get('cookie') ?? '';
-  h.set('cookie', cookie);
+  const cookie = headers().get('cookie');
+  if (cookie) {
+    h.set('cookie', cookie);
+  } else {
+    h.delete('cookie');
+  }
 
   const next = { ...(init.next ?? {}), revalidate: 0 };
 
