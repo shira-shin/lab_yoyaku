@@ -20,8 +20,9 @@ export async function POST(req: Request) {
   // デモショートカット：demo/demo でもログイン可（任意）
   if (email === 'demo' && password === 'demo') {
     const token = await signToken({ id: 'u-demo', name: 'demo', email: 'demo@example.com' });
-    setSessionCookie(token);
-    return NextResponse.json({ ok: true });
+    const res = NextResponse.json({ ok: true });
+    setSessionCookie(res, token);
+    return res;
   }
 
   const user = email ? await findUserByEmail(String(email)) : null;
@@ -29,7 +30,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok:false, error:'invalid credentials' }, { status:401 });
   }
   const token = await signToken({ id: user.id, name: user.name || '', email: user.email });
-  setSessionCookie(token);
-  return NextResponse.json({ ok:true });
+  const res = NextResponse.json({ ok:true });
+  setSessionCookie(res, token);
+  return res;
 }
 

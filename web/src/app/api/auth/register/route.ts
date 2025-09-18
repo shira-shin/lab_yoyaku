@@ -35,6 +35,7 @@ export async function POST(req: Request) {
 
   // 自動ログイン
   const token = await signToken({ id: user.id, name: user.name || '', email: user.email });
-  setSessionCookie(token);
-  return NextResponse.json({ ok:true });
+  const res = NextResponse.json({ ok:true });
+  setSessionCookie(res, token);
+  return res;
 }
