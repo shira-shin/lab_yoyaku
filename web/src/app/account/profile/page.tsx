@@ -2,12 +2,14 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
+import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getUserFromCookies } from '@/lib/auth/server';
 import { serverFetch } from '@/lib/serverFetch';
 import ProfileClient from './ProfileClient';
 
 export default async function ProfilePage() {
+  noStore();
   const user = await getUserFromCookies();
   if (!user) redirect('/login?next=/account/profile');
   const res = await serverFetch('/api/me/profile');

@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import QRCode from 'qrcode'
 import { prisma } from '@/src/lib/prisma'
 import { getBaseUrl } from '@/lib/http/base-url'

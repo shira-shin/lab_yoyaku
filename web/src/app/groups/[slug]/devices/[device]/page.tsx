@@ -3,6 +3,7 @@ export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
 import { serverFetch } from '@/lib/serverFetch';
+import { unstable_noStore as noStore } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 import PrintButton from '@/components/PrintButton';
@@ -47,6 +48,7 @@ export default async function DeviceDetail({
   params: { slug: string; device: string };
   searchParams: { month?: string };
 }) {
+  noStore();
   const { slug, device } = params;
   const group = slug;
   const user = await getUserFromCookies();

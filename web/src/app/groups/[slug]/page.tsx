@@ -15,6 +15,7 @@ import CalendarReservationSection from './CalendarReservationSection';
 import Image from 'next/image';
 import { AUTH_COOKIE } from '@/lib/auth/cookies';
 import { decodeSession } from '@/lib/auth';
+import { unstable_noStore as noStore } from 'next/cache';
 
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
@@ -58,6 +59,7 @@ export default async function GroupPage({
   params: { slug: string };
   searchParams: { month?: string };
 }) {
+  noStore();
   const paramSlug = params.slug.toLowerCase();
   const token = cookies().get(AUTH_COOKIE)?.value;
   let user: Awaited<ReturnType<typeof decodeSession>> | null = null;
