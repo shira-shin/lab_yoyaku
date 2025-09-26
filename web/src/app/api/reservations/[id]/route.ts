@@ -1,5 +1,4 @@
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
@@ -26,16 +25,27 @@ async function loadReservation(id: string) {
   return prisma.reservation.findUnique({
     where: { id },
     include: {
-      device: { include: { group: true } },
+      device: { include: { group: { include: { members: true } } } },
       user: { select: { id: true } },
     },
   })
 }
 
-function isOwner(reservation: Awaited<ReturnType<typeof loadReservation>>, userId: string, email: string) {
+function isOwner(
+  reservation: Awaited<ReturnType<typeof loadReservation>>,
+  actorId: string | null,
+  email: string
+) {
   if (!reservation) return false
-  if (reservation.userId) {
-    return reservation.userId === userId
+  if (actorId && reservation.userId) {
+    if (reservation.userId === actorId) {
+      return true
+    }
+  }
+  if (actorId && reservation.user?.id) {
+    if (reservation.user.id === actorId) {
+      return true
+    }
   }
   return reservation.userEmail.toLowerCase() === email.toLowerCase()
 }
@@ -59,7 +69,7 @@ function toPayload(reservation: NonNullable<Awaited<ReturnType<typeof loadReserv
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const me = await readUserFromCookie()
-  if (!me?.email || !me?.id) {
+  if (!me?.email) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
@@ -81,7 +91,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const { groupSlug, reminderMinutes } = parsedBody.data
   const normalizedGroupSlug = groupSlug?.toLowerCase()
 
-  const reservation = await loadReservation(id)
+  const [reservation, actor] = await Promise.all([
+    loadReservation(id),
+    prisma.user.findUnique({ where: { email: me.email }, select: { id: true } }),
+  ])
   if (!reservation) {
     return NextResponse.json({ error: 'reservation not found' }, { status: 404 })
   }
@@ -90,7 +103,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: 'reservation not found' }, { status: 404 })
   }
 
-  if (!isOwner(reservation, me.id, me.email)) {
+  const actorId = actor?.id ?? null
+
+  if (!isOwner(reservation, actorId, me.email)) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 
@@ -117,7 +132,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   const me = await readUserFromCookie()
-  if (!me?.email || !me?.id) {
+  if (!me?.email) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
@@ -131,7 +146,10 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
   const { id } = parsedParams.data
 
-  const reservation = await loadReservation(id)
+  const [reservation, actor] = await Promise.all([
+    loadReservation(id),
+    prisma.user.findUnique({ where: { email: me.email }, select: { id: true } }),
+  ])
   if (!reservation) {
     return NextResponse.json({ error: 'reservation not found' }, { status: 404 })
   }
@@ -140,7 +158,10 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     return NextResponse.json({ error: 'reservation not found' }, { status: 404 })
   }
 
-  if (!isOwner(reservation, me.id, me.email)) {
+  const actorId = actor?.id ?? null
+  const isHost = reservation.device.group.hostEmail.toLowerCase() === me.email.toLowerCase()
+
+  if (!isOwner(reservation, actorId, me.email) && !isHost) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 

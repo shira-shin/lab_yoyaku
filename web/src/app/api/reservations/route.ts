@@ -1,5 +1,4 @@
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
@@ -228,13 +227,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'reservation conflict' }, { status: 409 })
     }
 
+    const user = await prisma.user.upsert({
+      where: { email: me.email },
+      update: {
+        name: me.name || undefined,
+      },
+      create: {
+        email: me.email,
+        name: me.name || null,
+      },
+    })
+
     const profile = await prisma.userProfile.findUnique({ where: { email: me.email } })
     const displayName = profile?.displayName || me.name || me.email.split('@')[0]
 
     const created = await prisma.reservation.create({
       data: {
         deviceId: device.id,
-        userId: me.id,
+        userId: user.id,
         userEmail: me.email,
         userName: displayName,
         start: body.start,
