@@ -1,7 +1,7 @@
 import 'server-only';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
-import { createHash } from 'crypto';
+import { hashSync, compareSync } from 'bcryptjs';
 import { loadUsers } from './db';
 import { AUTH_COOKIE } from './auth/cookies';
 
@@ -10,8 +10,9 @@ export const SESSION_COOKIE = AUTH_COOKIE;
 
 export type User = { id: string; name: string; email: string };
 
-export const hashPassword = (pw: string) =>
-  createHash('sha256').update(pw).digest('hex');
+export const hashPassword = (pw: string) => hashSync(pw, 10);
+
+export const verifyPassword = (pw: string, hash: string) => compareSync(pw, hash);
 
 export async function signToken(user: User) {
   return await new SignJWT(user).setProtectedHeader({ alg: 'HS256' })

@@ -90,8 +90,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'invalid date range' }, { status: 400 })
     }
 
-    const group = await prisma.group.findUnique({
-      where: { slug },
+    const group = await prisma.group.findFirst({
+      where: { slug, deletedAt: null },
       include: { members: true },
     })
 
@@ -107,13 +107,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
 
-    const deviceWhere: Prisma.DeviceWhereInput = { groupId: group.id }
+    const deviceWhere: Prisma.DeviceWhereInput = { groupId: group.id, deletedAt: null }
     if (deviceSlugNormalized) {
       deviceWhere.slug = deviceSlugNormalized
     }
 
     const where: Prisma.ReservationWhereInput = {
       device: deviceWhere,
+      deletedAt: null,
     }
     if (rangeStart) {
       where.end = { gt: rangeStart }
@@ -196,7 +197,7 @@ export async function POST(req: Request) {
     const deviceSlug = body.deviceSlug.toLowerCase()
 
     const device = await prisma.device.findFirst({
-      where: { slug: deviceSlug, group: { slug } },
+      where: { slug: deviceSlug, deletedAt: null, group: { slug, deletedAt: null } },
       include: { group: { include: { members: true } } },
     })
 
@@ -215,6 +216,7 @@ export async function POST(req: Request) {
     const conflict = await prisma.reservation.findFirst({
       where: {
         deviceId: device.id,
+        deletedAt: null,
         start: { lt: body.end },
         end: { gt: body.start },
       },

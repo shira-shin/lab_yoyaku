@@ -11,13 +11,19 @@ function toISO(value: Date | null | undefined) {
 }
 
 async function buildGroupPayload(slug: string) {
-  const group = await prisma.group.findUnique({
-    where: { slug },
+  const group = await prisma.group.findFirst({
+    where: { slug, deletedAt: null },
     include: {
-      members: true,
+      members: { select: { email: true, role: true } },
       devices: {
+        where: { deletedAt: null },
         orderBy: { name: 'asc' },
-        include: { reservations: { orderBy: { start: 'asc' } } },
+        include: {
+          reservations: {
+            where: { deletedAt: null },
+            orderBy: { start: 'asc' },
+          },
+        },
       },
     },
   })
@@ -74,6 +80,10 @@ async function buildGroupPayload(slug: string) {
     group,
     reservations: reservationsPayload,
     members: Array.from(new Set([group.hostEmail, ...group.members.map((member) => member.email)])),
+    memberRoles: group.members.reduce<Record<string, string>>((acc, member) => {
+      acc[member.email] = member.role
+      return acc
+    }, {}),
     devices: group.devices.map((device) => ({
       id: device.id,
       slug: device.slug,
@@ -97,11 +107,16 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
       return NextResponse.json({ error: 'group not found' }, { status: 404 })
     }
 
-    const { group, reservations, members, devices } = payload
+    const { group, reservations, members, memberRoles, devices } = payload
     const isMember = members.includes(me.email)
     if (!isMember) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
+
+    const role = (() => {
+      if (group.hostEmail === me.email) return 'OWNER'
+      return memberRoles[me.email] ?? null
+    })()
 
     return NextResponse.json({
       group: {
@@ -113,8 +128,11 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
         reserveTo: toISO(group.reserveTo),
         memo: group.memo ?? null,
         members,
+        memberRoles,
         devices,
         reservations,
+        allowMemberDeviceCreate: group.allowMemberDeviceCreate,
+        viewerRole: role,
       },
     })
   } catch (error) {
@@ -184,6 +202,11 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
       return NextResponse.json({ error: 'group not found' }, { status: 404 })
     }
 
+    const role = (() => {
+      if (payload.group.hostEmail === me.email) return 'OWNER'
+      return payload.memberRoles[me.email] ?? null
+    })()
+
     return NextResponse.json({
       group: {
         id: payload.group.id,
@@ -194,8 +217,11 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
         reserveTo: toISO(payload.group.reserveTo),
         memo: payload.group.memo ?? null,
         members: payload.members,
+        memberRoles: payload.memberRoles,
         devices: payload.devices,
         reservations: payload.reservations,
+        allowMemberDeviceCreate: payload.group.allowMemberDeviceCreate,
+        viewerRole: role,
       },
     })
   } catch (error) {

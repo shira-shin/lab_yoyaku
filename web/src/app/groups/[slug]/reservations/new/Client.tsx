@@ -21,6 +21,9 @@ export default function NewReservationClient({
   const r = useRouter();
   const sp = useSearchParams();
   const defaultDevice = sp.get('device') ?? '';
+  const defaultDate = sp.get('date');
+  const defaultStartValue = defaultDate ? `${defaultDate}T09:00` : '';
+  const defaultEndValue = defaultDate ? `${defaultDate}T10:00` : '';
   const [deviceSlug, setDeviceSlug] = useState(defaultDevice);
   const sorted = useMemo(
     () => devices.slice().sort((a, b) => a.name.localeCompare(b.name)),
@@ -137,6 +140,7 @@ export default function NewReservationClient({
             type="datetime-local"
             required
             className="w-full rounded-xl border px-3 py-2"
+            defaultValue={defaultStartValue}
           />
         </div>
         <div>
@@ -146,6 +150,7 @@ export default function NewReservationClient({
             type="datetime-local"
             required
             className="w-full rounded-xl border px-3 py-2"
+            defaultValue={defaultEndValue}
           />
         </div>
       </div>

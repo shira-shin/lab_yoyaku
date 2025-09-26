@@ -16,8 +16,8 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
     }
 
     const slug = params.slug.toLowerCase()
-    const group = await prisma.group.findUnique({
-      where: { slug },
+    const group = await prisma.group.findFirst({
+      where: { slug, deletedAt: null },
       include: { members: true },
     })
     if (!group) {
@@ -31,7 +31,7 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
     }
 
     const devices = await prisma.device.findMany({
-      where: { groupId: group.id },
+      where: { groupId: group.id, deletedAt: null },
       orderBy: { name: 'asc' },
       select: { id: true, slug: true, name: true, caution: true, code: true },
     })
@@ -51,15 +51,19 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
     }
 
     const slug = params.slug.toLowerCase()
-    const group = await prisma.group.findUnique({
-      where: { slug },
+    const group = await prisma.group.findFirst({
+      where: { slug, deletedAt: null },
       include: { members: true },
     })
     if (!group) {
       return NextResponse.json({ error: 'group not found' }, { status: 404 })
     }
 
-    if (group.hostEmail !== me.email) {
+    const membership = group.members.find((member) => member.email === me.email)
+    const isOwner = group.hostEmail === me.email
+    const isManager = membership?.role === 'MANAGER' || membership?.role === 'OWNER'
+    const canCreate = isOwner || isManager || group.allowMemberDeviceCreate
+    if (!canCreate) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
 
@@ -78,7 +82,9 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
     const caution = String((body as any).caution || '').trim()
     const code = String((body as any).code || '').trim()
 
-    const exists = await prisma.device.findFirst({ where: { groupId: group.id, slug: deviceSlug } })
+    const exists = await prisma.device.findFirst({
+      where: { groupId: group.id, slug: deviceSlug, deletedAt: null },
+    })
     if (exists) {
       return NextResponse.json({ error: 'device slug already exists' }, { status: 409 })
     }

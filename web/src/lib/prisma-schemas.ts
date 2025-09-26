@@ -11,7 +11,10 @@ export const GroupSchema = z.object({
   reserveFrom: date.nullable(),
   reserveTo: date.nullable(),
   memo: z.string().nullable(),
+  allowMemberDeviceCreate: z.boolean().default(false),
   createdAt: date,
+  updatedAt: date,
+  deletedAt: date.nullable(),
 })
 
 export const DeviceSchema = z.object({
@@ -22,6 +25,8 @@ export const DeviceSchema = z.object({
   code: z.string().nullable(),
   qrToken: z.string().min(1),
   createdAt: date,
+  updatedAt: date,
+  deletedAt: date.nullable(),
   groupId: z.string().min(1),
 })
 
@@ -34,6 +39,8 @@ export const ReservationSchema = z.object({
   end: date,
   purpose: z.string().nullable(),
   createdAt: date,
+  updatedAt: date,
+  deletedAt: date.nullable(),
 })
 
 export const UserProfileSchema = z.object({

@@ -40,3 +40,23 @@ export async function saveUser(user: UserRecord): Promise<void> {
     dbData.users.push(user);
   }
 }
+
+export async function updateUser(user: { id: string; name?: string; passHash?: string }): Promise<void> {
+  if (db) {
+    const updates: Record<string, unknown> = {};
+    if (user.name !== undefined) updates.name = user.name;
+    if (user.passHash !== undefined) updates.passHash = user.passHash;
+    const setClause = Object.keys(updates)
+      .map((key) => `${key} = @${key}`)
+      .join(', ');
+    if (!setClause) return;
+    db.prepare(`UPDATE users SET ${setClause} WHERE id = @id`).run({ id: user.id, ...updates });
+  } else {
+    const dbData = loadDB();
+    const target = dbData.users.find((u) => u.id === user.id);
+    if (target) {
+      if (user.name !== undefined) target.name = user.name;
+      if (user.passHash !== undefined) target.passHash = user.passHash;
+    }
+  }
+}

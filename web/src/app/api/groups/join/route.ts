@@ -38,6 +38,7 @@ export async function POST(req: Request) {
           { slug: queryNorm },
           { name: { equals: queryRaw, mode: 'insensitive' } },
         ],
+        deletedAt: null,
       },
       include: { members: true },
     })
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
       group.hostEmail === me.email || group.members.some((member) => member.email === me.email)
 
     if (!alreadyMember) {
-      await prisma.groupMember.create({ data: { groupId: group.id, email: me.email } })
+      await prisma.groupMember.create({ data: { groupId: group.id, email: me.email, role: 'MEMBER' } })
     }
 
     return NextResponse.json({ ok: true, data: { slug: group.slug, name: group.name } })

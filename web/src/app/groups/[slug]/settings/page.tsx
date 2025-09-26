@@ -27,7 +27,8 @@ export default async function GroupSettingsPage({ params }: { params: { slug: st
   }
   const data = await res.json();
   const group = data?.group ?? data;
-  if (!group || group.host !== user.email) return notFound();
+  const role = group?.viewerRole ?? null;
+  if (!group || (role !== 'OWNER' && role !== 'MANAGER')) return notFound();
   return (
     <div className="mx-auto max-w-4xl">
       <GroupSettingsClient initialGroup={group} />

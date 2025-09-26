@@ -6,25 +6,16 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/src/lib/prisma'
 import { readUserFromCookie } from '@/lib/auth'
 
-export async function GET(
-  _req: Request,
-  { params }: { params: { slug: string; device: string } }
-) {
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
     const me = await readUserFromCookie()
     if (!me?.email) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
 
-    const groupSlug = params.slug.toLowerCase()
-    const deviceSlug = params.device.toLowerCase()
-
     const device = await prisma.device.findFirst({
-      where: { slug: deviceSlug, deletedAt: null, group: { slug: groupSlug, deletedAt: null } },
-      include: {
-        group: { include: { members: true } },
-        reservations: { where: { deletedAt: null }, orderBy: { start: 'asc' } },
-      },
+      where: { id: params.id, deletedAt: null, group: { deletedAt: null } },
+      include: { group: { include: { members: true } } },
     })
 
     if (!device) {
@@ -38,65 +29,29 @@ export async function GET(
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
 
-    const profileEmails = Array.from(
-      new Set([
-        device.group.hostEmail,
-        ...device.group.members.map((member) => member.email),
-        ...device.reservations.map((reservation) => reservation.userEmail),
-      ])
-    )
-    const profiles = profileEmails.length
-      ? await prisma.userProfile.findMany({ where: { email: { in: profileEmails } } })
-      : []
-    const displayNameMap = new Map(profiles.map((profile) => [profile.email, profile.displayName || '']))
-
-    const reservations = device.reservations.map((reservation) => ({
-      id: reservation.id,
-      deviceId: reservation.deviceId,
-      deviceSlug: device.slug,
-      deviceName: device.name,
-      start: reservation.start.toISOString(),
-      end: reservation.end.toISOString(),
-      purpose: reservation.purpose ?? null,
-      userEmail: reservation.userEmail,
-      userName:
-        reservation.userName ||
-        displayNameMap.get(reservation.userEmail) ||
-        reservation.userEmail.split('@')[0],
-    }))
-
     return NextResponse.json({
       device: {
         id: device.id,
         slug: device.slug,
         name: device.name,
-        caution: device.caution ?? null,
-        code: device.code ?? null,
         groupSlug: device.group.slug,
       },
-      reservations,
     })
   } catch (error) {
-    console.error('load device failed', error)
+    console.error('load device by id failed', error)
     return NextResponse.json({ error: 'load device failed' }, { status: 500 })
   }
 }
 
-export async function DELETE(
-  _req: Request,
-  { params }: { params: { slug: string; device: string } }
-) {
+export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   try {
     const me = await readUserFromCookie()
     if (!me?.email) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
 
-    const groupSlug = params.slug.toLowerCase()
-    const deviceSlug = params.device.toLowerCase()
-
     const device = await prisma.device.findFirst({
-      where: { slug: deviceSlug, deletedAt: null, group: { slug: groupSlug, deletedAt: null } },
+      where: { id: params.id, deletedAt: null, group: { deletedAt: null } },
       include: { group: { include: { members: true } } },
     })
 
@@ -117,7 +72,7 @@ export async function DELETE(
       data: { deletedAt: new Date() },
     })
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true }, { status: 200 })
   } catch (error) {
     console.error('delete device failed', error)
     return NextResponse.json({ error: 'delete device failed' }, { status: 500 })

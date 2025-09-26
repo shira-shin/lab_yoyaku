@@ -51,6 +51,12 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+enum GroupRole {
+  OWNER
+  MANAGER
+  MEMBER
+}
+
 model Group {
   id        String   @id @default(cuid())
   slug      String   @unique
@@ -60,9 +66,12 @@ model Group {
   reserveFrom DateTime?
   reserveTo DateTime?
   memo      String?
+  allowMemberDeviceCreate Boolean @default(false)
   devices   Device[]
   members   GroupMember[]
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
 }
 
 model Device {
@@ -73,6 +82,8 @@ model Device {
   code      String?
   qrToken   String   @default(cuid())
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
   group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId   String
   reservations Reservation[]
@@ -90,6 +101,8 @@ model Reservation {
   end       DateTime
   purpose   String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
 
   @@index([deviceId, start])
   @@index([start, end])
@@ -100,7 +113,9 @@ model GroupMember {
   group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId   String
   email     String
+  role      GroupRole @default(MEMBER)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([groupId, email])
 }
