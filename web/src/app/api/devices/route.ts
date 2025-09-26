@@ -29,8 +29,8 @@ export async function GET(req: Request) {
     }
 
     const slug = parsed.data.groupSlug.toLowerCase()
-    const group = await prisma.group.findUnique({
-      where: { slug },
+    const group = await prisma.group.findFirst({
+      where: { slug, deletedAt: null },
       include: { members: true },
     })
 
@@ -38,16 +38,16 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'group not found' }, { status: 404 })
     }
 
-    const isMember =
-      group.hostEmail === me.email ||
-      group.members.some((member) => member.email === me.email)
+    const membership = group.members.find((member) => member.email === me.email)
+    const isOwner = group.hostEmail === me.email
+    const isMember = isOwner || !!membership
 
     if (!isMember) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
 
     const devices = await prisma.device.findMany({
-      where: { groupId: group.id },
+      where: { groupId: group.id, deletedAt: null },
       orderBy: { name: 'asc' },
       select: { id: true, slug: true, name: true, caution: true, code: true },
     })

@@ -28,7 +28,7 @@ export async function GET() {
   }
 
   const groups = await prisma.group.findMany({
-    where: { OR: orConditions },
+    where: { deletedAt: null, OR: orConditions },
     select: { id: true, slug: true, name: true },
   })
 
@@ -38,7 +38,7 @@ export async function GET() {
 
   const groupIdMap = new Map(groups.map((g) => [g.id, g]))
   const reservations = await prisma.reservation.findMany({
-    where: { device: { groupId: { in: Array.from(groupIdMap.keys()) } } },
+    where: { device: { groupId: { in: Array.from(groupIdMap.keys()) }, deletedAt: null }, deletedAt: null },
     include: {
       device: {
         select: {

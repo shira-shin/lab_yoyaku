@@ -9,6 +9,9 @@ export default function GroupSettingsClient({ initialGroup }: { initialGroup: an
   const [reserveTo, setReserveTo] = useState(initialGroup.reserveTo || '');
   const [memo, setMemo] = useState(initialGroup.memo || '');
   const [host, setHost] = useState(initialGroup.host || '');
+  const [allowMemberDeviceCreate, setAllowMemberDeviceCreate] = useState(
+    Boolean(initialGroup.allowMemberDeviceCreate)
+  );
   const [saving, setSaving] = useState(false);
   const router = useRouter();
   const members: string[] = initialGroup.members || [];
@@ -17,18 +20,28 @@ export default function GroupSettingsClient({ initialGroup }: { initialGroup: an
     e.preventDefault();
     setSaving(true);
     try {
-      const r = await fetch(`/api/groups/${encodeURIComponent(initialGroup.slug)}`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          reserveFrom: reserveFrom || undefined,
-          reserveTo: reserveTo || undefined,
-          memo: memo || undefined,
-          host: host || undefined,
+      const payload = {
+        reserveFrom: reserveFrom || undefined,
+        reserveTo: reserveTo || undefined,
+        memo: memo || undefined,
+        host: host || undefined,
+      };
+      const base = `/api/groups/${encodeURIComponent(initialGroup.slug)}`;
+      const [groupRes, settingsRes] = await Promise.all([
+        fetch(base, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+          credentials: 'same-origin',
         }),
-        credentials: 'same-origin',
-      });
-      if (!r.ok) throw new Error('failed');
+        fetch(`${base}/settings`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ allowMemberDeviceCreate }),
+          credentials: 'same-origin',
+        }),
+      ]);
+      if (!groupRes.ok || !settingsRes.ok) throw new Error('failed');
       toast.success('保存しました');
       router.refresh();
     } catch (e) {
@@ -62,6 +75,14 @@ export default function GroupSettingsClient({ initialGroup }: { initialGroup: an
             />
           </label>
         </div>
+        <label className="mt-4 flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={allowMemberDeviceCreate}
+            onChange={(event) => setAllowMemberDeviceCreate(event.target.checked)}
+          />
+          <span className="text-sm">一般メンバーによる機器追加を許可</span>
+        </label>
       </section>
       <section className="rounded-2xl border p-6 bg-white">
       <h2 className="text-lg font-semibold mb-4">連絡先</h2>

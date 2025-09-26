@@ -25,6 +25,9 @@ importers:
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
+      bcryptjs:
+        specifier: ^2.4.3
+        version: 2.4.3
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -115,6 +118,9 @@ packages:
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
     engines: {node: '>=12'}
+
+  bcryptjs@2.4.3:
+    resolution: {integrity: sha512-zd2nJczJ3WguWcYwiUA2Gban+9hhEFDVfdUKdxbV6I5hw5Rox96LRZsRTh3bp1u7dqV/Dr/SeacmCUBlKx7sqg==}
 
   '@isaacs/fs-minipass@4.0.1':
     resolution: {integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w==}

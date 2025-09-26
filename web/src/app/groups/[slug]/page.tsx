@@ -117,6 +117,9 @@ export default async function GroupPage({
     members: Array.isArray(raw?.members) ? raw.members : [],
     devices: Array.isArray(raw?.devices) ? raw.devices : [],
     reservations: Array.isArray(raw?.reservations) ? raw.reservations : [],
+    viewerRole: raw?.viewerRole ?? null,
+    allowMemberDeviceCreate: Boolean(raw?.allowMemberDeviceCreate),
+    memberRoles: raw?.memberRoles ?? {},
   };
   const devices = group.devices;
   const me = user;
@@ -196,7 +199,6 @@ export default async function GroupPage({
         <GroupScreenClient
           initialGroup={group}
           initialDevices={devices}
-          defaultReserver={me?.email}
         />
       </div>
       <div className="rounded-2xl border p-4 md:p-6 bg-white space-y-4 overflow-visible">
@@ -237,7 +239,6 @@ export default async function GroupPage({
           listItems={listItems}
           groupSlug={group.slug}
           devices={devices}
-          defaultReserver={me?.email}
         />
         <Image
           src={qrUrl}

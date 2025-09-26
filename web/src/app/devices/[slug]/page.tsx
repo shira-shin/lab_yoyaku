@@ -9,7 +9,7 @@ import { notFound, redirect } from 'next/navigation';
 
 export default async function DeviceGlobal({ params }: { params: { slug: string } }) {
   noStore();
-  const res = await serverFetch(`/api/devices/${encodeURIComponent(params.slug)}`);
+  const res = await serverFetch(`/api/devices/by-slug/${encodeURIComponent(params.slug)}`);
   if (res.status === 401) {
     redirect(`/login?next=/devices/${params.slug}`);
   }

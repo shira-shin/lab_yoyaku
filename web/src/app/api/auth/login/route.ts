@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { findUserByEmail, hashPassword, signToken } from '@/lib/auth';
+import { findUserByEmail, hashPassword, signToken, verifyPassword } from '@/lib/auth';
 import { setSessionCookie } from '@/lib/auth/cookies';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   }
 
   const user = email ? await findUserByEmail(String(email)) : null;
-  if (!user || user.passHash !== hashPassword(String(password))) {
+  if (!user || !verifyPassword(String(password), user.passHash)) {
     return NextResponse.json({ ok:false, error:'invalid credentials' }, { status:401 });
   }
   const token = await signToken({ id: user.id, name: user.name || '', email: user.email });

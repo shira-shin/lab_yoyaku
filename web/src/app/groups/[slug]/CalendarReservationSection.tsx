@@ -1,7 +1,8 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 import ReservationList, { ReservationItem } from '@/components/ReservationList';
+import { useRouter } from 'next/navigation';
 
 export default function CalendarReservationSection({
   weeks,
@@ -10,7 +11,6 @@ export default function CalendarReservationSection({
   listItems,
   groupSlug,
   devices,
-  defaultReserver,
 }: {
   weeks: Date[][];
   month: number;
@@ -18,19 +18,15 @@ export default function CalendarReservationSection({
   listItems: ReservationItem[];
   groupSlug: string;
   devices: any[];
-  defaultReserver?: string;
 }) {
-  const [selected, setSelected] = useState<Date | null>(null);
+  const router = useRouter();
   const handleSelect = (d: Date) => {
-    setSelected(d);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    router.push(`/groups/${encodeURIComponent(groupSlug)}/calendar?date=${year}-${month}-${day}`);
   };
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  const items = useMemo(() => {
-    if (!selected) return listItems;
-    return listItems.filter(
-      (i) => i.start.toDateString() === selected.toDateString()
-    );
-  }, [selected, listItems]);
+  const items = useMemo(() => listItems, [listItems]);
   return (
     <>
       <CalendarWithBars
@@ -41,9 +37,7 @@ export default function CalendarReservationSection({
         showModal={false}
       />
       <div className="mt-4">
-        <h2 className="text-xl font-semibold mb-2">
-          予約一覧{selected && ` (${selected.getMonth() + 1}/${selected.getDate()})`}
-        </h2>
+        <h2 className="text-xl font-semibold mb-2">予約一覧</h2>
         <ReservationList items={items} />
       </div>
       </>

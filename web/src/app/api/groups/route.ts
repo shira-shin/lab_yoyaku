@@ -36,6 +36,7 @@ export async function GET(req: Request) {
       const groupIds = memberships.map((m) => m.groupId)
       const groups = await prisma.group.findMany({
         where: {
+          deletedAt: null,
           OR: [{ hostEmail: me.email }, groupIds.length ? { id: { in: groupIds } } : undefined].filter(
             Boolean
           ) as Prisma.GroupWhereInput[],
@@ -47,6 +48,7 @@ export async function GET(req: Request) {
     }
 
     const groups = await prisma.group.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
       select: { slug: true, name: true },
     })
@@ -106,7 +108,7 @@ export async function POST(req: Request) {
         reserveFrom,
         reserveTo,
         memo: memoValue || null,
-        members: { create: { email: me.email } },
+        members: { create: { email: me.email, role: 'OWNER' } },
       },
       select: { id: true, slug: true, name: true },
     })

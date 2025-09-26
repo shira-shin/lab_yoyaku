@@ -15,7 +15,7 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
 
     const slug = params.slug.toLowerCase()
     const device = await prisma.device.findFirst({
-      where: { slug },
+      where: { slug, deletedAt: null, group: { deletedAt: null } },
       include: { group: { include: { members: true } } },
     })
 
@@ -23,9 +23,9 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
       return NextResponse.json({ error: 'device not found' }, { status: 404 })
     }
 
-    const isMember =
-      device.group.hostEmail === me.email ||
-      device.group.members.some((member) => member.email === me.email)
+    const membership = device.group.members.find((member) => member.email === me.email)
+    const isOwner = device.group.hostEmail === me.email
+    const isMember = isOwner || !!membership
     if (!isMember) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
