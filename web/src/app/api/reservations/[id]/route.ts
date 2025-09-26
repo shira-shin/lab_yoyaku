@@ -25,7 +25,17 @@ async function loadReservation(id: string) {
   return prisma.reservation.findUnique({
     where: { id },
     include: {
-      device: { include: { group: { include: { members: true } } } },
+      device: {
+        include: {
+          group: {
+            include: {
+              members: {
+                select: { id: true, email: true, createdAt: true, groupId: true },
+              },
+            },
+          },
+        },
+      },
       user: { select: { id: true } },
     },
   })
@@ -122,7 +132,17 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     where: { id },
     data: updates,
     include: {
-      device: { include: { group: true } },
+      device: {
+        include: {
+          group: {
+            include: {
+              members: {
+                select: { id: true, email: true, createdAt: true, groupId: true },
+              },
+            },
+          },
+        },
+      },
       user: { select: { id: true } },
     },
   })
