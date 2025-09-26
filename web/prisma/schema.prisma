@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String        @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String?       @unique
   emailVerified DateTime?
   image         String?
   accounts      Account[]
   sessions      Session[]
+  reservations  Reservation[]
 }
 
 model Account {
@@ -52,46 +53,46 @@ model VerificationToken {
 }
 
 model Group {
-  id        String   @id @default(cuid())
-  slug      String   @unique
-  name      String?
-  passcode  String?
-  hostEmail String
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  name        String?
+  passcode    String?
+  hostEmail   String
   reserveFrom DateTime?
-  reserveTo DateTime?
-  memo      String?
-  devices   Device[]
-  members   GroupMember[]
-  createdAt DateTime @default(now())
+  reserveTo   DateTime?
+  memo        String?
+  devices     Device[]
+  members     GroupMember[]
+  createdAt   DateTime      @default(now())
 }
 
 model Device {
-  id        String   @id @default(cuid())
-  slug      String
-  name      String
-  caution   String?
-  code      String?
-  qrToken   String   @default(cuid())
-  createdAt DateTime @default(now())
-  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId   String
+  id           String        @id @default(cuid())
+  slug         String
+  name         String
+  caution      String?
+  code         String?
+  qrToken      String        @default(cuid())
+  createdAt    DateTime      @default(now())
+  group        Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId      String
   reservations Reservation[]
 
   @@unique([groupId, slug])
 }
 
 model Reservation {
-  id        String   @id @default(cuid())
-  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
-  deviceId  String
-  userId    String?
-  userEmail String
-  userName  String?
-  start     DateTime
-  end       DateTime
-  purpose   String?
+  id              String   @id @default(cuid())
+  device          Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  deviceId        String
+  userId          String?
+  userEmail       String
+  userName        String?
+  start           DateTime
+  end             DateTime
+  purpose         String?
   reminderMinutes Int?
-  createdAt DateTime @default(now())
+  createdAt       DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -110,8 +111,8 @@ model GroupMember {
 }
 
 model UserProfile {
-  email String  @id
+  email       String   @id
   displayName String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
