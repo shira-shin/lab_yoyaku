@@ -84,12 +84,16 @@ model Reservation {
   id        String   @id @default(cuid())
   device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
   deviceId  String
+  userId    String?
   userEmail String
   userName  String?
   start     DateTime
   end       DateTime
   purpose   String?
+  reminderMinutes Int?
   createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([deviceId, start])
   @@index([start, end])

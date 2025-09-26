@@ -74,8 +74,10 @@ export async function GET() {
       start: reservation.start.toISOString(),
       end: reservation.end.toISOString(),
       purpose: reservation.purpose ?? null,
+      reminderMinutes: reservation.reminderMinutes ?? null,
       userEmail: reservation.userEmail,
       userName,
+      userId: reservation.userId,
     }
   })
 

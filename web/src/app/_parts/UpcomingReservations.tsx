@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { updateReservation, deleteReservation } from '@/lib/api';
+import { toast } from '@/lib/toast';
 
 export type Item = {
   id: string;
@@ -170,6 +171,10 @@ function Modal({
         reminderMinutes: minutes,
       });
       onUpdated(res.data);
+      toast.success('リマインダー設定を保存しました');
+    } catch (error) {
+      console.error('update reservation reminder failed', error);
+      toast.error('リマインダー設定に失敗しました');
     } finally {
       setSaving(false);
     }
@@ -181,6 +186,10 @@ function Modal({
     try {
       await deleteReservation({ id: item.id, groupSlug: item.groupSlug });
       onDeleted(item.id);
+      toast.success('予約をキャンセルしました');
+    } catch (error) {
+      console.error('cancel reservation failed', error);
+      toast.error('予約のキャンセルに失敗しました');
     } finally {
       setSaving(false);
     }

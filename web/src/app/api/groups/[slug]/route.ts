@@ -35,6 +35,8 @@ async function buildGroupPayload(slug: string) {
       purpose: reservation.purpose ?? null,
       userEmail: reservation.userEmail,
       userName: reservation.userName ?? null,
+      reminderMinutes: reservation.reminderMinutes ?? null,
+      userId: reservation.userId,
     }))
   )
 
@@ -59,11 +61,13 @@ async function buildGroupPayload(slug: string) {
     start: reservation.start.toISOString(),
     end: reservation.end.toISOString(),
     purpose: reservation.purpose,
+    reminderMinutes: reservation.reminderMinutes,
     userEmail: reservation.userEmail,
     userName:
       reservation.userName ||
       displayNameMap.get(reservation.userEmail) ||
       reservation.userEmail.split('@')[0],
+    userId: reservation.userId,
   }))
 
   reservationsPayload.sort(
