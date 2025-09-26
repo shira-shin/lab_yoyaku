@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/src/lib/prisma'
-import { z } from 'zod'
+import { z } from '@/lib/zod'
 import { readUserFromCookie } from '@/lib/auth'
 import type { Prisma } from '@prisma/client'
 

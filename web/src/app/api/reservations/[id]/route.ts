@@ -3,7 +3,7 @@ export const revalidate = 0
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
-import { z } from 'zod'
+import { z } from '@/lib/zod'
 import { readUserFromCookie } from '@/lib/auth'
 import { prisma } from '@/src/lib/prisma'
 
@@ -14,7 +14,7 @@ const ParamsSchema = z.object({
 const UpdateSchema = z.object({
   groupSlug: z.string().min(1).optional(),
   reminderMinutes: z
-    .number()
+    .coerce.number()
     .int()
     .min(0)
     .max(24 * 60)
@@ -71,7 +71,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const bodyRaw = await req.json().catch(() => ({}))
   const parsedBody = UpdateSchema.safeParse(bodyRaw)
   if (!parsedBody.success) {
-    return NextResponse.json({ error: parsedBody.error.flatten() }, { status: 400 })
+    if ('error' in parsedBody) {
+      return NextResponse.json({ error: parsedBody.error.flatten() }, { status: 400 })
+    }
+    return NextResponse.json({ error: { formErrors: ['invalid body'], fieldErrors: {} } }, { status: 400 })
   }
 
   const { id } = parsedParams.data

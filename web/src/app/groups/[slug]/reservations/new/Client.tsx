@@ -2,7 +2,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from '@/lib/toast';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 
 const ReservationFormSchema = z.object({
   deviceSlug: z.string().min(1),
