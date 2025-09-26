@@ -133,6 +133,7 @@ export async function GET(req: Request) {
             group: { select: { slug: true } },
           },
         },
+        user: { select: { id: true } },
       },
       orderBy: { start: 'asc' },
     })
@@ -150,14 +151,17 @@ export async function GET(req: Request) {
       deviceId: reservation.deviceId,
       deviceSlug: reservation.device.slug,
       deviceName: reservation.device.name,
+      groupSlug: reservation.device.group.slug,
       start: reservation.start.toISOString(),
       end: reservation.end.toISOString(),
       purpose: reservation.purpose ?? null,
+      reminderMinutes: reservation.reminderMinutes ?? null,
       userEmail: reservation.userEmail,
       userName:
         reservation.userName ||
         displayNameMap.get(reservation.userEmail) ||
         reservation.userEmail.split('@')[0],
+      userId: reservation.user?.id ?? null,
     }))
 
     return NextResponse.json({ reservations: payload })
@@ -230,6 +234,7 @@ export async function POST(req: Request) {
     const created = await prisma.reservation.create({
       data: {
         deviceId: device.id,
+        userId: me.id,
         userEmail: me.email,
         userName: displayName,
         start: body.start,
@@ -245,6 +250,7 @@ export async function POST(req: Request) {
             group: { select: { slug: true } },
           },
         },
+        user: { select: { id: true } },
       },
     })
 
@@ -255,11 +261,14 @@ export async function POST(req: Request) {
           deviceId: created.deviceId,
           deviceSlug: created.device.slug,
           deviceName: created.device.name,
+          groupSlug: created.device.group.slug,
           start: created.start.toISOString(),
           end: created.end.toISOString(),
           purpose: created.purpose ?? null,
+          reminderMinutes: created.reminderMinutes ?? null,
           userEmail: created.userEmail,
           userName: created.userName,
+          userId: created.user?.id ?? null,
         },
       },
       { status: 201 }

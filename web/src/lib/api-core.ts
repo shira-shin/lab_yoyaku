@@ -69,11 +69,23 @@ export function createApi(
         method: 'POST',
         body: JSON.stringify(body),
       }),
-    updateReservation: async (_body?: any): Promise<any> => {
-      throw new Error('updateReservation is not implemented');
+    updateReservation: (body: { id: string; groupSlug?: string; reminderMinutes?: number | null }) => {
+      if (!body?.id) throw new Error('reservation id is required');
+      const { id, ...rest } = body;
+      return api(`/api/reservations/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(rest),
+      });
     },
-    deleteReservation: async (_body?: any): Promise<any> => {
-      throw new Error('deleteReservation is not implemented');
+    deleteReservation: (body: { id: string; groupSlug?: string }) => {
+      if (!body?.id) throw new Error('reservation id is required');
+      const { id, ...rest } = body;
+      return api(`/api/reservations/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(rest),
+      });
     },
     listMyReservations: () => api('/api/me/reservations'),
   };

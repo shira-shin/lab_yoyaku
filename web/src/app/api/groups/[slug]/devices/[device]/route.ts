@@ -63,6 +63,8 @@ export async function GET(
         reservation.userName ||
         displayNameMap.get(reservation.userEmail) ||
         reservation.userEmail.split('@')[0],
+      reminderMinutes: reservation.reminderMinutes ?? null,
+      userId: reservation.userId,
     }))
 
     return NextResponse.json({
