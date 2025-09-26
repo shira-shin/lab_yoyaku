@@ -3,7 +3,7 @@ export const revalidate = 0
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
-import { z } from 'zod'
+import { z } from '@/lib/zod'
 import { readUserFromCookie } from '@/lib/auth'
 import { prisma } from '@/src/lib/prisma'
 

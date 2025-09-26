@@ -139,6 +139,64 @@ class DateSchema extends BaseSchema<Date> {
   }
 }
 
+class NumberSchema extends BaseSchema<number> {
+  private readonly validators: Array<(value: number) => string | null> = []
+
+  constructor(private readonly options: { coerce: boolean } = { coerce: false }) {
+    super()
+  }
+
+  int(message?: string): this {
+    this.validators.push(value => {
+      if (!Number.isInteger(value)) {
+        return message ?? 'expected integer'
+      }
+      return null
+    })
+    return this
+  }
+
+  min(minValue: number, message?: string): this {
+    this.validators.push(value => {
+      if (value < minValue) {
+        return message ?? `must be greater than or equal to ${minValue}`
+      }
+      return null
+    })
+    return this
+  }
+
+  max(maxValue: number, message?: string): this {
+    this.validators.push(value => {
+      if (value > maxValue) {
+        return message ?? `must be less than or equal to ${maxValue}`
+      }
+      return null
+    })
+    return this
+  }
+
+  internalParse(input: unknown, path: IssuePath): number {
+    let value = input
+    if (this.options.coerce) {
+      value = Number(value)
+    }
+
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      throw new ZodError([{ path, message: 'expected number' }])
+    }
+
+    for (const validator of this.validators) {
+      const failure = validator(value)
+      if (failure) {
+        throw new ZodError([{ path, message: failure }])
+      }
+    }
+
+    return value
+  }
+}
+
 type Shape = Record<string, BaseSchema<any>>
 
 type InferShape<S extends Shape> = { [K in keyof S]: InferSchema<S[K]> }
@@ -176,11 +234,13 @@ class ObjectSchema<S extends Shape> extends BaseSchema<InferShape<S>> {
 
 const coerce = {
   date: () => new DateSchema(),
+  number: () => new NumberSchema({ coerce: true }),
 }
 
 export const z = {
   object: <S extends Shape>(shape: S) => new ObjectSchema(shape),
   string: () => new StringSchema(),
+  number: () => new NumberSchema(),
   coerce,
 }
 

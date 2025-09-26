@@ -1,4 +1,4 @@
-import { z, type infer as Infer } from 'zod'
+import { z, type infer as Infer } from '@/lib/zod'
 
 const date = z.coerce.date()
 
