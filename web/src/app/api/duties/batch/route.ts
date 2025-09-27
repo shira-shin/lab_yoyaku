@@ -8,24 +8,14 @@ import { prisma } from '@/lib/prisma';
 import { canManageDuties, getActorByEmail } from '@/lib/perm';
 import { z as zod } from 'zod';
 
-/** 文字列 or 文字列配列 を配列<string>に正規化（union/or 不使用） */
-const OneOrManyStrings = zod.preprocess(
-  (v) => {
-    if (v == null || v === '') return [];
-    if (Array.isArray(v)) return v;
-    return [String(v)];
-  },
-  zod.array(zod.string())
-);
-
 const Body = zod.object({
   groupSlug: zod.string(),
   dutyTypeId: zod.string(),
   from: zod.string(), // yyyy-mm-dd
   to: zod.string(),
   mode: zod.enum(['ROUND_ROBIN', 'RANDOM', 'MANUAL']),
-  memberIds: OneOrManyStrings.optional().default([]),
-  weekdays: OneOrManyStrings.optional().default([]),
+  memberIds: zod.any().optional(),
+  weekdays: zod.any().optional(),
 });
 
 async function readBody(req: Request) {
@@ -66,10 +56,18 @@ export async function POST(req: Request) {
 
     const raw = await readBody(req);
     const body = Body.parse(raw);
+    const toStrArray = (v: unknown): string[] => {
+      if (v == null) return [];
+      if (Array.isArray(v)) return v.map((item) => String(item));
+      return [String(v)];
+    };
 
-    const memberIds: string[] = body.memberIds;
+    const memberIds: string[] = toStrArray(body.memberIds);
 
-    const weekdayNums: number[] = body.weekdays.map((s) => Number(s)).filter((n) => !Number.isNaN(n));
+    const weekdaysRaw: string[] = toStrArray(body.weekdays);
+    const weekdayNums: number[] = weekdaysRaw
+      .map((value) => Number(value))
+      .filter((n) => Number.isFinite(n) && n >= 0 && n <= 6);
 
     const slug = body.groupSlug.toLowerCase();
     const group = await prisma.group.findUnique({
