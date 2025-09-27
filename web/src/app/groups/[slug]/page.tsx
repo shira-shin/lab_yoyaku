@@ -183,6 +183,54 @@ export default async function GroupPage({
     };
   });
 
+  const dutyParams = new URLSearchParams({
+    groupSlug: group.slug,
+    from: rangeStart.toISOString(),
+    to: rangeEnd.toISOString(),
+    include: 'type',
+  });
+  const dutiesRes = await serverFetch(`/api/duties?${dutyParams.toString()}`);
+  if (dutiesRes.status === 401) {
+    redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
+  }
+  if (dutiesRes.status === 403 || dutiesRes.status === 404) {
+    redirect(`/groups/join?slug=${encodeURIComponent(paramSlug)}`);
+  }
+  const dutiesJson = await dutiesRes.json().catch(() => ({}));
+  const dutiesSource = Array.isArray(dutiesJson?.data)
+    ? dutiesJson.data
+    : Array.isArray(dutiesJson?.duties)
+      ? dutiesJson.duties
+      : [];
+  const dutySpans: Span[] = dutiesSource.map((d: any) => {
+    const date = new Date(d.date ?? d.startsAt ?? d.endsAt ?? Date.now());
+    const start = d.startsAt ? new Date(d.startsAt) : new Date(date);
+    if (!d.startsAt) {
+      start.setUTCHours(0, 0, 0, 0);
+    }
+    const end = d.endsAt ? new Date(d.endsAt) : new Date(start);
+    if (!d.endsAt) {
+      end.setUTCHours(23, 59, 59, 999);
+    }
+    const type = d.type ?? {};
+    const assignee = d.assignee ?? {};
+    const assigneeName =
+      assignee.name ||
+      (assignee.email ? String(assignee.email).split('@')[0] : '') ||
+      '未割当';
+    return {
+      id: `duty-${d.id}`,
+      name: `[当番] ${type.name ?? '当番'}`,
+      start,
+      end,
+      color: type.color ?? '#7c3aed',
+      groupSlug: group.slug,
+      by: assigneeName,
+    } satisfies Span;
+  });
+
+  const calendarSpans = [...spans, ...dutySpans];
+
   const listItems: ReservationItem[] = reservations.map((r) => {
     const dev = devices.find((d: any) => d.id === r.deviceId || d.slug === r.deviceSlug);
     return {
@@ -233,12 +281,18 @@ export default async function GroupPage({
             >
               予約を追加
             </Link>
+            <Link
+              href={`/groups/${encodeURIComponent(group.slug)}/duties`}
+              className="ml-2 px-3 py-2 rounded bg-purple-600 text-white"
+            >
+              当番・作業
+            </Link>
           </div>
         </div>
         <CalendarReservationSection
           weeks={weeks}
           month={month}
-          spans={spans}
+          spans={calendarSpans}
           listItems={listItems}
           groupSlug={group.slug}
         />

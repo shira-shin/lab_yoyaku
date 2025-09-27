@@ -92,6 +92,12 @@ export default function GroupScreenClient({
             >
               予約を追加
             </Link>
+            <Link
+              href={`/groups/${encodeURIComponent(group.slug)}/duties`}
+              className="px-3 py-2 rounded bg-purple-600 text-white"
+            >
+              当番・作業
+            </Link>
             <button onClick={handleShareLink} className="btn btn-secondary">
               リンクをコピー
             </button>

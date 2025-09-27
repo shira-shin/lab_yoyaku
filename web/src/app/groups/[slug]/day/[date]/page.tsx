@@ -7,6 +7,9 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { serverFetch } from '@/lib/http/serverFetch';
+import { prisma } from '@/src/lib/prisma';
+import DutyInlineEditor from './DutyInlineEditor';
+import DutyInlineCreate from './DutyInlineCreate';
 import InlineReservationForm from './InlineReservationForm';
 
 type Reservation = {
@@ -30,6 +33,23 @@ function formatTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+async function fetchDuties(slug: string, date: string) {
+  const from = new Date(`${date}T00:00:00Z`).toISOString();
+  const to = new Date(`${date}T23:59:59Z`).toISOString();
+  const base = process.env.NEXT_PUBLIC_BASE_URL ?? '';
+  const res = await fetch(
+    `${base}/api/duties?groupSlug=${encodeURIComponent(slug)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&include=type`,
+    { cache: 'no-store' }
+  );
+  if (!res.ok) {
+    return [] as any[];
+  }
+  const json = await res.json().catch(() => ({}));
+  if (Array.isArray(json?.data)) return json.data as any[];
+  if (Array.isArray(json?.duties)) return json.duties as any[];
+  return [] as any[];
 }
 
 export default async function DayPage({
@@ -95,6 +115,49 @@ export default async function DayPage({
     }))
     .filter((device) => device.id && device.name);
 
+  const duties = await fetchDuties(normalizedSlug, date);
+  const groupForDuties = await prisma.group.findUnique({
+    where: { slug: normalizedSlug },
+    select: {
+      dutyTypes: {
+        select: {
+          id: true,
+          name: true,
+          kind: true,
+          rules: {
+            select: {
+              id: true,
+              startDate: true,
+              endDate: true,
+              byWeekday: true,
+              slotsPerDay: true,
+              startTime: true,
+              endTime: true,
+            },
+          },
+        },
+      },
+      members: {
+        select: {
+          userId: true,
+          email: true,
+          user: { select: { id: true, name: true, email: true } },
+        },
+      },
+    },
+  });
+
+  const memberOptions = (groupForDuties?.members ?? [])
+    .map((member) => {
+      const id = member.userId ?? member.user?.id ?? '';
+      const email = member.user?.email ?? member.email ?? '';
+      const name = member.user?.name || (email ? email.split('@')[0] : '');
+      return { id, label: name || email, email };
+    })
+    .filter((member) => member.id);
+
+  const dutyTypes = groupForDuties?.dutyTypes ?? [];
+
   return (
     <div className="mx-auto max-w-5xl p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -133,6 +196,38 @@ export default async function DayPage({
       </section>
 
       <InlineReservationForm slug={normalizedSlug} date={date} devices={devices} />
+
+      <section className="rounded-2xl border p-4 space-y-3 bg-white">
+        <h2 className="font-semibold">当日の当番</h2>
+        {duties.length === 0 ? (
+          <p className="text-gray-500">当番はありません。</p>
+        ) : (
+          <ul className="space-y-2">
+            {duties.map((duty: any) => (
+              <li key={duty.id} className="rounded-lg border p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <span
+                      className="font-medium"
+                      style={{ color: duty.type?.color ?? '#7c3aed' }}
+                    >
+                      {duty.type?.name ?? '当番'}
+                    </span>
+                  </div>
+                  <DutyInlineEditor
+                    id={duty.id}
+                    assigneeId={duty.assigneeId ?? duty.assignee?.id ?? null}
+                    locked={Boolean(duty.locked)}
+                    done={Boolean(duty.done)}
+                    members={memberOptions}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <DutyInlineCreate date={date} members={memberOptions} types={dutyTypes} />
+      </section>
     </div>
   );
 }

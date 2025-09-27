@@ -57,7 +57,14 @@ export async function POST(req: Request) {
       group.hostEmail === me.email || group.members.some((member) => member.email === me.email)
 
     if (!alreadyMember) {
-      await prisma.groupMember.create({ data: { groupId: group.id, email: me.email } })
+      await prisma.groupMember.create({
+        data: { groupId: group.id, email: me.email, userId: me.id, role: 'MEMBER' },
+      })
+    } else {
+      await prisma.groupMember.updateMany({
+        where: { groupId: group.id, email: me.email },
+        data: { userId: me.id },
+      })
     }
 
     return NextResponse.json({ ok: true, data: { slug: group.slug, name: group.name } })

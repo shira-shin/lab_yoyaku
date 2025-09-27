@@ -3,86 +3,42 @@ export const revalidate = 0;
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { prisma } from '@/src/lib/prisma';
-import { readUserFromCookie } from '@/lib/auth';
-import { isGroupAdmin } from '@/lib/duties/permissions';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { getActorByEmail, getGroupAndRole, isAdmin } from '@/lib/perm';
+import { z } from 'zod';
 
-type DutyVisibility = 'PUBLIC' | 'MEMBERS_ONLY';
-type DutyKind = 'DAY_SLOT' | 'TIME_RANGE';
-
-function normalizeSlug(value: string | string[] | undefined) {
-  if (!value) return '';
-  const raw = Array.isArray(value) ? value[0] : value;
-  return String(raw || '').trim().toLowerCase();
-}
+const Body = z.object({
+  name: z.string().min(1),
+  color: z.string().default('#7c3aed'),
+  visibility: z.enum(['PUBLIC', 'MEMBERS_ONLY']).default('PUBLIC'),
+  kind: z.enum(['DAY_SLOT', 'TIME_RANGE']),
+});
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
   try {
-    const me = await readUserFromCookie();
-    if (!me?.email) {
+    const session = await auth();
+    const me = await getActorByEmail(session?.user?.email ?? undefined);
+    if (!me) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
-    const slug = normalizeSlug(params?.slug);
-    if (!slug) {
-      return NextResponse.json({ error: 'invalid slug' }, { status: 400 });
-    }
-
-    const group = await prisma.group.findUnique({
-      where: { slug },
-      include: { members: true },
-    });
-    if (!group) {
-      return NextResponse.json({ error: 'group not found' }, { status: 404 });
-    }
-
-    if (!isGroupAdmin(group, me.email)) {
+    const ctx = await getGroupAndRole(params.slug, me.id);
+    if (!ctx || !isAdmin(ctx.role)) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const name = String((body as any)?.name || '').trim();
-    if (!name) {
-      return NextResponse.json({ error: 'name is required' }, { status: 400 });
-    }
-
-    const colorRaw = (body as any)?.color;
-    const visibilityRaw = (body as any)?.visibility;
-    const kindRaw = (body as any)?.kind;
-    const color = colorRaw ? String(colorRaw).trim() : '#7c3aed';
-    const visibility: DutyVisibility =
-      visibilityRaw === 'MEMBERS_ONLY' ? 'MEMBERS_ONLY' : 'PUBLIC';
-    const kind: DutyKind = kindRaw === 'TIME_RANGE' ? 'TIME_RANGE' : 'DAY_SLOT';
-
-    const duplicate = await prisma.dutyType.findFirst({
-      where: { groupId: group.id, name },
-      select: { id: true },
+    const body = Body.parse(await req.json());
+    const type = await prisma.dutyType.create({
+      data: { groupId: ctx.group.id, ...body },
+      select: { id: true, name: true, kind: true, color: true },
     });
-    if (duplicate) {
-      return NextResponse.json({ error: 'duty type already exists' }, { status: 409 });
-    }
-
-    const created = await prisma.dutyType.create({
-      data: {
-        groupId: group.id,
-        name,
-        color,
-        visibility,
-        kind,
-      },
-      select: {
-        id: true,
-        groupId: true,
-        name: true,
-        color: true,
-        visibility: true,
-        kind: true,
-      },
-    });
-
-    return NextResponse.json({ dutyType: created }, { status: 201 });
+    return NextResponse.json({ data: type }, { status: 201 });
   } catch (error) {
     console.error('create duty type failed', error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'invalid body', details: error.flatten() }, { status: 400 });
+    }
     return NextResponse.json({ error: 'create duty type failed' }, { status: 500 });
   }
 }

@@ -4,8 +4,8 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
-import { readUserFromCookie } from '@/lib/auth';
-import { canManageDuties } from '@/lib/duties/permissions';
+import { auth } from '@/lib/auth';
+import { getActorByEmail, getGroupAndRole, canManageDuties } from '@/lib/perm';
 
 function parseDate(input: unknown) {
   if (!input) return null;
@@ -29,8 +29,9 @@ function parseDateTime(baseDate: Date, input: unknown) {
 
 export async function POST(req: Request) {
   try {
-    const me = await readUserFromCookie();
-    if (!me?.email) {
+    const session = await auth();
+    const me = await getActorByEmail(session?.user?.email ?? undefined);
+    if (!me) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
@@ -42,13 +43,23 @@ export async function POST(req: Request) {
 
     const dutyType = await prisma.dutyType.findUnique({
       where: { id: typeId },
-      include: { group: { include: { members: true } } },
+      include: {
+        group: {
+          select: {
+            id: true,
+            slug: true,
+            dutyManagePolicy: true,
+            members: { select: { userId: true } },
+          },
+        },
+      },
     });
     if (!dutyType) {
       return NextResponse.json({ error: 'duty type not found' }, { status: 404 });
     }
 
-    if (!canManageDuties(dutyType.group, me.email)) {
+    const ctx = await getGroupAndRole(dutyType.group.slug, me.id);
+    if (!ctx || !canManageDuties(dutyType.group.dutyManagePolicy, ctx.role)) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     }
 
@@ -71,13 +82,9 @@ export async function POST(req: Request) {
     const rawAssignee = (body as any)?.assigneeId;
     const assigneeId = rawAssignee === null || rawAssignee === undefined || rawAssignee === '' ? null : String(rawAssignee);
     if (assigneeId) {
-      const memberEmails = Array.from(
-        new Set([dutyType.group.hostEmail, ...dutyType.group.members.map((member) => member.email)])
+      const allowed = new Set(
+        dutyType.group.members.map((member) => member.userId).filter((id): id is string => Boolean(id))
       );
-      const members = memberEmails.length
-        ? await prisma.user.findMany({ where: { email: { in: memberEmails } }, select: { id: true } })
-        : [];
-      const allowed = new Set(members.map((member) => member.id));
       if (!allowed.has(assigneeId)) {
         return NextResponse.json({ error: 'assignee not member' }, { status: 400 });
       }

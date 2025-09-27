@@ -4,8 +4,8 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
-import { readUserFromCookie } from '@/lib/auth';
-import { isGroupAdmin } from '@/lib/duties/permissions';
+import { auth } from '@/lib/auth';
+import { getActorByEmail, getGroupAndRole, isAdmin } from '@/lib/perm';
 
 function parseDate(input: unknown) {
   if (input === undefined) return undefined;
@@ -51,20 +51,22 @@ function parseTimeString(value: unknown) {
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
-    const me = await readUserFromCookie();
-    if (!me?.email) {
+    const session = await auth();
+    const me = await getActorByEmail(session?.user?.email ?? undefined);
+    if (!me) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
     const rule = await prisma.dutyRule.findUnique({
       where: { id: params.id },
-      include: { type: { include: { group: { include: { members: true } } } } },
+      include: { type: { include: { group: { select: { slug: true } } } } },
     });
     if (!rule) {
       return NextResponse.json({ error: 'duty rule not found' }, { status: 404 });
     }
 
-    if (!isGroupAdmin(rule.type.group, me.email)) {
+    const ctx = await getGroupAndRole(rule.type.group.slug, me.id);
+    if (!ctx || !isAdmin(ctx.role)) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     }
 
@@ -206,20 +208,22 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   try {
-    const me = await readUserFromCookie();
-    if (!me?.email) {
+    const session = await auth();
+    const me = await getActorByEmail(session?.user?.email ?? undefined);
+    if (!me) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
     const rule = await prisma.dutyRule.findUnique({
       where: { id: params.id },
-      include: { type: { include: { group: { include: { members: true } } } } },
+      include: { type: { include: { group: { select: { slug: true } } } } },
     });
     if (!rule) {
       return NextResponse.json({ error: 'duty rule not found' }, { status: 404 });
     }
 
-    if (!isGroupAdmin(rule.type.group, me.email)) {
+    const ctx = await getGroupAndRole(rule.type.group.slug, me.id);
+    if (!ctx || !isAdmin(ctx.role)) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     }
 

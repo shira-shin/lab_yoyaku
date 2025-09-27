@@ -19,6 +19,10 @@ async function buildGroupPayload(slug: string) {
         orderBy: { name: 'asc' },
         include: { reservations: { orderBy: { start: 'asc' } } },
       },
+      dutyTypes: {
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true, color: true, visibility: true, kind: true },
+      },
     },
   })
 
@@ -85,6 +89,7 @@ async function buildGroupPayload(slug: string) {
       caution: device.caution ?? null,
       code: device.code ?? null,
     })),
+    dutyTypes: group.dutyTypes,
   }
 }
 
@@ -120,6 +125,7 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
       dutyManagePolicy: group.dutyManagePolicy,
       members,
       devices,
+      dutyTypes: group.dutyTypes,
       reservations,
     },
   })
