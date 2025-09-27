@@ -9,6 +9,9 @@ export default function GroupSettingsClient({ initialGroup }: { initialGroup: an
   const [reserveTo, setReserveTo] = useState(initialGroup.reserveTo || '');
   const [memo, setMemo] = useState(initialGroup.memo || '');
   const [host, setHost] = useState(initialGroup.host || '');
+  const [deviceManagePolicy, setDeviceManagePolicy] = useState<'HOST_ONLY' | 'MEMBERS_ALLOWED'>(
+    initialGroup.deviceManagePolicy || 'HOST_ONLY'
+  );
   const [saving, setSaving] = useState(false);
   const router = useRouter();
   const members: string[] = initialGroup.members || [];
@@ -25,6 +28,7 @@ export default function GroupSettingsClient({ initialGroup }: { initialGroup: an
           reserveTo: reserveTo || undefined,
           memo: memo || undefined,
           host: host || undefined,
+          deviceManagePolicy,
         }),
         credentials: 'same-origin',
       });
@@ -64,7 +68,7 @@ export default function GroupSettingsClient({ initialGroup }: { initialGroup: an
         </div>
       </section>
       <section className="rounded-2xl border p-6 bg-white">
-      <h2 className="text-lg font-semibold mb-4">連絡先</h2>
+        <h2 className="text-lg font-semibold mb-4">連絡先</h2>
         <label className="block mb-4">
           <div className="mb-1">ホスト</div>
           <select
@@ -81,6 +85,29 @@ export default function GroupSettingsClient({ initialGroup }: { initialGroup: an
           </select>
         </label>
         <div className="text-sm text-gray-500">将来の共同管理者用の説明ラベル</div>
+      </section>
+      <section className="rounded-2xl border p-6 bg-white">
+        <h2 className="text-lg font-semibold mb-4">機器の管理権限</h2>
+        <div className="space-y-3">
+          <label className="flex items-center gap-3">
+            <input
+              type="radio"
+              name="deviceManagePolicy"
+              checked={deviceManagePolicy === 'HOST_ONLY'}
+              onChange={() => setDeviceManagePolicy('HOST_ONLY')}
+            />
+            <span>ホストのみ追加・削除可</span>
+          </label>
+          <label className="flex items-center gap-3">
+            <input
+              type="radio"
+              name="deviceManagePolicy"
+              checked={deviceManagePolicy === 'MEMBERS_ALLOWED'}
+              onChange={() => setDeviceManagePolicy('MEMBERS_ALLOWED')}
+            />
+            <span>メンバーも追加・削除可</span>
+          </label>
+        </div>
       </section>
       <section className="rounded-2xl border p-6 bg-white">
         <h2 className="text-lg font-semibold mb-4">メモ</h2>

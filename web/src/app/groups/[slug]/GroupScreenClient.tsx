@@ -21,7 +21,11 @@ export default function GroupScreenClient({
   const group = initialGroup;
   const [devices, setDevices] = useState<any[]>(initialDevices);
   const [removingSlug, setRemovingSlug] = useState<string | null>(null);
-  const isHost = defaultReserver && group.host === defaultReserver;
+  const meEmail = defaultReserver ?? null;
+  const isHost = !!meEmail && group.host === meEmail;
+  const isMember = !!meEmail && Array.isArray(group.members) && group.members.includes(meEmail);
+  const policy: 'HOST_ONLY' | 'MEMBERS_ALLOWED' = group.deviceManagePolicy ?? 'HOST_ONLY';
+  const canManageDevices = policy === 'MEMBERS_ALLOWED' ? isMember : isHost;
   const firstDevice = devices[0];
 
   async function handleShareLink() {
@@ -43,6 +47,10 @@ export default function GroupScreenClient({
   }
 
   async function handleDeleteDevice(device: { id: string; slug: string }) {
+    if (!canManageDevices) {
+      alert('機器の管理権限がありません');
+      return;
+    }
     if (removingSlug) return;
     setRemovingSlug(device.slug);
     try {
@@ -53,10 +61,17 @@ export default function GroupScreenClient({
           credentials: 'same-origin',
         }
       );
+      if (r.status === 403) {
+        throw new Error('forbidden');
+      }
       if (!r.ok) throw new Error('failed');
       setDevices((prev) => prev.filter((d) => d.id !== device.id));
     } catch (e) {
-      alert('削除に失敗しました');
+      if ((e as Error)?.message === 'forbidden') {
+        alert('機器の削除権限がありません');
+      } else {
+        alert('削除に失敗しました');
+      }
     } finally {
       setRemovingSlug(null);
     }
@@ -113,16 +128,18 @@ export default function GroupScreenClient({
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">機器</h2>
-          <Link
-            href={`/groups/${encodeURIComponent(group.slug.toLowerCase())}/devices/new?next=${encodeURIComponent(`/groups/${group.slug.toLowerCase()}`)}`}
-            className="btn btn-primary"
-          >
-            機器を追加
-          </Link>
+          {canManageDevices && (
+            <Link
+              href={`/groups/${encodeURIComponent(group.slug.toLowerCase())}/devices/new?next=${encodeURIComponent(`/groups/${group.slug.toLowerCase()}`)}`}
+              className="btn btn-primary"
+            >
+              機器を追加
+            </Link>
+          )}
         </div>
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {devices.map((d) => (
-            <li key={d.id} className="shadow-card">
+            <li key={d.id}>
               <DeviceCard
                 device={{
                   id: d.id,
@@ -144,6 +161,7 @@ export default function GroupScreenClient({
                   );
                 }}
                 onDelete={() => handleDeleteDevice(d)}
+                canManage={canManageDevices}
               />
             </li>
           ))}

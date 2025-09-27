@@ -108,19 +108,20 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
     }
 
     return NextResponse.json({
-      group: {
-        id: group.id,
-        slug: group.slug,
-        name: group.name,
-        host: group.hostEmail,
-        reserveFrom: toISO(group.reserveFrom),
-        reserveTo: toISO(group.reserveTo),
-        memo: group.memo ?? null,
-        members,
-        devices,
-        reservations,
-      },
-    })
+    group: {
+      id: group.id,
+      slug: group.slug,
+      name: group.name,
+      host: group.hostEmail,
+      reserveFrom: toISO(group.reserveFrom),
+      reserveTo: toISO(group.reserveTo),
+      memo: group.memo ?? null,
+      deviceManagePolicy: group.deviceManagePolicy,
+      members,
+      devices,
+      reservations,
+    },
+  })
   } catch (error) {
     console.error('load group failed', error)
     return NextResponse.json({ error: 'load group failed' }, { status: 500 })
@@ -153,6 +154,7 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
     const reserveToRaw = body?.reserveTo ?? body?.reserve_to
     const memoRaw = body?.memo
     const hostRaw = body?.host
+    const policyRaw = body?.deviceManagePolicy ?? body?.device_manage_policy
 
     const updates: any = {}
     if (reserveFromRaw !== undefined) {
@@ -178,6 +180,12 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
         updates.hostEmail = nextHost
       }
     }
+    if (policyRaw !== undefined) {
+      const value = String(policyRaw)
+      if (value === 'HOST_ONLY' || value === 'MEMBERS_ALLOWED') {
+        updates.deviceManagePolicy = value as 'HOST_ONLY' | 'MEMBERS_ALLOWED'
+      }
+    }
 
     if (Object.keys(updates).length > 0) {
       await prisma.group.update({ where: { id: group.id }, data: updates })
@@ -200,6 +208,7 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
         members: payload.members,
         devices: payload.devices,
         reservations: payload.reservations,
+        deviceManagePolicy: payload.group.deviceManagePolicy,
       },
     })
   } catch (error) {
