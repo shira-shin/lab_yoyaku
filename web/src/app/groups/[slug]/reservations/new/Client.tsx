@@ -11,6 +11,21 @@ const ReservationFormSchema = z.object({
   purpose: z.string().optional(),
 });
 
+function toLocalInputValue(date: Date) {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}T${pad(
+    local.getHours()
+  )}:${pad(local.getMinutes())}`;
+}
+
+function buildDefaultValue(param: string | null, time: string) {
+  if (!param) return '';
+  const candidate = new Date(`${param}T${time}`);
+  if (Number.isNaN(candidate.getTime())) return '';
+  return toLocalInputValue(candidate);
+}
+
 export default function NewReservationClient({
   params,
   devices,
@@ -21,10 +36,20 @@ export default function NewReservationClient({
   const r = useRouter();
   const sp = useSearchParams();
   const defaultDevice = sp.get('device') ?? '';
+  const dateParam = sp.get('date');
   const [deviceSlug, setDeviceSlug] = useState(defaultDevice);
   const sorted = useMemo(
     () => devices.slice().sort((a, b) => a.name.localeCompare(b.name)),
     [devices]
+  );
+
+  const defaultStartValue = useMemo(
+    () => buildDefaultValue(dateParam, '13:00:00'),
+    [dateParam]
+  );
+  const defaultEndValue = useMemo(
+    () => buildDefaultValue(dateParam, '14:00:00'),
+    [dateParam]
   );
 
   const [submitting, setSubmitting] = useState(false);
@@ -137,6 +162,7 @@ export default function NewReservationClient({
             type="datetime-local"
             required
             className="w-full rounded-xl border px-3 py-2"
+            defaultValue={defaultStartValue}
           />
         </div>
         <div>
@@ -146,6 +172,7 @@ export default function NewReservationClient({
             type="datetime-local"
             required
             className="w-full rounded-xl border px-3 py-2"
+            defaultValue={defaultEndValue}
           />
         </div>
       </div>

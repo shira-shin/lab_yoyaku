@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import LeaveButton from './LeaveButton';
+import { DeviceCard } from './_components/DeviceCard';
 
 export default function GroupScreenClient({
   initialGroup,
@@ -15,6 +17,7 @@ export default function GroupScreenClient({
   defaultReserver?: string;
   canLeave: boolean;
 }) {
+  const router = useRouter();
   const group = initialGroup;
   const [devices, setDevices] = useState<any[]>(initialDevices);
   const [removingSlug, setRemovingSlug] = useState<string | null>(null);
@@ -40,7 +43,7 @@ export default function GroupScreenClient({
   }
 
   async function handleDeleteDevice(device: { id: string; slug: string }) {
-    if (!confirm('この機器を削除しますか？')) return;
+    if (removingSlug) return;
     setRemovingSlug(device.slug);
     try {
       const r = await fetch(
@@ -119,44 +122,29 @@ export default function GroupScreenClient({
         </div>
         <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {devices.map((d) => (
-            <li
-              key={d.id}
-              className="border rounded-md p-4 shadow-card flex flex-col justify-between"
-            >
-              <div>
-                <a
-                  href={`/groups/${encodeURIComponent(group.slug.toLowerCase())}/devices/${d.slug}`}
-                  className="font-medium hover:underline"
-                >
-                  {d.name}
-                </a>
-                <div className="text-xs text-neutral-500">ID: {d.id}</div>
-              </div>
-              <div className="mt-3 flex gap-2">
-                <Link
-                  href={`/groups/${encodeURIComponent(group.slug)}/reservations/new?device=${encodeURIComponent(
+            <li key={d.id} className="shadow-card">
+              <DeviceCard
+                device={{
+                  id: d.id,
+                  name: d.name,
+                  slug: d.slug,
+                  href: `/groups/${encodeURIComponent(group.slug.toLowerCase())}/devices/${d.slug}`,
+                }}
+                onReserve={() => {
+                  const target = `/groups/${encodeURIComponent(group.slug)}/reservations/new?device=${encodeURIComponent(
                     d.slug
-                  )}`}
-                  className="btn btn-secondary flex-1"
-                >
-                  予約
-                </Link>
-                <a
-                  href={`/api/devices/${d.slug}/qr`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-secondary flex-1"
-                >
-                  QRコード
-                </a>
-                <button
-                  onClick={() => handleDeleteDevice(d)}
-                  className="btn btn-danger flex-1"
-                  disabled={removingSlug === d.slug}
-                >
-                  削除
-                </button>
-              </div>
+                  )}`;
+                  router.push(target);
+                }}
+                onShowQR={() => {
+                  window.open(
+                    `/api/devices/${encodeURIComponent(d.slug)}/qr`,
+                    '_blank',
+                    'noopener,noreferrer'
+                  );
+                }}
+                onDelete={() => handleDeleteDevice(d)}
+              />
             </li>
           ))}
         </ul>

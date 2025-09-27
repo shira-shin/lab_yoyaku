@@ -70,9 +70,12 @@ export default function CalendarWithBars({
                 isToday && 'border-2 border-indigo-600'
               )}
               onClick={() => {
-                setSel(d);
+                if (showModal) {
+                  setSel(d);
+                }
                 onSelectDate?.(d);
               }}
+              aria-label={`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`}
             >
               <div className="absolute left-1 top-1 text-xs">{d.getDate()}</div>
               {todays.length > 0 && (
