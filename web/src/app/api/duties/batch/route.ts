@@ -6,16 +6,16 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { canManageDuties, getActorByEmail } from '@/lib/perm';
-import { z as zod } from 'zod';
+import * as Z from 'zod';
 
-const Body = zod.object({
-  groupSlug: zod.string(),
-  dutyTypeId: zod.string(),
-  from: zod.string(), // yyyy-mm-dd
-  to: zod.string(),
-  mode: zod.enum(['ROUND_ROBIN', 'RANDOM', 'MANUAL']),
-  memberIds: zod.any().optional(),
-  weekdays: zod.any().optional(),
+const Body = Z.object({
+  groupSlug: Z.string(),
+  dutyTypeId: Z.string(),
+  from: Z.string(), // yyyy-mm-dd
+  to: Z.string(),
+  mode: Z.enum(['ROUND_ROBIN', 'RANDOM', 'MANUAL']),
+  memberIds: Z.unknown().optional(),
+  weekdays: Z.unknown().optional(),
 });
 
 async function readBody(req: Request) {
@@ -179,7 +179,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, count: result.count });
   } catch (error) {
     console.error('batch create duties failed', error);
-    if (error instanceof zod.ZodError) {
+    if (error instanceof Z.ZodError) {
       return NextResponse.json({ error: 'invalid body', details: error.flatten() }, { status: 400 });
     }
     return NextResponse.json({ error: 'batch create duties failed' }, { status: 500 });
