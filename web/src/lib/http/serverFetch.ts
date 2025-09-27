@@ -1,24 +1,9 @@
 import { headers } from 'next/headers';
-
-function resolveTargetUrl(path: string, proto: string, host: string) {
-  if (/^https?:\/\//i.test(path)) {
-    return path;
-  }
-  if (!path.startsWith('/')) {
-    return `${proto}://${host}/${path}`;
-  }
-  return `${proto}://${host}${path}`;
-}
+import { absUrl } from '@/lib/url';
 
 export async function serverFetch(path: string, init: RequestInit = {}) {
   const incomingHeaders = headers();
-  const proto = incomingHeaders.get('x-forwarded-proto') ?? 'https';
-  const host =
-    incomingHeaders.get('x-forwarded-host') ??
-    incomingHeaders.get('host') ??
-    process.env.NEXT_PUBLIC_BASE_HOST ??
-    'labyoyaku.vercel.app';
-  const target = resolveTargetUrl(path, proto, host);
+  const target = absUrl(path);
   const cookie = incomingHeaders.get('cookie') ?? '';
 
   const headerBag = new Headers(init.headers ?? undefined);
@@ -27,13 +12,13 @@ export async function serverFetch(path: string, init: RequestInit = {}) {
   }
   headerBag.set('accept', 'application/json');
 
-  const nextInit = (init as any)?.next ?? {};
+  const { next, ...rest } = init as RequestInit & { next?: any };
 
   return fetch(target, {
-    ...init,
+    ...rest,
     cache: 'no-store',
     credentials: 'include',
     headers: headerBag,
-    next: { ...nextInit, revalidate: 0 },
+    ...(next ? { next } : {}),
   });
 }
