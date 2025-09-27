@@ -156,7 +156,20 @@ export default async function DayPage({
     })
     .filter((member) => member.id);
 
-  const dutyTypes = groupForDuties?.dutyTypes ?? [];
+  const dutyTypes = (groupForDuties?.dutyTypes ?? []).map((type) => ({
+    ...type,
+    rules: type.rules.map((rule) => ({
+      ...rule,
+      startDate:
+        typeof rule.startDate === 'string'
+          ? rule.startDate
+          : rule.startDate?.toISOString() ?? '',
+      endDate:
+        typeof rule.endDate === 'string'
+          ? rule.endDate
+          : rule.endDate?.toISOString() ?? '',
+    })),
+  }));
 
   return (
     <div className="mx-auto max-w-5xl p-6 space-y-6">
