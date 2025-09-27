@@ -6,17 +6,16 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { canManageDuties, getActorByEmail } from '@/lib/perm';
-// npm の zod を“名前空間 import”で固定（衝突予防）
-import * as Z from 'zod';
+import { z } from 'zod';
 
-const Body = Z.object({
-  groupSlug: Z.string(),
-  dutyTypeId: Z.string(),
-  from: Z.string(), // yyyy-mm-dd
-  to: Z.string(),
-  mode: Z.enum(['ROUND_ROBIN', 'RANDOM', 'MANUAL']),
-  memberIds: Z.unknown().optional(),
-  weekdays: Z.unknown().optional(),
+const Body = z.object({
+  groupSlug: z.string(),
+  dutyTypeId: z.string(),
+  from: z.string(), // yyyy-mm-dd
+  to: z.string(),
+  mode: z.enum(['ROUND_ROBIN', 'RANDOM', 'MANUAL']),
+  memberIds: z.unknown().optional(),
+  weekdays: z.unknown().optional(),
 });
 
 async function readBody(req: Request) {
@@ -180,7 +179,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, count: result.count });
   } catch (error) {
     console.error('batch create duties failed', error);
-    if (error instanceof Z.ZodError) {
+    if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'invalid body', details: error.flatten() }, { status: 400 });
     }
     return NextResponse.json({ error: 'batch create duties failed' }, { status: 500 });
