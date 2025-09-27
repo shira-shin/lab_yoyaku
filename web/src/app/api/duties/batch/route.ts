@@ -9,7 +9,7 @@ import { canManageDuties, getActorByEmail } from '@/lib/perm';
 import { z } from 'zod';
 
 // 単一文字列 or 文字列配列 を同一に扱うためのユーティリティ
-const OneOrManyStrings = z.string().array().or(z.string());
+const OneOrManyStrings = z.string().or(z.array(z.string()));
 
 const Body = z.object({
   groupSlug: z.string(),
