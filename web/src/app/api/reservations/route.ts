@@ -49,6 +49,7 @@ export async function GET(req: Request) {
     }
 
     const url = new URL(req.url)
+    const mine = url.searchParams.get('mine') === '1'
     const parsed = QuerySchema.safeParse({
       groupSlug: url.searchParams.get('groupSlug') ?? '',
       deviceSlug: url.searchParams.get('deviceSlug') ?? undefined,
@@ -119,6 +120,13 @@ export async function GET(req: Request) {
     }
     if (rangeEnd) {
       where.start = { lt: rangeEnd }
+    }
+    if (mine) {
+      const orConditions: Prisma.ReservationWhereInput[] = [{ userEmail: me.email }]
+      if (me.id) {
+        orConditions.push({ userId: me.id })
+      }
+      where.OR = orConditions
     }
 
     const reservations = await prisma.reservation.findMany({

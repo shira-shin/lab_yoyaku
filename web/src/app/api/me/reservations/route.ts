@@ -8,85 +8,77 @@ import type { Prisma } from '@prisma/client'
 
 export const runtime = 'nodejs'
 
-export async function GET() {
+function parseDate(value: string | null): Date | null {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function parseTake(value: string | null): number {
+  if (!value) return 50
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return 50
+  const intValue = Math.floor(parsed)
+  if (intValue < 1) return 50
+  if (intValue > 100) return 100
+  return intValue
+}
+
+export async function GET(req: Request) {
   const me = await readUserFromCookie()
   console.info('[api.me.reservations.GET]', {
     hasUserId: Boolean(me?.id),
     hasEmail: Boolean(me?.email),
   })
-  if (!me?.email) return NextResponse.json({ ok: false }, { status: 401 })
+  if (!me?.email) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const memberships = await prisma.groupMember.findMany({
-    where: { email: me.email },
-    select: { groupId: true },
-  })
-  const memberGroupIds = memberships.map((m) => m.groupId)
+  const url = new URL(req.url)
+  const from = parseDate(url.searchParams.get('from'))
+  const to = parseDate(url.searchParams.get('to'))
+  const take = parseTake(url.searchParams.get('take'))
 
-  const orConditions: Prisma.GroupWhereInput[] = [{ hostEmail: me.email }]
-  if (memberGroupIds.length) {
-    orConditions.push({ id: { in: memberGroupIds } })
+  const orConditions: Prisma.ReservationWhereInput[] = [{ userEmail: me.email }]
+  if (me.id) {
+    orConditions.push({ userId: me.id })
   }
 
-  const groups = await prisma.group.findMany({
-    where: { OR: orConditions },
-    select: { id: true, slug: true, name: true },
-  })
-
-  if (groups.length === 0) {
-    return NextResponse.json({ ok: true, data: [], all: [] })
+  const where: Prisma.ReservationWhereInput = { OR: orConditions }
+  if (from && to) {
+    where.AND = [{ start: { lt: to } }, { end: { gt: from } }]
   }
 
-  const groupIdMap = new Map(groups.map((g) => [g.id, g]))
   const reservations = await prisma.reservation.findMany({
-    where: { device: { groupId: { in: Array.from(groupIdMap.keys()) } } },
+    where,
+    orderBy: { start: 'asc' },
+    take,
     include: {
       device: {
         select: {
           id: true,
           slug: true,
           name: true,
-          groupId: true,
+          group: { select: { id: true, slug: true, name: true } },
         },
       },
     },
-    orderBy: { start: 'asc' },
   })
 
-  const profileEmails = Array.from(new Set(reservations.map((r) => r.userEmail)))
-  const profiles = profileEmails.length
-    ? await prisma.userProfile.findMany({ where: { email: { in: profileEmails } } })
-    : []
-  const displayNameMap = new Map(profiles.map((profile) => [profile.email, profile.displayName || '']))
+  const payload = reservations.map((reservation) => ({
+    id: reservation.id,
+    deviceId: reservation.deviceId,
+    deviceSlug: reservation.device.slug,
+    deviceName: reservation.device.name,
+    groupId: reservation.device.group.id,
+    groupSlug: reservation.device.group.slug,
+    groupName: reservation.device.group.name ?? reservation.device.group.slug,
+    start: reservation.start.toISOString(),
+    end: reservation.end.toISOString(),
+    purpose: reservation.purpose ?? null,
+    reminderMinutes: reservation.reminderMinutes ?? null,
+    userEmail: reservation.userEmail,
+    userId: reservation.userId ?? null,
+    participants: [] as string[],
+  }))
 
-  const all = reservations.map((reservation) => {
-    const group = groupIdMap.get(reservation.device.groupId)!
-    const userName =
-      reservation.userName ||
-      displayNameMap.get(reservation.userEmail) ||
-      reservation.userEmail.split('@')[0]
-    return {
-      id: reservation.id,
-      deviceId: reservation.deviceId,
-      deviceSlug: reservation.device.slug,
-      deviceName: reservation.device.name,
-      groupSlug: group.slug,
-      groupName: group.name ?? group.slug,
-      start: reservation.start.toISOString(),
-      end: reservation.end.toISOString(),
-      purpose: reservation.purpose ?? null,
-      reminderMinutes: reservation.reminderMinutes ?? null,
-      userEmail: reservation.userEmail,
-      userName,
-      userId: reservation.userId,
-    }
-  })
-
-  const now = Date.now()
-  const upcoming = all
-    .filter((reservation) => new Date(reservation.end).getTime() >= now)
-    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-    .slice(0, 10)
-
-  return NextResponse.json({ ok: true, data: upcoming, all })
+  return NextResponse.json({ ok: true, data: payload, all: payload })
 }
-

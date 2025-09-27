@@ -71,9 +71,9 @@ export async function createGroupAction(
     return { error: 'グループの作成に失敗しました' }
   }
 
-  const joinResponse = await serverFetch('/api/groups/join', {
+  const joinResponse = await serverFetch(`/api/groups/${encodeURIComponent(slug)}/join`, {
     method: 'POST',
-    body: JSON.stringify({ slug, query: slug, password }),
+    body: JSON.stringify({ passcode: password || undefined }),
     headers: { 'content-type': 'application/json' },
   })
 

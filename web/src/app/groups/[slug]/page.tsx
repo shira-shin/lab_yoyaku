@@ -96,6 +96,8 @@ export default async function GroupPage({
     redirect(`/groups/join?slug=${encodeURIComponent(paramSlug)}`);
   }
 
+  const canLeave = isMember && groupRecord.hostEmail !== user.email;
+
   const res = await serverFetch(`/api/groups/${encodeURIComponent(paramSlug)}`);
   if (res.status === 401) redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
   if (res.status === 403 || res.status === 404) {
@@ -197,6 +199,7 @@ export default async function GroupPage({
           initialGroup={group}
           initialDevices={devices}
           defaultReserver={me?.email}
+          canLeave={canLeave}
         />
       </div>
       <div className="rounded-2xl border p-4 md:p-6 bg-white space-y-4 overflow-visible">

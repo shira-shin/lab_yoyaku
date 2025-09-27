@@ -2,15 +2,18 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import LeaveButton from './LeaveButton';
 
 export default function GroupScreenClient({
   initialGroup,
   initialDevices,
   defaultReserver,
+  canLeave,
 }: {
   initialGroup: any;
   initialDevices: any[];
   defaultReserver?: string;
+  canLeave: boolean;
 }) {
   const group = initialGroup;
   const [devices, setDevices] = useState<any[]>(initialDevices);
@@ -60,7 +63,7 @@ export default function GroupScreenClient({
     <div className="space-y-8">
       <header className="space-y-2">
         <a href="/" className="text-sm text-indigo-600 hover:underline">&larr; ホームへ戻る</a>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-3xl font-bold">{group.name}</h1>
           <div className="flex gap-2 flex-wrap justify-end">
             <Link
@@ -81,6 +84,9 @@ export default function GroupScreenClient({
               >
                 設定を変更
               </a>
+            )}
+            {!isHost && canLeave && (
+              <LeaveButton slug={group.slug} />
             )}
           </div>
         </div>

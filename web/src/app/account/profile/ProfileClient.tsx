@@ -4,13 +4,13 @@ import { useState } from 'react';
 import { toast } from '@/lib/toast';
 
 export default function ProfileClient({
-  initialDisplayName,
+  initialName,
   email,
 }: {
-  initialDisplayName: string;
+  initialName: string;
   email: string;
 }) {
-  const [displayName, setDisplayName] = useState(initialDisplayName);
+  const [name, setName] = useState(initialName);
   const [saving, setSaving] = useState(false);
   const router = useRouter();
 
@@ -21,7 +21,7 @@ export default function ProfileClient({
       const res = await fetch('/api/me/profile', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ displayName }),
+        body: JSON.stringify({ name }),
         credentials: 'same-origin',
       });
       if (!res.ok) throw new Error('failed');
@@ -47,8 +47,8 @@ export default function ProfileClient({
       <label className="block">
         <div className="mb-1">表示名</div>
         <input
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           className="input w-full"
         />
       </label>

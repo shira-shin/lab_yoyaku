@@ -36,10 +36,10 @@ export function createApi(
     createGroup: (body: any) =>
       api('/api/groups', { method: 'POST', body: JSON.stringify(body) }),
     getGroup: (slug: string) => api(`/api/groups/${slug}`),
-    joinGroup: (payload: any) =>
-      api('/api/groups/join', {
+    joinGroup: (slug: string, passcode?: string) =>
+      api(`/api/groups/${encodeURIComponent(slug)}/join`, {
         method: 'POST',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ passcode }),
       }),
     listDevices: (slug: string) =>
       api(`/api/groups/${encodeURIComponent(slug)}/devices`),
