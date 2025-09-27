@@ -7,7 +7,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getActorByEmail, getGroupAndRole, isAdmin } from '@/lib/perm';
 import { assignMembersToSlots } from '@/utils/duty/assign';
-import { z } from 'zod';
+import { z } from '@/lib/zod-shim';
 
 const Body = z.object({
   from: z.coerce.date(),
