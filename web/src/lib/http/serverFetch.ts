@@ -1,24 +1,23 @@
 import { headers } from 'next/headers';
 import { absUrl } from '@/lib/url';
 
-export async function serverFetch(path: string, init: RequestInit = {}) {
-  const incomingHeaders = headers();
-  const target = absUrl(path);
-  const cookie = incomingHeaders.get('cookie') ?? '';
+type Init = RequestInit & { next?: { revalidate?: number } };
+
+export async function serverFetch(path: string, init: Init = {}) {
+  const cookie = headers().get('cookie') ?? '';
+  const url = absUrl(path);
 
   const headerBag = new Headers(init.headers ?? undefined);
   if (cookie) {
     headerBag.set('cookie', cookie);
   }
-  headerBag.set('accept', 'application/json');
 
-  const { next, ...rest } = init as RequestInit & { next?: any };
+  const { headers: _headers, ...rest } = init;
 
-  return fetch(target, {
+  return fetch(url, {
     ...rest,
+    headers: headerBag,
     cache: 'no-store',
     credentials: 'include',
-    headers: headerBag,
-    ...(next ? { next } : {}),
   });
 }

@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { absUrl } from '@/lib/url';
+import { serverFetch } from '@/lib/http/serverFetch';
 
 async function getTypes(slug: string) {
-  const res = await fetch(absUrl(`/api/groups/${encodeURIComponent(slug)}`), { cache: 'no-store' });
+  const res = await serverFetch(`/api/groups/${encodeURIComponent(slug)}`);
   if (!res.ok) {
     return [] as any[];
   }
