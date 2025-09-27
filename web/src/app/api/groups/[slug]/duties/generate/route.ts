@@ -8,8 +8,6 @@ import { readUserFromCookie } from '@/lib/auth';
 import { isGroupAdmin } from '@/lib/duties/permissions';
 import { assignMembersToSlots } from '@/utils/duty/assign';
 
-type DutyVisibility = 'PUBLIC' | 'MEMBERS_ONLY';
-
 function normalizeSlug(value: string | string[] | undefined) {
   if (!value) return '';
   const raw = Array.isArray(value) ? value[0] : value;
@@ -24,6 +22,28 @@ function parseDate(input: unknown) {
 
 function keyOf(date: Date, slotIndex: number) {
   return `${date.toISOString()}#${slotIndex}`;
+}
+
+function normalizeSeed(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.floor(value);
+  const str = String(value).trim();
+  if (str.length === 0) return undefined;
+  const parsed = Number(str);
+  if (!Number.isNaN(parsed)) return Math.floor(parsed);
+  let hash = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function combineDateTime(date: Date, time: string) {
+  const [hours, minutes] = time.split(':').map((v) => Number(v));
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  const dt = new Date(date);
+  dt.setUTCHours(hours, minutes, 0, 0);
+  return dt;
 }
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
@@ -74,6 +94,8 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
       return NextResponse.json({ ok: true, created: 0 });
     }
 
+    const seed = normalizeSeed((body as any)?.seed);
+
     const memberEmails = Array.from(
       new Set([group.hostEmail, ...group.members.map((member) => member.email)])
     );
@@ -91,7 +113,8 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
     let created = 0;
 
     for (const dutyType of dutyTypes) {
-      if (dutyType.rules.length === 0) continue;
+      const rules = dutyType.rules.filter((rule) => !rule.disabled);
+      if (rules.length === 0) continue;
 
       const existingAssignments = await prisma.dutyAssignment.findMany({
         where: {
@@ -105,32 +128,36 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
         existingMap.set(keyOf(assignment.date, assignment.slotIndex), assignment);
       }
 
-      const includeIds = new Set<string>();
-      const excludeIds = new Set<string>();
-      let avoidConsecutive = false;
-      for (const rule of dutyType.rules) {
-        rule.includeMemberIds.forEach((id) => includeIds.add(id));
-        rule.excludeMemberIds.forEach((id) => excludeIds.add(id));
-        if (rule.avoidConsecutive !== false) {
-          avoidConsecutive = true;
+      const slots: {
+        date: Date;
+        slotIndex: number;
+        locked: boolean;
+        assigneeId?: string;
+        startsAt?: Date | null;
+        endsAt?: Date | null;
+        allowedAssigneeIds?: string[];
+        avoidConsecutive?: boolean;
+      }[] = [];
+
+      for (const rule of rules) {
+        const includeIds = new Set(rule.includeMemberIds.filter((id) => memberIdSet.has(id)));
+        const excludeIds = new Set(rule.excludeMemberIds.filter((id) => memberIdSet.has(id)));
+
+        let eligibleMembers = members.filter((member) => memberIdSet.has(member.id));
+        if (includeIds.size > 0) {
+          eligibleMembers = eligibleMembers.filter((member) => includeIds.has(member.id));
         }
-      }
+        if (excludeIds.size > 0) {
+          eligibleMembers = eligibleMembers.filter((member) => !excludeIds.has(member.id));
+        }
 
-      let targetMembers = members.filter((member) => memberIdSet.has(member.id));
-      if (includeIds.size > 0) {
-        targetMembers = targetMembers.filter((member) => includeIds.has(member.id));
-      }
-      if (excludeIds.size > 0) {
-        targetMembers = targetMembers.filter((member) => !excludeIds.has(member.id));
-      }
+        if (eligibleMembers.length === 0) {
+          continue;
+        }
 
-      if (targetMembers.length === 0) {
-        continue;
-      }
+        const allowedIds = eligibleMembers.map((member) => member.id);
+        const avoidConsecutive = rule.avoidConsecutive !== false;
 
-      const slots: { date: Date; slotIndex: number; locked: boolean; assigneeId?: string }[] = [];
-
-      for (const rule of dutyType.rules) {
         const start = new Date(Math.max(rule.startDate.getTime(), from.getTime()));
         const end = new Date(Math.min(rule.endDate.getTime(), to.getTime()));
         start.setUTCHours(0, 0, 0, 0);
@@ -138,18 +165,44 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
         if (end < start) continue;
 
         for (let cursor = new Date(start); cursor <= end; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
-          const weekday = cursor.getUTCDay();
-          if (!rule.byWeekday.includes(weekday)) continue;
-          for (let slotIndex = 0; slotIndex < rule.slotsPerDay; slotIndex++) {
-            const day = new Date(cursor);
-            const key = keyOf(day, slotIndex);
+          const day = new Date(cursor);
+          day.setUTCHours(0, 0, 0, 0);
+          const weekday = day.getUTCDay();
+          if (rule.byWeekday.length > 0 && !rule.byWeekday.includes(weekday)) continue;
+
+          if (dutyType.kind === 'TIME_RANGE') {
+            if (!rule.startTime || !rule.endTime) continue;
+            const startsAt = combineDateTime(day, rule.startTime);
+            const endsAt = combineDateTime(day, rule.endTime);
+            if (!startsAt || !endsAt || endsAt <= startsAt) continue;
+            const key = keyOf(day, 0);
             const existing = existingMap.get(key);
             slots.push({
-              date: day,
-              slotIndex,
+              date: new Date(day),
+              slotIndex: 0,
               locked: existing?.locked ?? false,
               assigneeId: existing?.assigneeId ?? undefined,
+              startsAt,
+              endsAt,
+              allowedAssigneeIds: allowedIds,
+              avoidConsecutive,
             });
+          } else {
+            const slotsPerDay = Math.max(1, rule.slotsPerDay);
+            for (let slotIndex = 0; slotIndex < slotsPerDay; slotIndex += 1) {
+              const key = keyOf(day, slotIndex);
+              const existing = existingMap.get(key);
+              slots.push({
+                date: new Date(day),
+                slotIndex,
+                locked: existing?.locked ?? false,
+                assigneeId: existing?.assigneeId ?? undefined,
+                startsAt: null,
+                endsAt: null,
+                allowedAssigneeIds: allowedIds,
+                avoidConsecutive,
+              });
+            }
           }
         }
       }
@@ -170,8 +223,9 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
         }
       }
 
-      const assigned = assignMembersToSlots(targetMembers, slots, countMap, {
-        avoidConsecutive,
+      const assigned = assignMembersToSlots(members, slots, countMap, {
+        seed,
+        avoidConsecutive: true,
       });
 
       for (const slot of assigned) {
@@ -192,13 +246,19 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
               slotIndex: slot.slotIndex,
             },
           },
-          update: { assigneeId: slot.assigneeId ?? null },
+          update: {
+            assigneeId: slot.assigneeId ?? null,
+            startsAt: dutyType.kind === 'TIME_RANGE' ? slot.startsAt ?? null : null,
+            endsAt: dutyType.kind === 'TIME_RANGE' ? slot.endsAt ?? null : null,
+          },
           create: {
             groupId: group.id,
             typeId: dutyType.id,
             date: slot.date,
             slotIndex: slot.slotIndex,
             assigneeId: slot.assigneeId ?? null,
+            startsAt: dutyType.kind === 'TIME_RANGE' ? slot.startsAt ?? null : null,
+            endsAt: dutyType.kind === 'TIME_RANGE' ? slot.endsAt ?? null : null,
           },
         });
         created += 1;

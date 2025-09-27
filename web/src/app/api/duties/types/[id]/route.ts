@@ -8,6 +8,7 @@ import { readUserFromCookie } from '@/lib/auth';
 import { isGroupAdmin } from '@/lib/duties/permissions';
 
 type DutyVisibility = 'PUBLIC' | 'MEMBERS_ONLY';
+type DutyKind = 'DAY_SLOT' | 'TIME_RANGE';
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -29,7 +30,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }
 
     const body = await req.json().catch(() => ({}));
-    const updates: { name?: string; color?: string; visibility?: DutyVisibility } = {};
+    const updates: { name?: string; color?: string; visibility?: DutyVisibility; kind?: DutyKind } = {};
 
     if ((body as any)?.name !== undefined) {
       const name = String((body as any).name || '').trim();
@@ -58,13 +59,20 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       }
     }
 
+    if ((body as any)?.kind !== undefined) {
+      const kindValue = String((body as any).kind);
+      if (kindValue === 'DAY_SLOT' || kindValue === 'TIME_RANGE') {
+        updates.kind = kindValue as DutyKind;
+      }
+    }
+
     if (Object.keys(updates).length > 0) {
       await prisma.dutyType.update({ where: { id: dutyType.id }, data: updates });
     }
 
     const refreshed = await prisma.dutyType.findUnique({
       where: { id: dutyType.id },
-      select: { id: true, groupId: true, name: true, color: true, visibility: true },
+      select: { id: true, groupId: true, name: true, color: true, visibility: true, kind: true },
     });
 
     return NextResponse.json({ dutyType: refreshed });

@@ -13,6 +13,20 @@ function parseDate(input: unknown) {
   return Number.isNaN(value.getTime()) ? null : value;
 }
 
+function parseDateTime(baseDate: Date, input: unknown) {
+  if (input === undefined || input === null || input === '') return null;
+  const raw = String(input).trim();
+  const hm = raw.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (hm) {
+    const [, h, m] = hm;
+    const dt = new Date(baseDate);
+    dt.setUTCHours(Number(h), Number(m), 0, 0);
+    return dt;
+  }
+  const value = new Date(raw);
+  return Number.isNaN(value.getTime()) ? null : value;
+}
+
 export async function POST(req: Request) {
   try {
     const me = await readUserFromCookie();
@@ -44,9 +58,14 @@ export async function POST(req: Request) {
     }
     date.setUTCHours(0, 0, 0, 0);
 
-    const slotIndexRaw = Number((body as any)?.slotIndex);
-    if (!Number.isInteger(slotIndexRaw) || slotIndexRaw < 0) {
-      return NextResponse.json({ error: 'slotIndex must be non-negative integer' }, { status: 400 });
+    let slotIndex = 0;
+    if (dutyType.kind === 'DAY_SLOT') {
+      const slotIndexRaw =
+        (body as any)?.slotIndex === undefined ? 0 : Number((body as any)?.slotIndex);
+      if (!Number.isInteger(slotIndexRaw) || slotIndexRaw < 0) {
+        return NextResponse.json({ error: 'slotIndex must be non-negative integer' }, { status: 400 });
+      }
+      slotIndex = slotIndexRaw;
     }
 
     const rawAssignee = (body as any)?.assigneeId;
@@ -64,13 +83,23 @@ export async function POST(req: Request) {
       }
     }
 
+    const startsAt =
+      dutyType.kind === 'TIME_RANGE' ? parseDateTime(date, (body as any)?.startsAt) : null;
+    const endsAt = dutyType.kind === 'TIME_RANGE' ? parseDateTime(date, (body as any)?.endsAt) : null;
+
+    if (dutyType.kind === 'TIME_RANGE') {
+      if (!startsAt || !endsAt || endsAt <= startsAt) {
+        return NextResponse.json({ error: 'invalid time range' }, { status: 400 });
+      }
+    }
+
     const existing = await prisma.dutyAssignment.findUnique({
       where: {
         groupId_typeId_date_slotIndex: {
           groupId: dutyType.groupId,
           typeId: dutyType.id,
           date,
-          slotIndex: slotIndexRaw,
+          slotIndex,
         },
       },
       select: { id: true, locked: true, assigneeId: true },
@@ -86,19 +115,25 @@ export async function POST(req: Request) {
           groupId: dutyType.groupId,
           typeId: dutyType.id,
           date,
-          slotIndex: slotIndexRaw,
+          slotIndex,
         },
       },
-      update: { assigneeId },
+      update: {
+        assigneeId,
+        startsAt: dutyType.kind === 'TIME_RANGE' ? startsAt : null,
+        endsAt: dutyType.kind === 'TIME_RANGE' ? endsAt : null,
+      },
       create: {
         groupId: dutyType.groupId,
         typeId: dutyType.id,
         date,
-        slotIndex: slotIndexRaw,
+        slotIndex,
+        startsAt: dutyType.kind === 'TIME_RANGE' ? startsAt : null,
+        endsAt: dutyType.kind === 'TIME_RANGE' ? endsAt : null,
         assigneeId,
       },
       include: {
-        type: { select: { id: true, name: true, color: true, visibility: true } },
+        type: { select: { id: true, name: true, color: true, visibility: true, kind: true } },
       },
     });
 
@@ -112,6 +147,8 @@ export async function POST(req: Request) {
         locked: saved.locked,
         done: saved.done,
         assigneeId: saved.assigneeId,
+        startsAt: saved.startsAt ? saved.startsAt.toISOString() : null,
+        endsAt: saved.endsAt ? saved.endsAt.toISOString() : null,
         type: saved.type,
       },
     });

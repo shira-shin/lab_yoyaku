@@ -1,5 +1,14 @@
 export type Member = { id: string };
-export type Slot = { date: Date; slotIndex: number; locked: boolean; assigneeId?: string };
+export type Slot = {
+  date: Date;
+  slotIndex: number;
+  locked: boolean;
+  assigneeId?: string;
+  startsAt?: Date | null;
+  endsAt?: Date | null;
+  allowedAssigneeIds?: string[];
+  avoidConsecutive?: boolean;
+};
 export type Options = {
   avoidConsecutive?: boolean;
   seed?: number;
@@ -11,68 +20,66 @@ export function assignMembersToSlots(
   existingCount: Map<string, number>,
   opts: Options = {}
 ): Slot[] {
-  const avoidConsecutive = opts.avoidConsecutive ?? true;
-  const groupsByCount = new Map<number, Member[]>();
-  for (const member of members) {
-    const count = existingCount.get(member.id) ?? 0;
-    if (!groupsByCount.has(count)) groupsByCount.set(count, []);
-    groupsByCount.get(count)!.push(member);
-  }
-
-  const counts = Array.from(groupsByCount.keys()).sort((a, b) => a - b);
-  const queue: Member[] = [];
-  for (const count of counts) {
-    const arr = groupsByCount.get(count)!;
-    shuffleInPlace(arr, opts.seed);
-    queue.push(...arr);
-  }
-
-  let q = [...queue];
+  const rng = mulberry32(opts.seed ?? Date.now());
   const byDateLastAssignee = new Map<string, string>();
   const result = slots.map((slot) => ({ ...slot }));
 
   for (const slot of result) {
-    if (slot.locked && slot.assigneeId) continue;
-    if (q.length === 0) {
-      const currentCounts = new Map<string, number>();
-      for (const member of members) {
-        currentCounts.set(member.id, existingCount.get(member.id) ?? 0);
-      }
-      const min = Math.min(...Array.from(currentCounts.values()));
-      const next = members.filter((member) => (currentCounts.get(member.id) ?? 0) === min);
-      shuffleInPlace(next, opts.seed);
-      q = [...next];
-    }
-
-    let index = 0;
-    while (index < q.length) {
-      const candidate = q[index];
-      const key = slot.date.toISOString().slice(0, 10);
-      const last = byDateLastAssignee.get(key);
-      if (!avoidConsecutive || !last || last !== candidate.id) {
-        break;
-      }
-      index++;
-    }
-
-    const chosen = q.splice(index < q.length ? index : 0, 1)[0];
-    slot.assigneeId = chosen?.id;
     const dayKey = slot.date.toISOString().slice(0, 10);
-    if (chosen?.id) {
-      byDateLastAssignee.set(dayKey, chosen.id);
-      existingCount.set(chosen.id, (existingCount.get(chosen.id) ?? 0) + 1);
+    const slotAvoidConsecutive = slot.avoidConsecutive ?? opts.avoidConsecutive ?? true;
+
+    if (slot.locked && slot.assigneeId) {
+      if (slotAvoidConsecutive && slot.assigneeId) {
+        byDateLastAssignee.set(dayKey, slot.assigneeId);
+      }
+      continue;
     }
+
+    const allowedSet = new Set(slot.allowedAssigneeIds && slot.allowedAssigneeIds.length > 0 ? slot.allowedAssigneeIds : undefined);
+    const eligibleMembers = allowedSet.size
+      ? members.filter((member) => allowedSet.has(member.id))
+      : members.slice();
+
+    if (eligibleMembers.length === 0) {
+      continue;
+    }
+
+    const sorted = eligibleMembers
+      .map((member) => ({ member, count: existingCount.get(member.id) ?? 0 }))
+      .sort((a, b) => a.count - b.count);
+
+    if (sorted.length === 0) {
+      continue;
+    }
+
+    const minCount = sorted[0].count;
+    let candidates = sorted.filter((entry) => entry.count === minCount).map((entry) => entry.member);
+
+    if (slotAvoidConsecutive) {
+      const lastAssignee = byDateLastAssignee.get(dayKey);
+      const filtered = candidates.filter((member) => member.id !== lastAssignee);
+      if (filtered.length > 0) {
+        candidates = filtered;
+      }
+    }
+
+    const chosen = randomPick(candidates, rng);
+    if (!chosen) {
+      continue;
+    }
+
+    slot.assigneeId = chosen.id;
+    byDateLastAssignee.set(dayKey, chosen.id);
+    existingCount.set(chosen.id, (existingCount.get(chosen.id) ?? 0) + 1);
   }
 
   return result;
 }
 
-function shuffleInPlace<T>(arr: T[], seed = Date.now()) {
-  let random = mulberry32(seed);
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
+function randomPick<T>(arr: T[], rng: () => number) {
+  if (arr.length === 0) return undefined;
+  const index = Math.floor(rng() * arr.length);
+  return arr[index];
 }
 
 function mulberry32(a: number) {

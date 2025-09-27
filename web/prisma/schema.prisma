@@ -34,6 +34,11 @@ enum DutyManagePolicy {
   MEMBERS_ALLOWED
 }
 
+enum DutyKind {
+  DAY_SLOT
+  TIME_RANGE
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -144,6 +149,7 @@ model DutyType {
   name         String
   color        String            @default("#7c3aed")
   visibility   DutyVisibility    @default(PUBLIC)
+  kind         DutyKind          @default(DAY_SLOT)
   rules        DutyRule[]
   assignments  DutyAssignment[]
 
@@ -156,11 +162,14 @@ model DutyRule {
   typeId            String
   startDate         DateTime
   endDate           DateTime
-  byWeekday         Int[]
+  byWeekday         Int[]       @default([])
   slotsPerDay       Int         @default(1)
+  startTime         String?
+  endTime           String?
   includeMemberIds  String[]    @default([])
   excludeMemberIds  String[]    @default([])
   avoidConsecutive  Boolean     @default(true)
+  disabled          Boolean     @default(false)
 }
 
 model DutyAssignment {
@@ -170,7 +179,9 @@ model DutyAssignment {
   group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId     String
   date        DateTime
-  slotIndex   Int
+  slotIndex   Int      @default(0)
+  startsAt    DateTime?
+  endsAt      DateTime?
   assignee    User?    @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
   assigneeId  String?
   locked      Boolean  @default(false)
