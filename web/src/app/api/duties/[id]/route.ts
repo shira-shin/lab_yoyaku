@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getActorByEmail, getGroupAndRole, canManageDuties } from '@/lib/perm';
-import { z } from 'zod';
+import { z } from '@/lib/zod-shim';
 
 const Body = z.object({
   assigneeId: z.string().nullable().optional(),
