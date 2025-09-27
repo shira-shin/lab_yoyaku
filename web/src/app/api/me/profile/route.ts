@@ -5,6 +5,14 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import { readUserFromCookie } from '@/lib/auth'
 import { prisma } from '@/src/lib/prisma'
+import { updateUserNameByEmail } from '@/lib/db'
+
+const NAME_MAX_LENGTH = 80
+
+function normalizeName(value: unknown) {
+  if (typeof value !== 'string') return ''
+  return value.trim()
+}
 
 export async function GET() {
   const me = await readUserFromCookie()
@@ -16,8 +24,27 @@ export async function GET() {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  const profile = await prisma.userProfile.findUnique({ where: { email: me.email } })
-  return NextResponse.json({ displayName: profile?.displayName ?? null, email: me.email })
+  const existing = await prisma.user.findUnique({
+    where: { email: me.email },
+  })
+
+  if (!existing) {
+    return NextResponse.json({
+      data: {
+        id: me.id ?? null,
+        email: me.email,
+        name: me.name ?? '',
+      },
+    })
+  }
+
+  return NextResponse.json({
+    data: {
+      id: existing.id,
+      email: existing.email ?? me.email,
+      name: existing.name ?? '',
+    },
+  })
 }
 
 export async function PUT(req: Request) {
@@ -30,14 +57,29 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  const body = await req.json().catch(() => ({}))
-  const displayName = String(body?.displayName || '').trim()
+  let payload: unknown
+  try {
+    payload = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'invalid body' }, { status: 400 })
+  }
 
-  const updated = await prisma.userProfile.upsert({
+  const name = normalizeName((payload as any)?.name)
+  if (!name) {
+    return NextResponse.json({ error: 'name is required' }, { status: 400 })
+  }
+  if (name.length > NAME_MAX_LENGTH) {
+    return NextResponse.json({ error: 'name too long' }, { status: 400 })
+  }
+
+  const updated = await prisma.user.upsert({
     where: { email: me.email },
-    update: { displayName: displayName || null },
-    create: { email: me.email, displayName: displayName || null },
+    update: { name },
+    create: { email: me.email, name },
+    select: { id: true, email: true, name: true },
   })
 
-  return NextResponse.json({ ok: true, displayName: updated.displayName ?? null })
+  await updateUserNameByEmail(me.email, name)
+
+  return NextResponse.json({ data: updated })
 }

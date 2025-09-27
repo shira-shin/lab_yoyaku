@@ -51,7 +51,7 @@ export default function UpcomingReservations({
     setLoading(true);
     setErr(null);
     try {
-      const r = await fetch('/api/me/reservations', {
+      const r = await fetch('/api/me/reservations?take=50', {
         cache: 'no-store',
         credentials: 'same-origin',
       });

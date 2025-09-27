@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 export default function GroupJoinPage() {
   const searchParams = useSearchParams();
-  const [group, setGroup] = useState(() => searchParams.get("slug") || ""); // name or slug
-  const [password, setPassword] = useState("");
+  const [group, setGroup] = useState(() => searchParams.get("slug") || "");
+  const [passcode, setPasscode] = useState("");
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -22,11 +22,17 @@ export default function GroupJoinPage() {
     setErr('');
     setLoading(true);
     try {
-      const res = await fetch('/api/groups/join', {
+      const slug = group.trim().toLowerCase();
+      if (!slug) {
+        setErr('グループの識別子を入力してください');
+        return;
+      }
+      const res = await fetch(`/api/groups/${encodeURIComponent(slug)}/join`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ query: group, slug: group, password }),
+        body: JSON.stringify({ passcode: passcode || undefined }),
         credentials: 'same-origin',
+        cache: 'no-store',
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
@@ -34,11 +40,8 @@ export default function GroupJoinPage() {
         return;
       }
       const { data } = await res.json();
-      if (!data?.slug) {
-        setErr('参加できましたが slug を取得できませんでした');
-        return;
-      }
-      router.push(`/groups/${data.slug}`);
+      const nextSlug = data?.slug || slug;
+      router.push(`/groups/${nextSlug}`);
     } catch (e: any) {
       setErr(e.message || '参加に失敗しました');
     } finally {
@@ -54,7 +57,7 @@ export default function GroupJoinPage() {
       </div>
       <form onSubmit={onSubmit} className="space-y-5">
         <label className="block">
-          <div className="mb-1">グループ名 または slug</div>
+          <div className="mb-1">グループ slug</div>
           <input
             className="w-full rounded-xl border p-3"
             value={group}
@@ -64,14 +67,12 @@ export default function GroupJoinPage() {
           />
         </label>
         <label className="block">
-          <div className="mb-1">パスワード</div>
+          <div className="mb-1">パスコード（必要な場合）</div>
           <input
             type="password"
             className="w-full rounded-xl border p-3"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            aria-required="true"
+            value={passcode}
+            onChange={(e) => setPasscode(e.target.value)}
           />
         </label>
         {err && (
@@ -81,8 +82,8 @@ export default function GroupJoinPage() {
         )}
         <button
           className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={loading || !group || !password}
-          aria-disabled={loading || !group || !password}
+          disabled={loading || !group.trim()}
+          aria-disabled={loading || !group.trim()}
         >
           {loading ? "参加中..." : "参加する"}
         </button>
@@ -90,4 +91,3 @@ export default function GroupJoinPage() {
     </div>
   );
 }
-

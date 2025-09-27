@@ -21,12 +21,13 @@ export default async function ProfilePage() {
     redirect('/login?next=/account/profile');
   }
   const json = await res.json();
+  const data = json?.data ?? null;
   return (
     <div className="max-w-md space-y-4">
       <h1 className="text-2xl font-bold">プロフィール</h1>
       <ProfileClient
-        initialDisplayName={json?.displayName ?? ''}
-        email={json?.email ?? ''}
+        initialName={data?.name ?? user.name ?? ''}
+        email={data?.email ?? user.email ?? ''}
       />
     </div>
   );

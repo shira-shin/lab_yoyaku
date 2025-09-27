@@ -40,3 +40,15 @@ export async function saveUser(user: UserRecord): Promise<void> {
     dbData.users.push(user);
   }
 }
+
+export async function updateUserNameByEmail(email: string, name: string): Promise<void> {
+  if (db) {
+    db.prepare('UPDATE users SET name = ? WHERE LOWER(email) = LOWER(?)').run(name, email);
+    return;
+  }
+  const dbData = loadDB();
+  const record = dbData.users.find((user) => user.email.toLowerCase() === email.toLowerCase());
+  if (record) {
+    record.name = name;
+  }
+}
