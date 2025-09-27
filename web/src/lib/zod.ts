@@ -63,6 +63,10 @@ abstract class BaseSchema<T> {
   nullable(): BaseSchema<T | null> {
     return new NullableSchema(this)
   }
+
+  default(value: T): BaseSchema<T> {
+    return new DefaultSchema(this, value)
+  }
 }
 
 class OptionalSchema<T> extends BaseSchema<T | undefined> {
@@ -86,6 +90,19 @@ class NullableSchema<T> extends BaseSchema<T | null> {
   internalParse(input: unknown, path: IssuePath): T | null {
     if (input === null) {
       return null
+    }
+    return this.inner.internalParse(input, path)
+  }
+}
+
+class DefaultSchema<T> extends BaseSchema<T> {
+  constructor(private readonly inner: BaseSchema<T>, private readonly defaultValue: T) {
+    super()
+  }
+
+  internalParse(input: unknown, path: IssuePath): T {
+    if (input === undefined) {
+      return this.defaultValue
     }
     return this.inner.internalParse(input, path)
   }
@@ -136,6 +153,15 @@ class DateSchema extends BaseSchema<Date> {
     }
 
     return value
+  }
+}
+
+class BooleanSchema extends BaseSchema<boolean> {
+  internalParse(input: unknown, path: IssuePath): boolean {
+    if (typeof input !== 'boolean') {
+      throw new ZodError([{ path, message: 'expected boolean' }])
+    }
+    return input
   }
 }
 
@@ -203,6 +229,47 @@ type InferShape<S extends Shape> = { [K in keyof S]: InferSchema<S[K]> }
 
 type InferSchema<S> = S extends BaseSchema<infer T> ? T : never
 
+class ArraySchema<I extends BaseSchema<any>> extends BaseSchema<Array<InferSchema<I>>> {
+  constructor(private readonly inner: I) {
+    super()
+  }
+
+  internalParse(input: unknown, path: IssuePath): Array<InferSchema<I>> {
+    if (!Array.isArray(input)) {
+      throw new ZodError([{ path, message: 'expected array' }])
+    }
+
+    return input.map((value, index) => {
+      try {
+        return this.inner.internalParse(value, [...path, index])
+      } catch (error) {
+        if (error instanceof ZodError) {
+          throw error
+        }
+        throw error
+      }
+    })
+  }
+}
+
+class EnumSchema<Values extends readonly [string, ...string[]]> extends BaseSchema<Values[number]> {
+  constructor(private readonly options: Values) {
+    super()
+  }
+
+  internalParse(input: unknown, path: IssuePath): Values[number] {
+    if (typeof input !== 'string') {
+      throw new ZodError([{ path, message: 'expected string' }])
+    }
+
+    if (!this.options.includes(input as Values[number])) {
+      throw new ZodError([{ path, message: `expected one of: ${this.options.join(', ')}` }])
+    }
+
+    return input as Values[number]
+  }
+}
+
 class ObjectSchema<S extends Shape> extends BaseSchema<InferShape<S>> {
   constructor(private readonly shape: S) {
     super()
@@ -237,11 +304,26 @@ const coerce = {
   number: () => new NumberSchema({ coerce: true }),
 }
 
-export const z = {
+interface ZHelpers {
+  object: <S extends Shape>(shape: S) => ObjectSchema<S>
+  string: () => StringSchema
+  number: () => NumberSchema
+  boolean: () => BooleanSchema
+  array: <I extends BaseSchema<any>>(schema: I) => ArraySchema<I>
+  enum: <const Values extends readonly [string, ...string[]]>(values: Values) => EnumSchema<Values>
+  coerce: typeof coerce
+  ZodError: typeof ZodError
+}
+
+export const z: ZHelpers = {
   object: <S extends Shape>(shape: S) => new ObjectSchema(shape),
   string: () => new StringSchema(),
   number: () => new NumberSchema(),
+  boolean: () => new BooleanSchema(),
+  array: <I extends BaseSchema<any>>(schema: I) => new ArraySchema(schema),
+  enum: <const Values extends readonly [string, ...string[]]>(values: Values) => new EnumSchema(values),
   coerce,
+  ZodError,
 }
 
 export type infer<T extends BaseSchema<any>> = T extends BaseSchema<infer U> ? U : never
