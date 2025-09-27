@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { serverFetch } from '@/lib/http/serverFetch';
+import { absUrl } from '@/lib/url';
 import { prisma } from '@/src/lib/prisma';
 import DutyInlineEditor from './DutyInlineEditor';
 import DutyInlineCreate from './DutyInlineCreate';
@@ -38,9 +39,10 @@ function formatTime(value: string) {
 async function fetchDuties(slug: string, date: string) {
   const from = new Date(`${date}T00:00:00Z`).toISOString();
   const to = new Date(`${date}T23:59:59Z`).toISOString();
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? '';
   const res = await fetch(
-    `${base}/api/duties?groupSlug=${encodeURIComponent(slug)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&include=type`,
+    absUrl(
+      `/api/duties?groupSlug=${encodeURIComponent(slug)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&include=type`
+    ),
     { cache: 'no-store' }
   );
   if (!res.ok) {
