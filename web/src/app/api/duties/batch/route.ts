@@ -6,17 +6,17 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { canManageDuties, getActorByEmail } from '@/lib/perm';
-import { z } from 'zod';
+import { z as zod } from 'zod';
 
 // 単一文字列 or 文字列配列 を同一に扱うためのユーティリティ
-const OneOrManyStrings = z.string().or(z.array(z.string()));
+const OneOrManyStrings = zod.union([zod.string(), zod.array(zod.string())]);
 
-const Body = z.object({
-  groupSlug: z.string(),
-  dutyTypeId: z.string(),
-  from: z.string(), // yyyy-mm-dd
-  to: z.string(),
-  mode: z.enum(['ROUND_ROBIN', 'RANDOM', 'MANUAL']),
+const Body = zod.object({
+  groupSlug: zod.string(),
+  dutyTypeId: zod.string(),
+  from: zod.string(), // yyyy-mm-dd
+  to: zod.string(),
+  mode: zod.enum(['ROUND_ROBIN', 'RANDOM', 'MANUAL']),
   memberIds: OneOrManyStrings.optional(),
   weekdays: OneOrManyStrings.optional(),
 });
@@ -178,7 +178,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, count: result.count });
   } catch (error) {
     console.error('batch create duties failed', error);
-    if (error instanceof z.ZodError) {
+    if (error instanceof zod.ZodError) {
       return NextResponse.json({ error: 'invalid body', details: error.flatten() }, { status: 400 });
     }
     return NextResponse.json({ error: 'batch create duties failed' }, { status: 500 });
