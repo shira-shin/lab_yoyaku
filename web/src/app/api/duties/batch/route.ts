@@ -24,13 +24,13 @@ async function readBody(req: Request) {
   } catch {
     const formData = await req.formData();
     const acc: Record<string, any> = {};
-    for (const [key, value] of formData.entries()) {
+    formData.forEach((value, key) => {
       if (key in acc) {
         acc[key] = Array.isArray(acc[key]) ? [...acc[key], value] : [acc[key], value];
       } else {
         acc[key] = value;
       }
-    }
+    });
     return acc;
   }
 }
