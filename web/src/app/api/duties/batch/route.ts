@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { canManageDuties, getActorByEmail } from '@/lib/perm';
+// npm の zod を“名前空間 import”で固定（衝突予防）
 import * as Z from 'zod';
 
 const Body = Z.object({
