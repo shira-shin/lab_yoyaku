@@ -239,8 +239,6 @@ export default async function GroupPage({
           spans={spans}
           listItems={listItems}
           groupSlug={group.slug}
-          devices={devices}
-          defaultReserver={me?.email}
         />
         <Image
           src={qrUrl}
