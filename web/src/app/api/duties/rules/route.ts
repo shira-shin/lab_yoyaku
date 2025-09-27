@@ -28,6 +28,15 @@ function parseStringArray(value: unknown) {
     .filter((v) => v.length > 0);
 }
 
+function parseTimeString(value: unknown) {
+  if (value === undefined || value === null || value === '') return null;
+  const str = String(value).trim();
+  const matched = str.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (!matched) return null;
+  const [, h, m] = matched;
+  return `${h.padStart(2, '0')}:${m}`;
+}
+
 export async function POST(req: Request) {
   try {
     const me = await readUserFromCookie();
@@ -60,15 +69,32 @@ export async function POST(req: Request) {
     }
 
     const byWeekday = parseWeekdays((body as any)?.byWeekday);
-    if (byWeekday.length === 0) {
-      return NextResponse.json({ error: 'byWeekday is required' }, { status: 400 });
-    }
-
     const slotsPerDayRaw = Number((body as any)?.slotsPerDay ?? 1);
     const slotsPerDay = Number.isInteger(slotsPerDayRaw) && slotsPerDayRaw > 0 ? slotsPerDayRaw : 1;
+    const startTime = parseTimeString((body as any)?.startTime);
+    const endTime = parseTimeString((body as any)?.endTime);
+
+    if (dutyType.kind === 'DAY_SLOT') {
+      if (byWeekday.length === 0) {
+        return NextResponse.json({ error: 'byWeekday is required' }, { status: 400 });
+      }
+    }
+
+    if (dutyType.kind === 'TIME_RANGE') {
+      if (!startTime || !endTime) {
+        return NextResponse.json({ error: 'startTime and endTime are required' }, { status: 400 });
+      }
+      const startMinutes = Number(startTime.slice(0, 2)) * 60 + Number(startTime.slice(3, 5));
+      const endMinutes = Number(endTime.slice(0, 2)) * 60 + Number(endTime.slice(3, 5));
+      if (endMinutes <= startMinutes) {
+        return NextResponse.json({ error: 'endTime must be after startTime' }, { status: 400 });
+      }
+    }
+
     const includeMemberIds = parseStringArray((body as any)?.includeMemberIds);
     const excludeMemberIds = parseStringArray((body as any)?.excludeMemberIds);
     const avoidConsecutive = Boolean((body as any)?.avoidConsecutive ?? true);
+    const disabled = Boolean((body as any)?.disabled ?? false);
 
     const created = await prisma.dutyRule.create({
       data: {
@@ -77,9 +103,12 @@ export async function POST(req: Request) {
         endDate,
         byWeekday,
         slotsPerDay,
+        startTime: dutyType.kind === 'TIME_RANGE' ? startTime : null,
+        endTime: dutyType.kind === 'TIME_RANGE' ? endTime : null,
         includeMemberIds,
         excludeMemberIds,
         avoidConsecutive,
+        disabled,
       },
       select: {
         id: true,
@@ -88,9 +117,12 @@ export async function POST(req: Request) {
         endDate: true,
         byWeekday: true,
         slotsPerDay: true,
+        startTime: true,
+        endTime: true,
         includeMemberIds: true,
         excludeMemberIds: true,
         avoidConsecutive: true,
+        disabled: true,
       },
     });
 

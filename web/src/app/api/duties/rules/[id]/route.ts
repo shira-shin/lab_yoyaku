@@ -39,6 +39,16 @@ function parseBoolean(value: unknown) {
   return undefined;
 }
 
+function parseTimeString(value: unknown) {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const str = String(value).trim();
+  const matched = str.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (!matched) return undefined;
+  const [, h, m] = matched;
+  return `${h.padStart(2, '0')}:${m}`;
+}
+
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
     const me = await readUserFromCookie();
@@ -111,8 +121,49 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       updates.avoidConsecutive = avoidConsecutive;
     }
 
+    const startTimeValue = parseTimeString((body as any)?.startTime);
+    if (startTimeValue !== undefined) {
+      if (rule.type.kind === 'TIME_RANGE') {
+        if (!startTimeValue) {
+          return NextResponse.json({ error: 'startTime is required' }, { status: 400 });
+        }
+        updates.startTime = startTimeValue;
+      } else {
+        updates.startTime = null;
+      }
+    }
+
+    const endTimeValue = parseTimeString((body as any)?.endTime);
+    if (endTimeValue !== undefined) {
+      if (rule.type.kind === 'TIME_RANGE') {
+        if (!endTimeValue) {
+          return NextResponse.json({ error: 'endTime is required' }, { status: 400 });
+        }
+        updates.endTime = endTimeValue;
+      } else {
+        updates.endTime = null;
+      }
+    }
+
+    const disabled = parseBoolean((body as any)?.disabled);
+    if (disabled !== undefined) {
+      updates.disabled = disabled;
+    }
+
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ dutyRule: rule });
+    }
+
+    const startTimeForValidation =
+      updates.startTime ?? (rule.type.kind === 'TIME_RANGE' ? rule.startTime : null);
+    const endTimeForValidation =
+      updates.endTime ?? (rule.type.kind === 'TIME_RANGE' ? rule.endTime : null);
+    if (rule.type.kind === 'TIME_RANGE' && startTimeForValidation && endTimeForValidation) {
+      const startMinutes = Number(startTimeForValidation.slice(0, 2)) * 60 + Number(startTimeForValidation.slice(3, 5));
+      const endMinutes = Number(endTimeForValidation.slice(0, 2)) * 60 + Number(endTimeForValidation.slice(3, 5));
+      if (endMinutes <= startMinutes) {
+        return NextResponse.json({ error: 'endTime must be after startTime' }, { status: 400 });
+      }
     }
 
     if (updates.startDate && !updates.endDate) {
@@ -137,9 +188,12 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         endDate: true,
         byWeekday: true,
         slotsPerDay: true,
+        startTime: true,
+        endTime: true,
         includeMemberIds: true,
         excludeMemberIds: true,
         avoidConsecutive: true,
+        disabled: true,
       },
     });
 

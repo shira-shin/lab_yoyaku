@@ -27,7 +27,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       where: { id: params.id },
       include: {
         group: { include: { members: true } },
-        type: { select: { id: true, name: true, color: true, visibility: true } },
+        type: { select: { id: true, name: true, color: true, visibility: true, kind: true } },
       },
     });
     if (!assignment) {
@@ -70,14 +70,28 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
 
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ duty: assignment });
+      return NextResponse.json({
+        duty: {
+          id: assignment.id,
+          groupId: assignment.groupId,
+          typeId: assignment.typeId,
+          date: assignment.date.toISOString(),
+          slotIndex: assignment.slotIndex,
+          locked: assignment.locked,
+          done: assignment.done,
+          assigneeId: assignment.assigneeId,
+          startsAt: assignment.startsAt ? assignment.startsAt.toISOString() : null,
+          endsAt: assignment.endsAt ? assignment.endsAt.toISOString() : null,
+          type: assignment.type,
+        },
+      });
     }
 
     const updated = await prisma.dutyAssignment.update({
       where: { id: assignment.id },
       data: updates,
       include: {
-        type: { select: { id: true, name: true, color: true, visibility: true } },
+        type: { select: { id: true, name: true, color: true, visibility: true, kind: true } },
       },
     });
 
@@ -91,6 +105,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         locked: updated.locked,
         done: updated.done,
         assigneeId: updated.assigneeId,
+        startsAt: updated.startsAt ? updated.startsAt.toISOString() : null,
+        endsAt: updated.endsAt ? updated.endsAt.toISOString() : null,
         type: updated.type,
       },
     });

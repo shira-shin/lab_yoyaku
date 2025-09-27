@@ -8,6 +8,7 @@ import { readUserFromCookie } from '@/lib/auth';
 import { isGroupAdmin } from '@/lib/duties/permissions';
 
 type DutyVisibility = 'PUBLIC' | 'MEMBERS_ONLY';
+type DutyKind = 'DAY_SLOT' | 'TIME_RANGE';
 
 function normalizeSlug(value: string | string[] | undefined) {
   if (!value) return '';
@@ -47,9 +48,11 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
 
     const colorRaw = (body as any)?.color;
     const visibilityRaw = (body as any)?.visibility;
+    const kindRaw = (body as any)?.kind;
     const color = colorRaw ? String(colorRaw).trim() : '#7c3aed';
     const visibility: DutyVisibility =
       visibilityRaw === 'MEMBERS_ONLY' ? 'MEMBERS_ONLY' : 'PUBLIC';
+    const kind: DutyKind = kindRaw === 'TIME_RANGE' ? 'TIME_RANGE' : 'DAY_SLOT';
 
     const duplicate = await prisma.dutyType.findFirst({
       where: { groupId: group.id, name },
@@ -65,6 +68,7 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
         name,
         color,
         visibility,
+        kind,
       },
       select: {
         id: true,
@@ -72,6 +76,7 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
         name: true,
         color: true,
         visibility: true,
+        kind: true,
       },
     });
 

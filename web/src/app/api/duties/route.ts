@@ -44,21 +44,27 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     }
 
+    const includeParams = searchParams.getAll('include');
+    const includeType = includeParams.includes('type');
+
     const assignments = await prisma.dutyAssignment.findMany({
       where: {
         groupId: group.id,
         date: { gte: from, lte: to },
       },
-      include: {
-        type: {
-          select: {
-            id: true,
-            name: true,
-            color: true,
-            visibility: true,
-          },
-        },
-      },
+      include: includeType
+        ? {
+            type: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+                visibility: true,
+                kind: true,
+              },
+            },
+          }
+        : undefined,
       orderBy: [{ date: 'asc' }, { slotIndex: 'asc' }],
     });
 
@@ -71,7 +77,17 @@ export async function GET(req: Request) {
       locked: assignment.locked,
       done: assignment.done,
       assigneeId: assignment.assigneeId,
-      type: assignment.type,
+      startsAt: assignment.startsAt ? assignment.startsAt.toISOString() : null,
+      endsAt: assignment.endsAt ? assignment.endsAt.toISOString() : null,
+      type: includeType
+        ? assignment.type && {
+            id: assignment.type.id,
+            name: assignment.type.name,
+            color: assignment.type.color,
+            visibility: assignment.type.visibility,
+            kind: assignment.type.kind,
+          }
+        : undefined,
     }));
 
     return NextResponse.json({ duties });
