@@ -117,6 +117,7 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
       reserveTo: toISO(group.reserveTo),
       memo: group.memo ?? null,
       deviceManagePolicy: group.deviceManagePolicy,
+      dutyManagePolicy: group.dutyManagePolicy,
       members,
       devices,
       reservations,
@@ -155,6 +156,7 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
     const memoRaw = body?.memo
     const hostRaw = body?.host
     const policyRaw = body?.deviceManagePolicy ?? body?.device_manage_policy
+    const dutyPolicyRaw = body?.dutyManagePolicy ?? body?.duty_manage_policy
 
     const updates: any = {}
     if (reserveFromRaw !== undefined) {
@@ -186,6 +188,12 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
         updates.deviceManagePolicy = value as 'HOST_ONLY' | 'MEMBERS_ALLOWED'
       }
     }
+    if (dutyPolicyRaw !== undefined) {
+      const value = String(dutyPolicyRaw)
+      if (value === 'ADMINS_ONLY' || value === 'MEMBERS_ALLOWED') {
+        updates.dutyManagePolicy = value as 'ADMINS_ONLY' | 'MEMBERS_ALLOWED'
+      }
+    }
 
     if (Object.keys(updates).length > 0) {
       await prisma.group.update({ where: { id: group.id }, data: updates })
@@ -209,6 +217,7 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
         devices: payload.devices,
         reservations: payload.reservations,
         deviceManagePolicy: payload.group.deviceManagePolicy,
+        dutyManagePolicy: payload.group.dutyManagePolicy,
       },
     })
   } catch (error) {
