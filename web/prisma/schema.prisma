@@ -16,10 +16,21 @@ model User {
   accounts      Account[]
   sessions      Session[]
   reservations  Reservation[]
+  dutyAssignments DutyAssignment[]
 }
 
 enum DeviceManagePolicy {
   HOST_ONLY
+  MEMBERS_ALLOWED
+}
+
+enum DutyVisibility {
+  PUBLIC
+  MEMBERS_ONLY
+}
+
+enum DutyManagePolicy {
+  ADMINS_ONLY
   MEMBERS_ALLOWED
 }
 
@@ -67,8 +78,11 @@ model Group {
   reserveTo   DateTime?
   memo        String?
   deviceManagePolicy DeviceManagePolicy @default(HOST_ONLY)
+  dutyManagePolicy  DutyManagePolicy  @default(ADMINS_ONLY)
   devices     Device[]
   members     GroupMember[]
+  dutyTypes   DutyType[]
+  dutyAssignments DutyAssignment[]
   createdAt   DateTime      @default(now())
 }
 
@@ -121,4 +135,46 @@ model UserProfile {
   displayName String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model DutyType {
+  id           String            @id @default(cuid())
+  group        Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId      String
+  name         String
+  color        String            @default("#7c3aed")
+  visibility   DutyVisibility    @default(PUBLIC)
+  rules        DutyRule[]
+  assignments  DutyAssignment[]
+
+  @@unique([groupId, name])
+}
+
+model DutyRule {
+  id                String      @id @default(cuid())
+  type              DutyType    @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  typeId            String
+  startDate         DateTime
+  endDate           DateTime
+  byWeekday         Int[]
+  slotsPerDay       Int         @default(1)
+  includeMemberIds  String[]    @default([])
+  excludeMemberIds  String[]    @default([])
+  avoidConsecutive  Boolean     @default(true)
+}
+
+model DutyAssignment {
+  id          String   @id @default(cuid())
+  type        DutyType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  typeId      String
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId     String
+  date        DateTime
+  slotIndex   Int
+  assignee    User?    @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  assigneeId  String?
+  locked      Boolean  @default(false)
+  done        Boolean  @default(false)
+
+  @@unique([groupId, typeId, date, slotIndex])
 }

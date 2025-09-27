@@ -120,6 +120,7 @@ export default async function GroupPage({
     devices: Array.isArray(raw?.devices) ? raw.devices : [],
     reservations: Array.isArray(raw?.reservations) ? raw.reservations : [],
     deviceManagePolicy: raw?.deviceManagePolicy ?? 'HOST_ONLY',
+    dutyManagePolicy: raw?.dutyManagePolicy ?? 'ADMINS_ONLY',
   };
   const devices = group.devices;
   const me = user;
