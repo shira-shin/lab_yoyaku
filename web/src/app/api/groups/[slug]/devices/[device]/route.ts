@@ -99,14 +99,19 @@ export async function DELETE(
 
     const device = await prisma.device.findFirst({
       where: { slug: deviceSlug, group: { slug: groupSlug } },
-      include: { group: true },
+      include: { group: { include: { members: true } } },
     })
 
     if (!device) {
       return NextResponse.json({ error: 'device not found' }, { status: 404 })
     }
 
-    if (device.group.hostEmail !== me.email) {
+    const canManage =
+      device.group.deviceManagePolicy === 'MEMBERS_ALLOWED'
+        ? device.group.hostEmail === me.email || device.group.members.some((member) => member.email === me.email)
+        : device.group.hostEmail === me.email
+
+    if (!canManage) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
 

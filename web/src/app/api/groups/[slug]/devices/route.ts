@@ -59,7 +59,12 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
       return NextResponse.json({ error: 'group not found' }, { status: 404 })
     }
 
-    if (group.hostEmail !== me.email) {
+    const canManage =
+      group.deviceManagePolicy === 'MEMBERS_ALLOWED'
+        ? group.hostEmail === me.email || group.members.some((member) => member.email === me.email)
+        : group.hostEmail === me.email
+
+    if (!canManage) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
 

@@ -18,6 +18,11 @@ model User {
   reservations  Reservation[]
 }
 
+enum DeviceManagePolicy {
+  HOST_ONLY
+  MEMBERS_ALLOWED
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -61,6 +66,7 @@ model Group {
   reserveFrom DateTime?
   reserveTo   DateTime?
   memo        String?
+  deviceManagePolicy DeviceManagePolicy @default(HOST_ONLY)
   devices     Device[]
   members     GroupMember[]
   createdAt   DateTime      @default(now())

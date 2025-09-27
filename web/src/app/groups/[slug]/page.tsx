@@ -119,6 +119,7 @@ export default async function GroupPage({
     members: Array.isArray(raw?.members) ? raw.members : [],
     devices: Array.isArray(raw?.devices) ? raw.devices : [],
     reservations: Array.isArray(raw?.reservations) ? raw.reservations : [],
+    deviceManagePolicy: raw?.deviceManagePolicy ?? 'HOST_ONLY',
   };
   const devices = group.devices;
   const me = user;
