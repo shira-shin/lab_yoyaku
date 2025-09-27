@@ -8,14 +8,17 @@ import { prisma } from '@/lib/prisma';
 import { canManageDuties, getActorByEmail } from '@/lib/perm';
 import { z } from 'zod';
 
+// 単一文字列 or 文字列配列 を同一に扱うためのユーティリティ
+const OneOrManyStrings = z.string().array().or(z.string());
+
 const Body = z.object({
   groupSlug: z.string(),
   dutyTypeId: z.string(),
-  from: z.string(),
+  from: z.string(), // yyyy-mm-dd
   to: z.string(),
   mode: z.enum(['ROUND_ROBIN', 'RANDOM', 'MANUAL']),
-  memberIds: z.union([z.array(z.string()), z.string()]).optional(),
-  weekdays: z.union([z.array(z.string()), z.string()]).optional(),
+  memberIds: OneOrManyStrings.optional(),
+  weekdays: OneOrManyStrings.optional(),
 });
 
 async function readBody(req: Request) {
@@ -57,6 +60,14 @@ export async function POST(req: Request) {
     const raw = await readBody(req);
     const body = Body.parse(raw);
 
+    const memberIds: string[] = body.memberIds
+      ? (Array.isArray(body.memberIds) ? body.memberIds : [body.memberIds])
+      : [];
+
+    const weekdayNums: number[] = body.weekdays
+      ? (Array.isArray(body.weekdays) ? body.weekdays : [body.weekdays]).map((s) => Number(s))
+      : [];
+
     const slug = body.groupSlug.toLowerCase();
     const group = await prisma.group.findUnique({
       where: { slug },
@@ -93,14 +104,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'invalid range' }, { status: 400 });
     }
 
-    const weekdaysRaw = body.weekdays;
-    const weekdayValues = Array.isArray(weekdaysRaw)
-      ? weekdaysRaw
-      : typeof weekdaysRaw === 'string'
-        ? [weekdaysRaw]
-        : [];
     const weekdaySet = new Set(
-      weekdayValues
+      weekdayNums
         .map((value) => Number.parseInt(String(value), 10))
         .filter((value) => Number.isInteger(value) && value >= 0 && value <= 6)
     );
@@ -128,19 +133,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, count: result.count });
     }
 
-    const memberValues = Array.isArray(body.memberIds)
-      ? body.memberIds
-      : typeof body.memberIds === 'string'
-        ? [body.memberIds]
-        : [];
-
-    const memberIds = memberValues.map((value) => String(value)).filter(Boolean);
-    if (memberIds.length === 0) {
+    const filteredMemberIds = memberIds.filter((value) => Boolean(value));
+    if (filteredMemberIds.length === 0) {
       return NextResponse.json({ error: 'members required' }, { status: 400 });
     }
 
     const validMembers = await prisma.groupMember.findMany({
-      where: { groupId: group.id, userId: { in: memberIds } },
+      where: { groupId: group.id, userId: { in: filteredMemberIds } },
       select: { userId: true },
     });
     const allowedIds = validMembers.map((member) => member.userId).filter((value): value is string => Boolean(value));
