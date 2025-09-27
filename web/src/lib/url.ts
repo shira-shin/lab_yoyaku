@@ -1,35 +1,38 @@
 import { headers } from "next/headers";
 
-/** .env や Vercel 環境変数からの baseURL（あれば文字列を返す） */
-function getBaseUrlFromEnv(): string | null {
-  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL!;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return null;
+/** 現在のオリジン（サーバー or ブラウザ）を最優先で取得 */
+function currentOrigin(): string | null {
+  // ブラウザ実行時
+  if (typeof window !== "undefined") return window.location.origin;
+
+  // サーバー実行時（RSC/Route/Action）
+  try {
+    const h = headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    if (!host) return null;
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    return `${proto}://${host}`;
+  } catch {
+    return null;
+  }
 }
 
-/** Server 環境での Host 取得（RSC/Route/Action いずれでも可） */
-function getServerBaseUrl(): string {
-  const h = headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  return `${proto}://${host}`;
+/** 最後の手段としての環境変数（同一オリジン保証はしない） */
+function envOrigin(): string | null {
+  const env = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_BASE_URL;
+  if (!env) return null;
+  return env.startsWith("http") ? env : `https://${env}`;
 }
 
-/** どこからでも使える絶対URL化ヘルパ（Server/Browser 両対応） */
+/** どこからでも使える絶対URL化ヘルパ（同一オリジン優先） */
 export function absUrl(path: string): string {
   if (/^https?:\/\//.test(path)) return path;
 
-  // 1) まず環境変数/Vercel
-  const envBase = getBaseUrlFromEnv();
-  if (envBase) return `${envBase}${path.startsWith("/") ? path : `/${path}`}`;
-
-  // 2) ブラウザ実行時
-  if (typeof window !== "undefined") {
-    const { protocol, host } = window.location;
-    return `${protocol}//${host}${path.startsWith("/") ? path : `/${path}`}`;
+  const origin = currentOrigin() ?? envOrigin();
+  if (origin) {
+    return new URL(path.startsWith("/") ? path : `/${path}`, origin).toString();
   }
 
-  // 3) サーバー実行時（RSC/Route/Action）
-  const srvBase = getServerBaseUrl();
-  return `${srvBase}${path.startsWith("/") ? path : `/${path}`}`;
+  // どうしても分からない場合は、そのまま返す（開発時の保険）
+  return path.startsWith("/") ? path : `/${path}`;
 }
