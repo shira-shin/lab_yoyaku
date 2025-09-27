@@ -106,7 +106,7 @@ export async function POST(req: Request) {
         reserveFrom,
         reserveTo,
         memo: memoValue || null,
-        members: { create: { email: me.email } },
+        members: { create: { email: me.email, userId: me.id, role: 'OWNER' } },
       },
       select: { id: true, slug: true, name: true },
     })

@@ -17,6 +17,7 @@ model User {
   sessions      Session[]
   reservations  Reservation[]
   dutyAssignments DutyAssignment[]
+  groupMemberships GroupMember[]
 }
 
 enum DeviceManagePolicy {
@@ -125,11 +126,20 @@ model Reservation {
   @@index([start, end])
 }
 
+enum GroupMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
 model GroupMember {
   id        String   @id @default(cuid())
   group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId   String
   email     String
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId    String?
+  role      GroupMemberRole @default(MEMBER)
   createdAt DateTime @default(now())
 
   @@unique([groupId, email])

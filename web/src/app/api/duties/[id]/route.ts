@@ -3,115 +3,56 @@ export const revalidate = 0;
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { prisma } from '@/src/lib/prisma';
-import { readUserFromCookie } from '@/lib/auth';
-import { canManageDuties } from '@/lib/duties/permissions';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { getActorByEmail, getGroupAndRole, canManageDuties } from '@/lib/perm';
+import { z } from 'zod';
 
-function parseBoolean(value: unknown) {
-  if (value === undefined) return undefined;
-  if (typeof value === 'boolean') return value;
-  const str = String(value).trim().toLowerCase();
-  if (str === 'true') return true;
-  if (str === 'false') return false;
-  return undefined;
-}
+const Body = z.object({
+  assigneeId: z.string().nullable().optional(),
+  locked: z.boolean().optional(),
+  done: z.boolean().optional(),
+});
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
-    const me = await readUserFromCookie();
-    if (!me?.email) {
+    const session = await auth();
+    const me = await getActorByEmail(session?.user?.email ?? undefined);
+    if (!me) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
     const assignment = await prisma.dutyAssignment.findUnique({
       where: { id: params.id },
-      include: {
-        group: { include: { members: true } },
-        type: { select: { id: true, name: true, color: true, visibility: true, kind: true } },
-      },
+      select: { id: true, groupId: true, group: { select: { slug: true, dutyManagePolicy: true } } },
     });
     if (!assignment) {
-      return NextResponse.json({ error: 'duty assignment not found' }, { status: 404 });
+      return NextResponse.json({ error: 'not found' }, { status: 404 });
     }
 
-    if (!canManageDuties(assignment.group, me.email)) {
+    const group = assignment.group;
+    if (!group) {
+      return NextResponse.json({ error: 'group not found' }, { status: 404 });
+    }
+
+    const ctx = await getGroupAndRole(group.slug, me.id);
+    if (!ctx || !canManageDuties(group.dutyManagePolicy, ctx.role)) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const updates: { assigneeId?: string | null; locked?: boolean; done?: boolean } = {};
-
-    if ((body as any)?.assigneeId !== undefined) {
-      const raw = (body as any).assigneeId;
-      const value = raw === null || raw === '' ? null : String(raw);
-      if (value) {
-        const memberEmails = Array.from(
-          new Set([assignment.group.hostEmail, ...assignment.group.members.map((member) => member.email)])
-        );
-        const members = memberEmails.length
-          ? await prisma.user.findMany({ where: { email: { in: memberEmails } }, select: { id: true } })
-          : [];
-        const allowed = new Set(members.map((member) => member.id));
-        if (!allowed.has(value)) {
-          return NextResponse.json({ error: 'assignee not member' }, { status: 400 });
-        }
-      }
-      updates.assigneeId = value;
-    }
-
-    const locked = parseBoolean((body as any)?.locked);
-    if (locked !== undefined) {
-      updates.locked = locked;
-    }
-
-    const done = parseBoolean((body as any)?.done);
-    if (done !== undefined) {
-      updates.done = done;
-    }
-
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({
-        duty: {
-          id: assignment.id,
-          groupId: assignment.groupId,
-          typeId: assignment.typeId,
-          date: assignment.date.toISOString(),
-          slotIndex: assignment.slotIndex,
-          locked: assignment.locked,
-          done: assignment.done,
-          assigneeId: assignment.assigneeId,
-          startsAt: assignment.startsAt ? assignment.startsAt.toISOString() : null,
-          endsAt: assignment.endsAt ? assignment.endsAt.toISOString() : null,
-          type: assignment.type,
-        },
-      });
-    }
-
+    const body = Body.parse(await req.json());
     const updated = await prisma.dutyAssignment.update({
-      where: { id: assignment.id },
-      data: updates,
-      include: {
-        type: { select: { id: true, name: true, color: true, visibility: true, kind: true } },
-      },
+      where: { id: params.id },
+      data: body,
+      include: { assignee: { select: { id: true, email: true, name: true } } },
     });
 
-    return NextResponse.json({
-      duty: {
-        id: updated.id,
-        groupId: updated.groupId,
-        typeId: updated.typeId,
-        date: updated.date.toISOString(),
-        slotIndex: updated.slotIndex,
-        locked: updated.locked,
-        done: updated.done,
-        assigneeId: updated.assigneeId,
-        startsAt: updated.startsAt ? updated.startsAt.toISOString() : null,
-        endsAt: updated.endsAt ? updated.endsAt.toISOString() : null,
-        type: updated.type,
-      },
-    });
+    return NextResponse.json({ data: updated });
   } catch (error) {
     console.error('update duty assignment failed', error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'invalid body', details: error.flatten() }, { status: 400 });
+    }
     return NextResponse.json({ error: 'update duty assignment failed' }, { status: 500 });
   }
 }

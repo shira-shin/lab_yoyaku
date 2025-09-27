@@ -26,6 +26,12 @@ export async function readUserFromCookie(): Promise<User | null> {
   } catch { return null; }
 }
 
+export async function auth() {
+  const user = await readUserFromCookie();
+  if (!user) return null;
+  return { user };
+}
+
 export async function decodeSession(token: string): Promise<User> {
   const { payload } = await jwtVerify(token, secret);
   const id = payload?.id;

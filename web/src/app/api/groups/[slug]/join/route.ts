@@ -51,8 +51,8 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
 
     await prisma.groupMember.upsert({
       where: { groupId_email: { groupId: group.id, email: me.email } },
-      update: {},
-      create: { groupId: group.id, email: me.email },
+      update: { userId: me.id },
+      create: { groupId: group.id, email: me.email, userId: me.id, role: 'MEMBER' },
     })
 
     return NextResponse.json({ ok: true, data: { slug: group.slug, name: group.name ?? group.slug } })
