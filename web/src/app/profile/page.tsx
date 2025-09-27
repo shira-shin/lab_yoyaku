@@ -8,21 +8,14 @@ type Group = {
   role?: "OWNER" | "ADMIN" | "MEMBER";
 };
 
-type ProfileResponse = {
-  data?: { name?: string | null } | null;
-};
-
-type GroupsResponse =
-  | { data?: Group[] | null }
-  | { groups?: Group[] | null }
-  | Group[]
-  | null;
-
-function extractGroups(payload: GroupsResponse): Group[] {
-  if (!payload) return [];
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload.data)) return payload.data;
-  if (Array.isArray(payload.groups)) return payload.groups;
+// レスポンス正規化ヘルパ
+function normalizeGroups(payload: unknown): Group[] {
+  if (Array.isArray(payload)) return payload as Group[];
+  if (payload && typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    if ("data" in obj && Array.isArray((obj as any).data)) return (obj as any).data as Group[];
+    if ("groups" in obj && Array.isArray((obj as any).groups)) return (obj as any).groups as Group[];
+  }
   return [];
 }
 
@@ -43,9 +36,9 @@ export default function ProfilePage() {
           return;
         }
         if (profileRes.ok) {
-          const me = (await profileRes.json()) as ProfileResponse;
-          if (!cancelled) {
-            setName(me?.data?.name ?? "");
+          const meJson: unknown = await profileRes.json();
+          if (!cancelled && meJson && typeof meJson === "object" && "data" in (meJson as any)) {
+            setName(((meJson as any).data?.name as string) ?? "");
           }
         }
       } catch {
@@ -58,9 +51,9 @@ export default function ProfilePage() {
           return;
         }
         if (groupsRes.ok) {
-          const payload = (await groupsRes.json()) as GroupsResponse;
+          const gsJson: unknown = await groupsRes.json();
           if (!cancelled) {
-            setGroups(extractGroups(payload));
+            setGroups(normalizeGroups(gsJson));
           }
         }
       } catch {
