@@ -7,6 +7,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getActorByEmail, isAdmin } from '@/lib/perm';
 import { z } from '@/lib/zod-shim';
+import type { Prisma } from '@prisma/client';
 
 const Body = z.object({
   typeId: z.string(),
@@ -53,15 +54,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'invalid rule for TIME_RANGE' }, { status: 400 });
     }
 
-    const data = await prisma.dutyRule.create({
-      data: {
-        ...input,
-        byWeekday: input.byWeekday ?? [],
-        slotsPerDay: input.slotsPerDay ?? 1,
-      },
-    });
+    const data: Prisma.DutyRuleCreateInput = {
+      type: { connect: { id: input.typeId } },
+      startDate: new Date(input.startDate),
+      endDate: new Date(input.endDate),
+      byWeekday: input.byWeekday ?? [],
+      slotsPerDay: input.slotsPerDay ?? 1,
+      includeMemberIds: input.includeMemberIds ?? [],
+      excludeMemberIds: input.excludeMemberIds ?? [],
+      ...(input.startTime !== undefined ? { startTime: input.startTime } : {}),
+      ...(input.endTime !== undefined ? { endTime: input.endTime } : {}),
+      ...(input.avoidConsecutive !== undefined
+        ? { avoidConsecutive: input.avoidConsecutive }
+        : {}),
+    };
 
-    return NextResponse.json({ data }, { status: 201 });
+    const created = await prisma.dutyRule.create({ data });
+
+    return NextResponse.json({ data: created }, { status: 201 });
   } catch (error) {
     console.error('create duty rule failed', error);
     if (error instanceof z.ZodError) {
