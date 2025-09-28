@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { PASSWORD_HINT, passwordRegex } from '@/utils/password';
@@ -83,7 +84,18 @@ export default function LoginPage() {
 
   return (
     <div className="max-w-6xl mx-auto py-10">
-      <header className="text-center mb-8">
+      <header className="text-center mb-8 space-y-3">
+        <div className="flex items-center justify-center gap-3">
+          <Image
+            src="/brand/labyoyaku-icon.svg"
+            alt="ラボ予約"
+            width={52}
+            height={52}
+            className="rounded-2xl"
+            priority
+          />
+          <span className="text-2xl font-semibold tracking-tight text-gray-900">ラボ予約</span>
+        </div>
         <h1 className="text-3xl font-semibold tracking-tight">Lab Yoyaku へようこそ</h1>
         <p className="text-gray-600 mt-2">研究室の機器をグループで管理し、予約と使用状況をカレンダーで可視化します。</p>
       </header>

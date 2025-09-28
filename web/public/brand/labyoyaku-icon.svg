@@ -1,0 +1,20 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="112" fill="#7C3AED"/>
+  <rect x="88" y="112" width="336" height="272" rx="52" fill="white"/>
+  <rect x="88" y="176" width="336" height="208" rx="44" fill="#F5F3FF"/>
+  <rect x="132" y="88" width="64" height="96" rx="24" fill="white"/>
+  <rect x="316" y="88" width="64" height="96" rx="24" fill="white"/>
+  <rect x="140" y="224" width="96" height="80" rx="20" fill="white"/>
+  <rect x="236" y="224" width="96" height="80" rx="20" fill="white"/>
+  <rect x="332" y="224" width="96" height="80" rx="20" fill="white"/>
+  <rect x="140" y="312" width="96" height="80" rx="20" fill="white"/>
+  <rect x="236" y="312" width="96" height="80" rx="20" fill="white"/>
+  <rect x="332" y="312" width="96" height="80" rx="20" fill="white"/>
+  <path d="M188 130C188 122.268 194.268 116 202 116H214C221.732 116 228 122.268 228 130V148C228 155.732 221.732 162 214 162H202C194.268 162 188 155.732 188 148V130Z" fill="#7C3AED"/>
+  <path d="M284 130C284 122.268 290.268 116 298 116H310C317.732 116 324 122.268 324 130V148C324 155.732 317.732 162 310 162H298C290.268 162 284 155.732 284 148V130Z" fill="#7C3AED"/>
+  <circle cx="332" cy="352" r="60" fill="#4C1D95"/>
+  <path d="M308.5 352.5L324.2 368.2L355.5 336.9" stroke="white" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="256" y="454" text-anchor="middle" fill="white" font-family="'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif" font-size="68" font-weight="700">
+    ラボ予約
+  </text>
+</svg>

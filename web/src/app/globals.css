@@ -11,3 +11,15 @@
   .btn-danger { @apply bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-300; }
 }
 
+@media print {
+  @page {
+    size: auto;
+    margin: 10mm;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
