@@ -46,21 +46,21 @@ export default async function DeviceDetail({
   params,
   searchParams,
 }: {
-  params: { slug: string; device: string };
+  params: { slug: string; deviceSlug: string };
   searchParams: { month?: string };
 }) {
   noStore();
-  const { slug, device } = params;
+  const { slug, deviceSlug } = params;
   const group = slug;
   const user = await getUserFromCookies();
-  if (!user) redirect(`/login?next=/groups/${group}/devices/${device}`);
+  if (!user) redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
   const res = await serverFetch(
-    `/api/groups/${encodeURIComponent(group)}/devices/${encodeURIComponent(device)}`
+    `/api/groups/${encodeURIComponent(group)}/devices/${encodeURIComponent(deviceSlug)}`
   );
-  if (res.status === 401) redirect(`/login?next=/groups/${group}/devices/${device}`);
+  if (res.status === 401) redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
   if (res.status === 403) redirect(`/groups/join?slug=${encodeURIComponent(group)}`);
   if (res.status === 404) return notFound();
-  if (!res.ok) redirect(`/login?next=/groups/${group}/devices/${device}`);
+  if (!res.ok) redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
   const json = await res.json();
   const dev = json?.device;
   const me = user;
@@ -87,13 +87,13 @@ export default async function DeviceDetail({
 
   const query = new URLSearchParams({
     groupSlug: group,
-    deviceSlug: device,
+    deviceSlug: deviceSlug,
     from: rangeStart.toISOString(),
     to: rangeEnd.toISOString(),
   });
   const reservationsRes = await serverFetch(`/api/reservations?${query.toString()}`);
   if (reservationsRes.status === 401) {
-    redirect(`/login?next=/groups/${group}/devices/${device}`);
+    redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
   }
   if (reservationsRes.status === 403) {
     redirect(`/groups/join?slug=${encodeURIComponent(group)}`);
@@ -102,7 +102,7 @@ export default async function DeviceDetail({
     return notFound();
   }
   if (!reservationsRes.ok) {
-    redirect(`/login?next=/groups/${group}/devices/${device}`);
+    redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
   }
   const reservationsJson = await reservationsRes.json();
   const reservations: ReservationResponse[] = Array.isArray(reservationsJson?.reservations)
@@ -172,7 +172,7 @@ export default async function DeviceDetail({
           <ReservationList items={listItems} />
         </div>
         <Image
-          src={`/api/devices/${encodeURIComponent(device)}/qr`}
+          src={`/api/devices/${encodeURIComponent(deviceSlug)}/qr`}
           alt="QRコード"
           width={128}
           height={128}

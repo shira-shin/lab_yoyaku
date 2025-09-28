@@ -236,8 +236,18 @@ export default function PrintableQrCard({
           <div className="text-xl font-semibold tracking-wide" data-qr-card-title>
             {title}
           </div>
-          <div className="text-sm text-gray-500" data-qr-card-slug>
-            {code}
+          <div className="mt-1 flex items-center justify-center gap-2">
+            <code className="text-sm text-gray-700 break-all select-all" data-qr-card-slug>
+              {code}
+            </code>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard?.writeText(code)}
+              className="text-xs px-2 py-1 rounded border bg-gray-50 hover:bg-gray-100"
+              aria-label="コードをコピー"
+            >
+              コピー
+            </button>
           </div>
           {note ? (
             <div className="text-xs text-gray-400" data-qr-card-note>

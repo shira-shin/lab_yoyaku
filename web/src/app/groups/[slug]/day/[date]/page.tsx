@@ -23,10 +23,21 @@ function isValidDateFormat(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+function getLocalDateBounds(date: string) {
+  const [yearStr, monthStr, dayStr] = date.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr) - 1;
+  const day = Number(dayStr);
+  const start = new Date(year, month, day);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+}
+
 function toRange(date: string) {
-  const from = new Date(`${date}T00:00:00Z`).toISOString();
-  const to = new Date(`${date}T23:59:59Z`).toISOString();
-  return { from, to };
+  const { start, end } = getLocalDateBounds(date);
+  return { from: start.toISOString(), to: end.toISOString() };
 }
 
 function formatTime(value: string) {
@@ -36,8 +47,9 @@ function formatTime(value: string) {
 }
 
 async function fetchDuties(slug: string, date: string) {
-  const from = new Date(`${date}T00:00:00Z`).toISOString();
-  const to = new Date(`${date}T23:59:59Z`).toISOString();
+  const { start, end } = getLocalDateBounds(date);
+  const from = start.toISOString();
+  const to = end.toISOString();
   const res = await serverFetch(
     `/api/duties?groupSlug=${encodeURIComponent(slug)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&include=type`
   );
