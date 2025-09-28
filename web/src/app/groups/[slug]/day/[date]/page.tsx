@@ -23,20 +23,18 @@ function isValidDateFormat(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
-function getLocalDateBounds(date: string) {
-  const [yearStr, monthStr, dayStr] = date.split("-");
+function jstRange(date: string) {
+  const [yearStr, monthStr, dayStr] = date.split('-');
   const year = Number(yearStr);
   const month = Number(monthStr) - 1;
   const day = Number(dayStr);
-  const start = new Date(year, month, day);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+  const start = new Date(Date.UTC(year, month, day, -9, 0, 0, 0));
+  const end = new Date(Date.UTC(year, month, day + 1, -9, 0, 0, 0));
   return { start, end };
 }
 
 function toRange(date: string) {
-  const { start, end } = getLocalDateBounds(date);
+  const { start, end } = jstRange(date);
   return { from: start.toISOString(), to: end.toISOString() };
 }
 
@@ -47,7 +45,7 @@ function formatTime(value: string) {
 }
 
 async function fetchDuties(slug: string, date: string) {
-  const { start, end } = getLocalDateBounds(date);
+  const { start, end } = jstRange(date);
   const from = start.toISOString();
   const to = end.toISOString();
   const res = await serverFetch(

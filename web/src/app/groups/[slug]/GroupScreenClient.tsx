@@ -161,7 +161,9 @@ export default function GroupScreenClient({
                 }}
                 onShowQR={() => {
                   window.open(
-                    `/api/devices/${encodeURIComponent(d.slug)}/qr`,
+                    `/groups/${encodeURIComponent(group.slug.toLowerCase())}/devices/${encodeURIComponent(
+                      d.slug
+                    )}/qr`,
                     '_blank',
                     'noopener,noreferrer'
                   );

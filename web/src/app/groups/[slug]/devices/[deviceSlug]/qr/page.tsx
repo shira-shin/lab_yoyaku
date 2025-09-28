@@ -3,72 +3,38 @@ export const revalidate = 0;
 export const runtime = "nodejs";
 
 import PrintableQrCard from "@/components/qr/PrintableQrCard";
-import { serverFetch } from "@/lib/http/serverFetch";
 import { absUrl } from "@/lib/url";
-import { notFound, redirect } from "next/navigation";
 
-type GroupResponse = {
-  group?: { name?: string } | null;
-};
-
-type DeviceResponse = {
-  device?: { name?: string | null; slug: string; groupSlug: string } | null;
-};
-
-// サーバ側でQRのDataURL生成
 async function makeQrDataUrl(value: string) {
   const QRCode = (await import("qrcode")).default;
   return QRCode.toDataURL(value, { margin: 1, width: 560 });
 }
 
-function buildLoginRedirect(slug: string, device: string) {
-  const target = `/groups/${encodeURIComponent(slug)}/devices/${encodeURIComponent(device)}/qr`;
-  return `/login?next=${encodeURIComponent(target)}`;
-}
-
 export default async function DeviceQrPage({
   params,
-}: {
-  params: { slug: string; deviceSlug: string };
-}) {
-  const { slug, deviceSlug } = params;
+}: { params: { slug: string; deviceSlug: string } }) {
+  const groupRes = await fetch(absUrl(`/api/groups/${params.slug}`), { cache: "no-store" });
+  const { data: group } = await groupRes.json();
 
-  const groupRes = await serverFetch(`/api/groups/${encodeURIComponent(slug)}`);
-  if (groupRes.status === 401) redirect(buildLoginRedirect(slug, deviceSlug));
-  if (groupRes.status === 403) redirect(`/groups/join?slug=${encodeURIComponent(slug)}`);
-  if (groupRes.status === 404) return notFound();
-  if (!groupRes.ok) redirect(buildLoginRedirect(slug, deviceSlug));
-  const groupJson = (await groupRes.json()) as GroupResponse;
-  const groupName = groupJson.group?.name ?? "";
+  const devRes = await fetch(absUrl(`/api/groups/${params.slug}/devices/${params.deviceSlug}`), { cache: "no-store" });
+  const { data: device } = await devRes.json();
 
-  const deviceRes = await serverFetch(
-    `/api/groups/${encodeURIComponent(slug)}/devices/${encodeURIComponent(deviceSlug)}`
-  );
-  if (deviceRes.status === 401) redirect(buildLoginRedirect(slug, deviceSlug));
-  if (deviceRes.status === 403) redirect(`/groups/join?slug=${encodeURIComponent(slug)}`);
-  if (deviceRes.status === 404) return notFound();
-  if (!deviceRes.ok) redirect(buildLoginRedirect(slug, deviceSlug));
-  const deviceJson = (await deviceRes.json()) as DeviceResponse;
-
-  if (!deviceJson.device) return notFound();
-
-  const title = deviceJson.device.name || "機器";
-  const code = deviceJson.device.slug;
-  const targetUrl = absUrl(
-    `/groups/${encodeURIComponent(slug)}/devices/${encodeURIComponent(deviceSlug)}`
-  );
+  const targetUrl = absUrl(`/groups/${params.slug}/devices/${params.deviceSlug}`);
   const qrDataUrl = await makeQrDataUrl(targetUrl);
 
   return (
     <div className="mx-auto max-w-3xl p-6">
-      <h1 className="text-xl font-semibold mb-4">QRコード（{title}）</h1>
+      <h1 className="text-xl font-semibold mb-4">
+        QRコード（{device?.name ?? "機器"}）
+      </h1>
 
       <PrintableQrCard
+        // SVG/PNG どちらでも：存在する方に合わせて
         iconSrc="/brand/labyoyaku-icon.svg"
         qrDataUrl={qrDataUrl}
-        title={title}
-        code={code}
-        note={groupName ? `グループ：${groupName}` : undefined}
+        title={device?.name ?? "機器"}
+        code={device?.slug ?? params.deviceSlug}
+        note={group?.name ? `グループ：${group.name}` : undefined}
       />
     </div>
   );
