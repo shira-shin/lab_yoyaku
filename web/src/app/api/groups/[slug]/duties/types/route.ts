@@ -5,14 +5,14 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { getActorByEmail, getGroupAndRole, isAdmin } from '@/lib/perm';
+import { getActorByEmail, getGroupAndRole, canManageDuties } from '@/lib/perm';
 import { z } from '@/lib/zod-shim';
 
 const Body = z.object({
   name: z.string().min(1),
-  color: z.string().default('#7c3aed'),
-  visibility: z.enum(['PUBLIC', 'MEMBERS_ONLY']).default('PUBLIC'),
-  kind: z.enum(['DAY_SLOT', 'TIME_RANGE']),
+  color: z.string().optional(),
+  visibility: z.enum(['PUBLIC', 'MEMBERS_ONLY']).optional(),
+  kind: z.enum(['DAY_SLOT', 'TIME_RANGE']).optional(),
 });
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
@@ -24,16 +24,23 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
     }
 
     const ctx = await getGroupAndRole(params.slug, me.id);
-    if (!ctx || !isAdmin(ctx.role)) {
+    if (!ctx || !canManageDuties(ctx.group.dutyManagePolicy, ctx.role)) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     }
 
     const body = Body.parse(await req.json());
-    const type = await prisma.dutyType.create({
-      data: { groupId: ctx.group.id, ...body },
-      select: { id: true, name: true, kind: true, color: true },
+    const created = await prisma.dutyType.create({
+      data: {
+        name: body.name,
+        color: body.color ?? undefined,
+        visibility: body.visibility ?? 'PUBLIC',
+        kind: body.kind ?? 'DAY_SLOT',
+        group: { connect: { id: ctx.group.id } },
+      },
+      select: { id: true, name: true, kind: true, color: true, visibility: true },
     });
-    return NextResponse.json({ data: type }, { status: 201 });
+
+    return NextResponse.json({ data: created }, { status: 201 });
   } catch (error) {
     console.error('create duty type failed', error);
     if (error instanceof z.ZodError) {
