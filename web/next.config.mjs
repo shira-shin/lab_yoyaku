@@ -9,9 +9,6 @@ const nextConfig = {
     domains: ['via.placeholder.com'],
   },
   webpack(config) {
-    config.resolve = config.resolve ?? {}
-    config.resolve.alias = config.resolve.alias ?? {}
-    config.resolve.alias.zod = path.resolve(__dirname, 'src/lib/zod')
     return config
   },
 }
