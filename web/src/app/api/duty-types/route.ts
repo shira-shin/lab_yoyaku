@@ -102,9 +102,9 @@ export async function POST(req: Request) {
 
     const created = await prisma.dutyType.create({
       data: {
-        groupId: group.id,
         name,
         color: body.color?.trim() ? body.color.trim() : undefined,
+        group: { connect: { id: group.id } },
       },
       select: { id: true, name: true, color: true, visibility: true, kind: true },
     });
