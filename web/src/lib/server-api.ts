@@ -2,7 +2,7 @@
 import { headers } from "next/headers";
 import { createApi } from "./api-core";
 import { getBaseUrl } from "@/lib/http/base-url";
-import { serverFetch } from "@/lib/http/serverFetch";
+import { serverFetch, type Init } from "@/lib/http/serverFetch";
 
 function getInit() {
   const cookie = headers().get("cookie");
@@ -13,7 +13,7 @@ function getInit() {
   return {
     headers: headerInit,
     credentials: "include" as RequestCredentials,
-  } satisfies RequestInit;
+  } satisfies Init;
 }
 
 export const {
@@ -31,7 +31,7 @@ export const {
 /** SSR/RSC から自分の API を叩くとき用。Cookie を必ず中継して例外にしない */
 export async function serverGet<T>(
   path: string,
-  init: RequestInit = {}
+  init: Init = {}
 ): Promise<T | null> {
   const res = await serverFetch(path, init);
   if (!res.ok) {
