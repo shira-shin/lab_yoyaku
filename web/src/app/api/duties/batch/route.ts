@@ -18,6 +18,14 @@ const Body = z.object({
   weekdays: z.unknown().optional(),
 });
 
+const OneOffBody = z.object({
+  groupSlug: z.string().min(1),
+  dutyTypeId: z.string().min(1),
+  dates: z.array(z.string().min(1)).min(1),
+  slots: z.coerce.number().int().min(1).default(1),
+  assigneeIds: z.array(z.string().min(1)).optional(),
+});
+
 async function readBody(req: Request) {
   try {
     return await req.json();
@@ -45,6 +53,152 @@ function buildDateList(from: Date, to: Date) {
   return list;
 }
 
+function toStringArray(value: unknown): string[] {
+  if (value == null) return [];
+  if (Array.isArray(value)) return value.map((item) => String(item));
+  return [String(value)];
+}
+
+function parseDutyDate(value: string): Date | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const dateOnlyMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) {
+    const year = Number(dateOnlyMatch[1]);
+    const month = Number(dateOnlyMatch[2]) - 1;
+    const day = Number(dateOnlyMatch[3]);
+    if ([year, month, day].some((n) => !Number.isFinite(n))) return null;
+    const date = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return null;
+  parsed.setUTCHours(0, 0, 0, 0);
+  return parsed;
+}
+
+async function handleOneOffCreation(
+  input: z.infer<typeof OneOffBody>,
+  context: { me: NonNullable<Awaited<ReturnType<typeof getActorByEmail>>>; email: string | null }
+) {
+  const { me, email } = context;
+  const slug = input.groupSlug.toLowerCase();
+
+  const group = await prisma.group.findUnique({
+    where: { slug },
+    select: { id: true, hostEmail: true, dutyManagePolicy: true },
+  });
+  if (!group) {
+    return NextResponse.json({ error: 'group not found' }, { status: 404 });
+  }
+
+  const membership = await prisma.groupMember.findFirst({
+    where: { groupId: group.id, userId: me.id },
+    select: { role: true },
+  });
+  const normalizedEmail = email?.toLowerCase() ?? '';
+  const role = membership?.role ?? (group.hostEmail?.toLowerCase() === normalizedEmail ? 'OWNER' : null);
+  if (!canManageDuties(group.dutyManagePolicy, role)) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
+
+  const type = await prisma.dutyType.findFirst({
+    where: { id: input.dutyTypeId, groupId: group.id },
+    select: { id: true },
+  });
+  if (!type) {
+    return NextResponse.json({ error: 'duty type not found' }, { status: 404 });
+  }
+
+  const parsedDates = input.dates
+    .map((value) => parseDutyDate(value))
+    .filter((value): value is Date => Boolean(value));
+  const uniqueDates = Array.from(
+    new Map(parsedDates.map((date) => [date.toISOString(), date] as const)).values()
+  );
+
+  if (uniqueDates.length === 0) {
+    return NextResponse.json({ error: 'invalid dates' }, { status: 400 });
+  }
+
+  const candidateAssignees = Array.from(
+    new Set((input.assigneeIds ?? []).map((value) => value.trim()).filter(Boolean))
+  );
+
+  let allowedAssigneeIds: string[] = [];
+  if (candidateAssignees.length > 0) {
+    const validMembers = await prisma.groupMember.findMany({
+      where: { groupId: group.id, userId: { in: candidateAssignees } },
+      select: { userId: true },
+    });
+    allowedAssigneeIds = Array.from(
+      new Set(
+        validMembers
+          .map((member) => member.userId)
+          .filter((value): value is string => Boolean(value))
+      )
+    );
+    if (allowedAssigneeIds.length === 0) {
+      return NextResponse.json({ error: 'members required' }, { status: 400 });
+    }
+  }
+
+  const existingAssignments = await prisma.dutyAssignment.findMany({
+    where: { groupId: group.id, typeId: type.id, date: { in: uniqueDates } },
+    select: { date: true, slotIndex: true },
+  });
+
+  const usedSlotMap = new Map<string, Set<number>>();
+  for (const assignment of existingAssignments) {
+    const key = assignment.date.toISOString();
+    if (!usedSlotMap.has(key)) {
+      usedSlotMap.set(key, new Set());
+    }
+    usedSlotMap.get(key)!.add(assignment.slotIndex);
+  }
+
+  const records: { groupId: string; typeId: string; date: Date; slotIndex: number; assigneeId: string | null }[] = [];
+  let assignCursor = 0;
+  for (const date of uniqueDates) {
+    const key = date.toISOString();
+    const slotSet = usedSlotMap.get(key) ?? new Set<number>();
+    for (let index = 0; index < input.slots; index += 1) {
+      let slotIndex = 0;
+      while (slotSet.has(slotIndex)) {
+        slotIndex += 1;
+      }
+      slotSet.add(slotIndex);
+      const assigneeId =
+        allowedAssigneeIds.length > 0
+          ? allowedAssigneeIds[assignCursor % allowedAssigneeIds.length]
+          : null;
+      records.push({
+        groupId: group.id,
+        typeId: type.id,
+        date: new Date(date.getTime()),
+        slotIndex,
+        assigneeId,
+      });
+      if (allowedAssigneeIds.length > 0) {
+        assignCursor += 1;
+      }
+    }
+    usedSlotMap.set(key, slotSet);
+  }
+
+  if (records.length === 0) {
+    return NextResponse.json({ ok: true, count: 0 });
+  }
+
+  const result = await prisma.dutyAssignment.createMany({
+    data: records,
+    skipDuplicates: true,
+  });
+
+  return NextResponse.json({ ok: true, count: result.count });
+}
+
 export async function POST(req: Request) {
   try {
     const session = await auth();
@@ -55,16 +209,63 @@ export async function POST(req: Request) {
     }
 
     const raw = await readBody(req);
-    const body = Body.parse(raw);
-    const toStrArray = (v: unknown): string[] => {
-      if (v == null) return [];
-      if (Array.isArray(v)) return v.map((item) => String(item));
-      return [String(v)];
-    };
+    const normalized = raw ?? {};
+    const dateCandidates = toStringArray((normalized as any).dates ?? (normalized as any).date);
+    const hasOneOffMarkers =
+      dateCandidates.length > 0 ||
+      'slots' in normalized ||
+      'slotCount' in normalized ||
+      'slotsPerDay' in normalized ||
+      'assigneeId' in normalized ||
+      'assigneeIds' in normalized;
 
-    const memberIds: string[] = toStrArray(body.memberIds);
+    if (hasOneOffMarkers) {
+      const groupSlugSource =
+        (normalized as any).groupSlug ?? (normalized as any).group ?? (normalized as any).slug ?? '';
+      const dutyTypeSource =
+        (normalized as any).dutyTypeId ??
+        (normalized as any).typeId ??
+        (normalized as any).type ??
+        (normalized as any).dutyType ??
+        '';
+      const slotsSource =
+        (normalized as any).slots ??
+        (normalized as any).slotCount ??
+        (normalized as any).slotsPerDay ??
+        undefined;
+      const slotsValue =
+        slotsSource === undefined || slotsSource === null || String(slotsSource).trim() === ''
+          ? undefined
+          : slotsSource;
+      const parsedOneOff = OneOffBody.safeParse({
+        groupSlug: String(groupSlugSource ?? '').trim(),
+        dutyTypeId: String(dutyTypeSource ?? '').trim(),
+        dates: dateCandidates.filter((value) => value && value.trim()).map((value) => value.trim()),
+        slots: slotsValue,
+        assigneeIds: toStringArray(
+          (normalized as any).assigneeIds ??
+            (normalized as any).assigneeId ??
+            (normalized as any).memberIds ??
+            (normalized as any).memberId ??
+            [],
+        )
+          .map((value) => value.trim())
+          .filter(Boolean),
+      });
+      if (!parsedOneOff.success) {
+        return NextResponse.json(
+          { error: 'invalid body', details: parsedOneOff.error.flatten() },
+          { status: 400 }
+        );
+      }
+      return handleOneOffCreation(parsedOneOff.data, { me, email });
+    }
 
-    const weekdaysRaw: string[] = toStrArray(body.weekdays);
+    const body = Body.parse(normalized);
+
+    const memberIds: string[] = toStringArray(body.memberIds);
+
+    const weekdaysRaw: string[] = toStringArray(body.weekdays);
     const weekdayNums: number[] = weekdaysRaw
       .map((value) => Number(value))
       .filter((n) => Number.isFinite(n) && n >= 0 && n <= 6);

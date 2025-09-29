@@ -19,8 +19,9 @@ const QuerySchema = z.object({
   groupSlug: z.string().min(1),
   deviceSlug: z.string().optional(),
   date: z.string().optional(),
-  from: z.coerce.date().optional(),
-  to: z.coerce.date().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  tz: z.string().optional(),
 })
 
 function parseDateOnly(value: string): Date | null {
@@ -29,10 +30,61 @@ function parseDateOnly(value: string): Date | null {
   const year = Number(m[1])
   const month = Number(m[2]) - 1
   const day = Number(m[3])
-  const date = new Date(year, month, day)
+  const date = new Date(Date.UTC(year, month, day))
   if (Number.isNaN(date.getTime())) return null
-  date.setHours(0, 0, 0, 0)
   return date
+}
+
+function isDateOnly(value: string | null | undefined): value is string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+}
+
+function getTimeZoneOffset(date: Date, timeZone: string) {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+    const parts = formatter.formatToParts(date)
+    const filled: Record<string, number> = {}
+    for (const part of parts) {
+      if (part.type !== 'literal') {
+        filled[part.type] = Number(part.value)
+      }
+    }
+    const asUTC = Date.UTC(
+      filled.year ?? date.getUTCFullYear(),
+      (filled.month ?? date.getUTCMonth() + 1) - 1,
+      filled.day ?? date.getUTCDate(),
+      filled.hour ?? 0,
+      filled.minute ?? 0,
+      filled.second ?? 0,
+    )
+    return (asUTC - date.getTime()) / 60000
+  } catch {
+    return 0
+  }
+}
+
+function startOfDayInTimeZone(value: string, timeZone: string): Date | null {
+  if (!isDateOnly(value)) return null
+  const [year, month, day] = value.split('-').map((part) => Number(part))
+  if (![year, month, day].every((n) => Number.isFinite(n))) return null
+  const utcMidnight = Date.UTC(year, month - 1, day, 0, 0, 0, 0)
+  const offsetMinutes = getTimeZoneOffset(new Date(utcMidnight), timeZone)
+  return new Date(utcMidnight - offsetMinutes * 60 * 1000)
+}
+
+function endOfDayInTimeZone(value: string, timeZone: string): Date | null {
+  const start = startOfDayInTimeZone(value, timeZone)
+  if (!start) return null
+  return new Date(start.getTime() + 24 * 60 * 60 * 1000)
 }
 
 function normalizePurpose(value?: string) {
@@ -50,12 +102,14 @@ export async function GET(req: Request) {
 
     const url = new URL(req.url)
     const mine = url.searchParams.get('mine') === '1'
+    const groupParam = url.searchParams.get('groupSlug') ?? url.searchParams.get('group') ?? ''
     const parsed = QuerySchema.safeParse({
-      groupSlug: url.searchParams.get('groupSlug') ?? '',
+      groupSlug: groupParam,
       deviceSlug: url.searchParams.get('deviceSlug') ?? undefined,
       date: url.searchParams.get('date') ?? undefined,
       from: url.searchParams.get('from') ?? undefined,
       to: url.searchParams.get('to') ?? undefined,
+      tz: url.searchParams.get('tz') ?? undefined,
     })
 
     if (!parsed.success) {
@@ -63,26 +117,54 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: flattened }, { status: 400 })
     }
 
-    const { groupSlug, deviceSlug, date, from, to } = parsed.data
+    const { groupSlug, deviceSlug, date, from, to, tz } = parsed.data
     const slug = groupSlug.toLowerCase()
     const deviceSlugNormalized = deviceSlug?.toLowerCase()
+    const timeZone = tz && tz.trim() ? tz.trim() : 'Asia/Tokyo'
 
     let rangeStart: Date | null = null
     let rangeEnd: Date | null = null
     if (date) {
-      const day = parseDateOnly(date)
-      if (!day) {
-        return NextResponse.json({ error: 'invalid date' }, { status: 400 })
+      if (isDateOnly(date)) {
+        const start = startOfDayInTimeZone(date, timeZone)
+        const end = endOfDayInTimeZone(date, timeZone)
+        if (!start || !end) {
+          return NextResponse.json({ error: 'invalid date' }, { status: 400 })
+        }
+        rangeStart = start
+        rangeEnd = end
+      } else {
+        const day = parseDateOnly(date)
+        if (!day) {
+          return NextResponse.json({ error: 'invalid date' }, { status: 400 })
+        }
+        rangeStart = day
+        rangeEnd = new Date(day)
+        rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 1)
       }
-      rangeStart = day
-      rangeEnd = new Date(day)
-      rangeEnd.setDate(rangeEnd.getDate() + 1)
     } else {
       if (from) {
-        rangeStart = new Date(from)
+        if (isDateOnly(from)) {
+          rangeStart = startOfDayInTimeZone(from, timeZone)
+          if (rangeStart && !to) {
+            rangeEnd = new Date(rangeStart.getTime() + 24 * 60 * 60 * 1000)
+          }
+        } else {
+          const parsedFrom = new Date(from)
+          if (!Number.isNaN(parsedFrom.getTime())) {
+            rangeStart = parsedFrom
+          }
+        }
       }
       if (to) {
-        rangeEnd = new Date(to)
+        if (isDateOnly(to)) {
+          rangeEnd = endOfDayInTimeZone(to, timeZone)
+        } else {
+          const parsedTo = new Date(to)
+          if (!Number.isNaN(parsedTo.getTime())) {
+            rangeEnd = parsedTo
+          }
+        }
       }
     }
 
@@ -115,10 +197,20 @@ export async function GET(req: Request) {
     const where: Prisma.ReservationWhereInput = {
       device: deviceWhere,
     }
-    if (rangeStart) {
+    if (rangeStart && rangeEnd) {
+      where.AND = [
+        {
+          NOT: {
+            OR: [
+              { end: { lte: rangeStart } },
+              { start: { gte: rangeEnd } },
+            ],
+          },
+        },
+      ]
+    } else if (rangeStart) {
       where.end = { gt: rangeStart }
-    }
-    if (rangeEnd) {
+    } else if (rangeEnd) {
       where.start = { lt: rangeEnd }
     }
     if (mine) {
@@ -171,7 +263,7 @@ export async function GET(req: Request) {
       userId: reservation.user?.id ?? null,
     }))
 
-    return NextResponse.json({ reservations: payload })
+    return NextResponse.json({ reservations: payload, data: payload })
   } catch (error) {
     console.error('list reservations failed', error)
     return NextResponse.json({ error: 'list reservations failed' }, { status: 500 })

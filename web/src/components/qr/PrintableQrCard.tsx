@@ -1,13 +1,13 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Props = {
   iconSrc: string;
   qrDataUrl: string;
   title: string;
-  code: string;
+  code?: string;
   note?: string;
   cardWidthPx?: number;
 };
@@ -82,6 +82,16 @@ export default function PrintableQrCard({
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleDownload = useCallback(async () => {
     const card = cardRef.current;
@@ -203,6 +213,35 @@ export default function PrintableQrCard({
     }
   }, [iconSrc, qrDataUrl, title]);
 
+  const copyCode = useCallback(async () => {
+    if (!code) return;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = code;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+      copyTimerRef.current = window.setTimeout(() => {
+        setCopied(false);
+        copyTimerRef.current = null;
+      }, 1200);
+    } catch (error) {
+      console.error("copy failed", error);
+    }
+  }, [code]);
+
   return (
     <div className="space-y-3">
       <div
@@ -237,17 +276,19 @@ export default function PrintableQrCard({
             {title}
           </div>
           <div className="mt-1 flex items-center justify-center gap-2">
-            <code className="text-sm text-gray-700 break-all select-all" data-qr-card-slug>
+            <code className="text-sm text-gray-700 font-mono break-all select-all" data-qr-card-slug>
               {code}
             </code>
-            <button
-              type="button"
-              onClick={() => navigator.clipboard?.writeText(code)}
-              className="text-xs px-2 py-1 rounded border bg-gray-50 hover:bg-gray-100"
-              aria-label="コードをコピー"
-            >
-              コピー
-            </button>
+            {code ? (
+              <button
+                type="button"
+                onClick={copyCode}
+                className="px-2 py-1 text-xs rounded border bg-white hover:bg-gray-50"
+                aria-label="コードをコピー"
+              >
+                {copied ? "✓ コピー" : "コピー"}
+              </button>
+            ) : null}
           </div>
           {note ? (
             <div className="text-xs text-gray-400" data-qr-card-note>

@@ -22,6 +22,59 @@ const Body = z.object({
   avoidConsecutive: z.boolean().optional(),
 });
 
+async function readBody(req: Request) {
+  try {
+    return await req.json();
+  } catch {
+    const formData = await req.formData();
+    const acc: Record<string, any> = {};
+    formData.forEach((value, key) => {
+      if (key in acc) {
+        acc[key] = Array.isArray(acc[key]) ? [...acc[key], value] : [acc[key], value];
+      } else {
+        acc[key] = value;
+      }
+    });
+    return acc;
+  }
+}
+
+function toStringArray(value: unknown): string[] {
+  if (value == null) return [];
+  if (Array.isArray(value)) return value.map((item) => String(item));
+  return [String(value)];
+}
+
+function toNumberArray(value: unknown): number[] {
+  return toStringArray(value)
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item));
+}
+
+function parseOptionalNumber(value: unknown): number | undefined {
+  if (value === undefined || value === null) return undefined;
+  const trimmed = String(value).trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseOptionalBoolean(value: unknown): boolean | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'boolean') return value;
+  const text = String(value).trim().toLowerCase();
+  if (!text) return undefined;
+  if (['true', '1', 'on', 'yes'].includes(text)) return true;
+  if (['false', '0', 'off', 'no'].includes(text)) return false;
+  return undefined;
+}
+
+function sanitizeOptionalString(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  const text = String(value).trim();
+  return text ? text : undefined;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await auth();
@@ -30,7 +83,42 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
-    const input = Body.parse(await req.json());
+    const raw = await readBody(req);
+    const normalized = {
+      typeId:
+        (raw as any)?.typeId ??
+        (raw as any)?.dutyTypeId ??
+        (raw as any)?.type ??
+        '',
+      startDate:
+        (raw as any)?.startDate ??
+        (raw as any)?.start ??
+        (raw as any)?.from ??
+        '',
+      endDate:
+        (raw as any)?.endDate ??
+        (raw as any)?.end ??
+        (raw as any)?.to ??
+        '',
+      byWeekday: toNumberArray((raw as any)?.byWeekday ?? (raw as any)?.weekdays),
+      slotsPerDay: parseOptionalNumber((raw as any)?.slotsPerDay ?? (raw as any)?.slots ?? (raw as any)?.slotCount),
+      startTime: sanitizeOptionalString((raw as any)?.startTime ?? (raw as any)?.fromTime),
+      endTime: sanitizeOptionalString((raw as any)?.endTime ?? (raw as any)?.toTime),
+      includeMemberIds: toStringArray(
+        (raw as any)?.includeMemberIds ??
+          (raw as any)?.includeMembers ??
+          (raw as any)?.memberIds ??
+          []
+      ).filter((value) => value.trim()),
+      excludeMemberIds: toStringArray(
+        (raw as any)?.excludeMemberIds ??
+          (raw as any)?.excludeMembers ??
+          []
+      ).filter((value) => value.trim()),
+      avoidConsecutive: parseOptionalBoolean((raw as any)?.avoidConsecutive),
+    };
+
+    const input = Body.parse(normalized);
     const type = await prisma.dutyType.findUnique({
       where: { id: input.typeId },
       select: { groupId: true, kind: true },
