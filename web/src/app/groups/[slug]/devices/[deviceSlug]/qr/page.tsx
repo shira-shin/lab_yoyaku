@@ -22,18 +22,27 @@ export default async function DeviceQrPage({
   const targetUrl = absUrl(`/groups/${params.slug}/devices/${params.deviceSlug}`);
   const qrDataUrl = await makeQrDataUrl(targetUrl);
 
+  const deviceCode =
+    device?.code ??
+    device?.shortCode ??
+    device?.deviceCode ??
+    device?.publicCode ??
+    device?.id ??
+    device?.slug ??
+    params.deviceSlug;
+
+  const title = device?.name ?? "機器";
+
   return (
     <div className="mx-auto max-w-3xl p-6">
-      <h1 className="text-xl font-semibold mb-4">
-        QRコード（{device?.name ?? "機器"}）
-      </h1>
+      <h1 className="text-xl font-semibold mb-4">QRコード（{title}）</h1>
 
       <PrintableQrCard
         // SVG/PNG どちらでも：存在する方に合わせて
         iconSrc="/brand/labyoyaku-icon.svg"
         qrDataUrl={qrDataUrl}
-        title={device?.name ?? "機器"}
-        code={device?.slug ?? params.deviceSlug}
+        title={title}
+        code={deviceCode}
         note={group?.name ? `グループ：${group.name}` : undefined}
       />
     </div>
