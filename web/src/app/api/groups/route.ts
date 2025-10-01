@@ -95,7 +95,8 @@ export async function POST(req: Request) {
     const passwordRaw = String((body as any).password || '').trim()
     let passcode: string | null = null
     if (passwordRaw) {
-      const rounds = Number(process.env.BCRYPT_ROUNDS ?? 10)
+      const roundsRaw = parseInt(process.env.BCRYPT_ROUNDS ?? '10', 10)
+      const rounds = Number.isNaN(roundsRaw) ? 10 : roundsRaw
       passcode = await bcrypt.hash(passwordRaw, rounds)
     }
     const reserveFrom = parseDate((body as any).startAt)

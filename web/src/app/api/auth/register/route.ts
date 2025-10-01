@@ -32,7 +32,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok:false, error:'email already registered' }, { status:409 });
   }
 
-  const rounds = Number(process.env.BCRYPT_ROUNDS ?? 10);
+  const roundsRaw = parseInt(process.env.BCRYPT_ROUNDS ?? '10', 10);
+  const rounds = Number.isNaN(roundsRaw) ? 10 : roundsRaw;
   const salt = await bcrypt.genSalt(rounds);
   const passwordHash = await bcrypt.hash(normalizedPassword, salt);
 
