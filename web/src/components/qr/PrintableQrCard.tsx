@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 type Props = {
   iconSrc: string;
@@ -82,16 +82,6 @@ export default function PrintableQrCard({
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const copyTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (copyTimerRef.current !== null) {
-        window.clearTimeout(copyTimerRef.current);
-      }
-    };
-  }, []);
 
   const handleDownload = useCallback(async () => {
     const card = cardRef.current;
@@ -229,14 +219,7 @@ export default function PrintableQrCard({
         document.execCommand("copy");
         document.body.removeChild(textarea);
       }
-      setCopied(true);
-      if (copyTimerRef.current !== null) {
-        window.clearTimeout(copyTimerRef.current);
-      }
-      copyTimerRef.current = window.setTimeout(() => {
-        setCopied(false);
-        copyTimerRef.current = null;
-      }, 1200);
+      alert("コードをコピーしました");
     } catch (error) {
       console.error("copy failed", error);
     }
@@ -271,27 +254,33 @@ export default function PrintableQrCard({
           </div>
         </div>
 
-        <div className="mt-6 text-center space-y-1" data-qr-card-text>
+        <div className="mt-6 text-center" data-qr-card-text>
           <div className="text-xl font-semibold tracking-wide" data-qr-card-title>
             {title}
           </div>
-          <div className="mt-1 flex items-center justify-center gap-2">
-            <code className="text-sm text-gray-700 font-mono break-all select-all" data-qr-card-slug>
+
+          <div className="mt-1 inline-flex items-center gap-2">
+            <code
+              className="px-2 py-0.5 rounded bg-gray-100 text-gray-800 text-[13px] font-mono tracking-wide select-all"
+              style={{ wordBreak: "normal", whiteSpace: "nowrap" }}
+              title={code}
+              data-qr-card-slug
+            >
               {code}
             </code>
             {code ? (
               <button
                 type="button"
+                className="px-2 py-1 text-xs rounded border hover:bg-gray-50"
                 onClick={copyCode}
-                className="px-2 py-1 text-xs rounded border bg-white hover:bg-gray-50"
-                aria-label="コードをコピー"
               >
-                {copied ? "✓ コピー" : "コピー"}
+                コピー
               </button>
             ) : null}
           </div>
+
           {note ? (
-            <div className="text-xs text-gray-400" data-qr-card-note>
+            <div className="text-xs text-gray-400 mt-1" data-qr-card-note>
               {note}
             </div>
           ) : null}

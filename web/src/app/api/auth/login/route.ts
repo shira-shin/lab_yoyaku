@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
-import { findUserByEmail, hashPassword } from '@/lib/auth';
+import { findUserByEmail } from '@/lib/auth';
 import { setSessionCookie } from '@/lib/auth/cookies';
 
 const JWT_SECRET = new TextEncoder().encode(
@@ -40,15 +40,12 @@ export async function POST(req: Request) {
 
   const storedHash = user.passwordHash ?? (user as any).passHash ?? '';
   let ok = false;
-  if (storedHash.startsWith('$2')) {
+  if (storedHash) {
     try {
       ok = await bcrypt.compare(password, storedHash);
     } catch {
       ok = false;
     }
-  }
-  if (!ok && storedHash) {
-    ok = storedHash === hashPassword(password);
   }
 
   if (!ok) {

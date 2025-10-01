@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-type DeviceOption = { id: string; name: string };
+type DeviceOption = { id: string; slug: string; name: string };
 
 type Props = {
   slug: string;
@@ -13,14 +13,14 @@ type Props = {
 
 export default function InlineReservationForm({ slug, date, devices }: Props) {
   const router = useRouter();
-  const [deviceId, setDeviceId] = useState(devices[0]?.id ?? '');
+  const [deviceSlug, setDeviceSlug] = useState(devices[0]?.slug ?? '');
   const [start, setStart] = useState(`${date}T13:00`);
   const [end, setEnd] = useState(`${date}T14:00`);
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    if (!deviceId) {
+    if (!deviceSlug) {
       alert('機器を選択してください');
       return;
     }
@@ -31,16 +31,16 @@ export default function InlineReservationForm({ slug, date, devices }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           groupSlug: slug,
-          deviceId,
-          startsAt: new Date(start).toISOString(),
-          endsAt: new Date(end).toISOString(),
+          deviceSlug,
+          start: start.replace('T', ' ').replace(/-/g, '/'),
+          end: end.replace('T', ' ').replace(/-/g, '/'),
           note,
         }),
         credentials: 'same-origin',
       });
+      const json = await res.json().catch(() => ({} as any));
       if (!res.ok) {
-        const j = await res.json().catch(() => ({} as any));
-        throw new Error(j?.error ?? res.statusText);
+        throw new Error(json?.message ?? json?.error ?? res.statusText);
       }
       router.refresh();
     } catch (error) {
@@ -60,12 +60,12 @@ export default function InlineReservationForm({ slug, date, devices }: Props) {
           <label className="space-y-1">
             <span className="text-sm text-gray-600">機器</span>
             <select
-              value={deviceId}
-              onChange={(e) => setDeviceId(e.target.value)}
+              value={deviceSlug}
+              onChange={(e) => setDeviceSlug(e.target.value)}
               className="w-full border rounded-lg p-2"
             >
               {devices.map((d) => (
-                <option key={d.id} value={d.id}>
+                <option key={d.id} value={d.slug}>
                   {d.name}
                 </option>
               ))}

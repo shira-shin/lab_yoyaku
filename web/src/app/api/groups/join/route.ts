@@ -3,10 +3,12 @@ export const revalidate = 0
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
 import { prisma } from '@/src/lib/prisma'
-import { hashPassword, readUserFromCookie } from '@/lib/auth'
+import { readUserFromCookie } from '@/lib/auth'
+import { normalizeSlugInput } from '@/lib/slug'
 
-const normalize = (value: string) => value.trim().toLowerCase()
+const normalize = (value: string) => normalizeSlugInput(value)
 
 export async function POST(req: Request) {
   try {
@@ -26,7 +28,7 @@ export async function POST(req: Request) {
 
     const slugRaw = String((body as any).slug || '').trim()
     const queryRaw = String((body as any).query || slugRaw).trim()
-    const passwordRaw = String((body as any).password || '')
+    const passwordRaw = String((body as any).password || '').trim()
     if (!queryRaw) {
       return NextResponse.json({ ok: false, error: 'query is required' }, { status: 400 })
     }
@@ -47,8 +49,8 @@ export async function POST(req: Request) {
     }
 
     if (group.passcode) {
-      const hashed = hashPassword(passwordRaw)
-      if (hashed !== group.passcode) {
+      const ok = await bcrypt.compare(passwordRaw, group.passcode)
+      if (!ok) {
         return NextResponse.json({ ok: false, error: 'wrong password' }, { status: 403 })
       }
     }

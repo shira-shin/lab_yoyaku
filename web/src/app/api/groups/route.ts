@@ -3,8 +3,9 @@ export const revalidate = 0
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
 import { prisma } from '@/src/lib/prisma'
-import { readUserFromCookie, hashPassword } from '@/lib/auth'
+import { readUserFromCookie } from '@/lib/auth'
 import { makeSlug } from '@/lib/slug'
 import type { Prisma } from '@prisma/client'
 
@@ -91,8 +92,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'slug already exists' }, { status: 409 })
     }
 
-    const passwordRaw = String((body as any).password || '')
-    const passcode = passwordRaw ? hashPassword(passwordRaw) : null
+    const passwordRaw = String((body as any).password || '').trim()
+    let passcode: string | null = null
+    if (passwordRaw) {
+      const rounds = Number(process.env.BCRYPT_ROUNDS ?? 10)
+      passcode = await bcrypt.hash(passwordRaw, rounds)
+    }
     const reserveFrom = parseDate((body as any).startAt)
     const reserveTo = parseDate((body as any).endAt)
     const memoValue = String((body as any).memo || '').trim()

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEventHandler, useMemo, useState } from "react";
+import { FormEventHandler, useCallback, useMemo, useState } from "react";
 
 type DutyTypeOption = { id: string; name: string };
 type MemberOption = { id: string; displayName: string; email?: string };
@@ -50,6 +50,8 @@ export default function DutiesManager({ groupSlug, dutyTypes, members }: Props) 
       ) : (
         <WeeklyRuleForm groupSlug={groupSlug} dutyTypes={dutyTypes} members={members} />
       )}
+
+      <BatchDutyPicker members={members} />
     </div>
   );
 }
@@ -203,6 +205,35 @@ function OneOffForm({ groupSlug, dutyTypes, members }: Props) {
         <FeedbackMessage feedback={feedback} />
       </div>
     </form>
+  );
+}
+
+function BatchDutyPicker({ members }: { members: MemberOption[] }) {
+  const submitBatchDuty = useCallback(async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    alert("一括追加の登録は現在準備中です。先に週次ルールまたは単発追加をご利用ください。");
+  }, []);
+
+  return (
+    <div className="mt-6 p-4 rounded border">
+      <div className="font-medium mb-2">複数日/週で当番を追加</div>
+      <div className="flex flex-wrap items-center gap-2">
+        <input type="week" name="weeks" multiple className="border rounded px-2 py-1" />
+        <input type="date" name="days" multiple className="border rounded px-2 py-1" />
+        <select name="member" className="border rounded px-2 py-1">
+          <option value="">担当者を選択</option>
+          {members.map((member) => (
+            <option key={member.id} value={member.id}>
+              {member.displayName}
+            </option>
+          ))}
+        </select>
+        <button className="px-3 py-1.5 rounded bg-blue-600 text-white" onClick={submitBatchDuty}>
+          一括追加
+        </button>
+      </div>
+      <p className="text-xs text-gray-500 mt-1">週(YYYY-Www) または日付を複数選択して一括登録します。</p>
+    </div>
   );
 }
 

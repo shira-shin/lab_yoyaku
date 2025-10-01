@@ -3,13 +3,15 @@ export const revalidate = 0
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
 import { prisma } from '@/src/lib/prisma'
-import { hashPassword, readUserFromCookie } from '@/lib/auth'
+import { readUserFromCookie } from '@/lib/auth'
+import { normalizeSlugInput } from '@/lib/slug'
 
 function normalize(value: string | string[] | undefined) {
   if (!value) return ''
   const str = Array.isArray(value) ? value[0] : value
-  return String(str ?? '').trim().toLowerCase()
+  return normalizeSlugInput(String(str ?? ''))
 }
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
@@ -52,8 +54,8 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
     }
 
     if (group.passcode) {
-      const hashed = hashPassword(passcode || '')
-      if (hashed !== group.passcode) {
+      const ok = await bcrypt.compare(passcode || '', group.passcode)
+      if (!ok) {
         return NextResponse.json({ error: 'invalid passcode' }, { status: 401 })
       }
     }
