@@ -16,7 +16,7 @@ let db: any = null;
 //     id TEXT PRIMARY KEY,
 //     email TEXT UNIQUE NOT NULL,
 //     name TEXT,
-//     passHash TEXT NOT NULL
+//     passwordHash TEXT NOT NULL
 //   )`);
 // } catch (err) {
 //   console.warn('Failed to load better-sqlite3, using in-memory DB');
@@ -25,7 +25,7 @@ let db: any = null;
 
 export async function loadUsers(): Promise<UserRecord[]> {
   if (db) {
-    return db.prepare('SELECT id, email, name, passHash FROM users').all() as UserRecord[];
+    return db.prepare('SELECT id, email, name, passwordHash FROM users').all() as UserRecord[];
   }
   return loadDB().users;
 }
@@ -33,8 +33,8 @@ export async function loadUsers(): Promise<UserRecord[]> {
 export async function saveUser(user: UserRecord): Promise<void> {
   if (db) {
     db
-      .prepare('INSERT INTO users (id, email, name, passHash) VALUES (?, ?, ?, ?)')
-      .run(user.id, user.email, user.name, user.passHash);
+      .prepare('INSERT INTO users (id, email, name, passwordHash) VALUES (?, ?, ?, ?)')
+      .run(user.id, user.email, user.name, user.passwordHash);
   } else {
     const dbData = loadDB();
     dbData.users.push(user);

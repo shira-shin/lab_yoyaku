@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'INVALID_LOGIN' }, { status: 401 });
   }
 
-  const storedHash = user.passHash ?? '';
+  const storedHash = user.passwordHash ?? (user as any).passHash ?? '';
   let ok = false;
   if (storedHash.startsWith('$2')) {
     try {
