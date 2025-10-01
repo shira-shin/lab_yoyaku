@@ -77,8 +77,8 @@ export async function POST(req: Request) {
       data: {
         groupId: group.id,
         deviceId,
-        startAt: new Date(startIso),
-        endAt: new Date(endIso),
+        start: new Date(startIso),
+        end: new Date(endIso),
         note: body.note ?? "",
       },
       select: { id: true },
