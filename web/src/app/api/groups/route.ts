@@ -97,7 +97,8 @@ export async function POST(req: Request) {
     if (passwordRaw) {
       const roundsRaw = parseInt(process.env.BCRYPT_ROUNDS ?? '10', 10)
       const rounds = Number.isNaN(roundsRaw) ? 10 : roundsRaw
-      passcode = await bcrypt.hash(passwordRaw, rounds)
+      const salt = await bcrypt.genSalt(rounds)
+      passcode = await bcrypt.hash(passwordRaw, salt)
     }
     const reserveFrom = parseDate((body as any).startAt)
     const reserveTo = parseDate((body as any).endAt)
