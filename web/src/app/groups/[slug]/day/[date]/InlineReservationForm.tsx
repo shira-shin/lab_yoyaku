@@ -44,7 +44,13 @@ export default function InlineReservationForm({ slug, date, devices }: Props) {
       }
       router.refresh();
     } catch (error) {
-      alert(`作成失敗: ${(error as Error).message}`);
+      const msg =
+        (error &&
+          typeof error === 'object' &&
+          'message' in error &&
+          (error as any).message) ||
+        (typeof error === 'string' ? error : '');
+      alert(`作成失敗: ${msg || '不明なエラー'}`);
     } finally {
       setSaving(false);
     }
