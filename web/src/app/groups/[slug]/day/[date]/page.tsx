@@ -14,9 +14,10 @@ import InlineReservationForm from './InlineReservationForm';
 
 type Reservation = {
   id: string;
-  startsAt: string;
-  endsAt: string;
-  device: { name: string };
+  startAt: string;
+  endAt: string;
+  device: { name: string; slug?: string };
+  note?: string;
 };
 
 function isValidDateFormat(value: string) {
@@ -31,11 +32,6 @@ function jstRange(date: string) {
   const start = new Date(Date.UTC(year, month, day, -9, 0, 0, 0));
   const end = new Date(Date.UTC(year, month, day + 1, -9, 0, 0, 0));
   return { start, end };
-}
-
-function toRange(date: string) {
-  const { start, end } = jstRange(date);
-  return { from: start.toISOString(), to: end.toISOString() };
 }
 
 function formatTime(value: string) {
@@ -72,15 +68,16 @@ export default async function DayPage({
     notFound();
   }
 
-  const { from, to } = toRange(date);
-  const searchParams = new URLSearchParams({
-    groupSlug: normalizedSlug,
-    from,
-    to,
-  });
+  const dayStart = `${date}T00:00:00`;
+  const dayEnd = `${date}T23:59:59`;
+  const reservationsUrl = `/api/groups/${encodeURIComponent(
+    normalizedSlug,
+  )}/reservations?from=${encodeURIComponent(dayStart)}&to=${encodeURIComponent(
+    dayEnd,
+  )}`;
 
   const [reservationsRes, devicesRes] = await Promise.all([
-    serverFetch(`/api/reservations?${searchParams.toString()}`),
+    serverFetch(reservationsUrl),
     serverFetch(`/api/devices?groupSlug=${encodeURIComponent(normalizedSlug)}`),
   ]);
 
@@ -102,26 +99,27 @@ export default async function DayPage({
     throw new Error('機器情報の取得に失敗しました');
   }
 
-  const payload = await reservationsRes.json();
+  const payload = await reservationsRes.json().catch(() => ({}));
   const source = payload?.data ?? payload?.reservations ?? [];
   const listRaw = Array.isArray(source) ? (source as Reservation[]) : [];
   const list = listRaw
     .map((item) => ({
       ...item,
-      startsAt: item.startsAt ?? (item as any).start ?? '',
-      endsAt: item.endsAt ?? (item as any).end ?? '',
+      startAt: item.startAt ?? item.startsAt ?? (item as any).start ?? '',
+      endAt: item.endAt ?? item.endsAt ?? (item as any).end ?? '',
     }))
-    .filter((item) => item.startsAt && item.endsAt && item.device?.name)
-    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+    .filter((item) => item.startAt && item.endAt && item.device?.name)
+    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
 
   const devicesJson = await devicesRes.json().catch(() => ({} as any));
   const devicesSource = Array.isArray(devicesJson?.devices) ? devicesJson.devices : [];
   const devices = devicesSource
     .map((device: any) => ({
       id: device.id ?? device.deviceId ?? '',
+      slug: device.slug ?? device.deviceSlug ?? device.id ?? '',
       name: device.name ?? '',
     }))
-    .filter((device) => device.id && device.name);
+    .filter((device) => device.id && device.slug && device.name);
 
   const duties = await fetchDuties(normalizedSlug, date);
   const groupForDuties = await prisma.group.findUnique({
@@ -208,7 +206,7 @@ export default async function DayPage({
               <li key={r.id} className="rounded-xl border p-3">
                 <div className="font-medium">{r.device.name}</div>
                 <div className="text-sm text-gray-600">
-                  {formatTime(r.startsAt)} 〜 {formatTime(r.endsAt)}
+                  {formatTime(r.startAt)} 〜 {formatTime(r.endAt)}
                 </div>
               </li>
             ))}

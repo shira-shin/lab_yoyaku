@@ -1,8 +1,14 @@
 import { uuid } from './uuid';
 
+export const normalizeSlugInput = (value: string) =>
+  value
+    .normalize('NFKC')
+    .trim()
+    .toLowerCase();
+
 export const makeSlug = (name: string) => {
-  const s = name
-    .toLowerCase()
+  const normalized = normalizeSlugInput(name);
+  const s = normalized
     .normalize('NFKD')
     .replace(/[^\w]+/g, '-')
     .replace(/^-+|-+$/g, '')
