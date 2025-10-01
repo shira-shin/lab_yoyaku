@@ -1,80 +1,53 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/src/lib/prisma";
-import { normalizeSlugInput } from "@/lib/slug";
+import { prisma } from "@/lib/prisma";
 
-function parseDayParam(input: string | null): { start: Date; end: Date } | null {
-  if (!input) return null;
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-
-  const dayStart = new Date(`${trimmed}T00:00:00.000Z`);
-  if (Number.isNaN(dayStart.getTime())) {
-    return null;
-  }
-  const dayEnd = new Date(dayStart);
-  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
-
-  return { start: dayStart, end: dayEnd };
-}
-
-function parseFromIso(input: string | null): { start: Date; end: Date } | null {
-  if (!input) return null;
-  const date = new Date(input);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-  const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0, 0));
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + 1);
-  return { start, end };
-}
-
+// ?date=YYYY-MM-DD （無ければ今日）で1日窓を作り、グループ配下の全デバイスの重なり予約を返す
 export async function GET(
-  req: Request,
-  { params }: { params: { slug: string } },
+  _req: Request,
+  { params }: { params: { slug: string } }
 ) {
-  const url = new URL(req.url);
-  const dayParam =
-    url.searchParams.get("date") ?? url.searchParams.get("day") ?? url.searchParams.get("on");
-  const fromParam = url.searchParams.get("from");
-  const toParam = url.searchParams.get("to");
+  try {
+    const group = await prisma.group.findUnique({
+      where: { slug: params.slug },
+      select: { id: true },
+    });
+    if (!group) {
+      return NextResponse.json({ error: "グループが見つかりません" }, { status: 404 });
+    }
 
-  const slug = normalizeSlugInput(params.slug ?? "");
-  const group = await prisma.group.findUnique({
-    where: { slug },
-    select: { id: true },
-  });
-  if (!group) {
-    return NextResponse.json({ message: "group not found" }, { status: 404 });
+    const url = new URL(_req.url);
+    const dayStr = url.searchParams.get("date"); // "2025-10-09" など
+    const base = dayStr ? new Date(`${dayStr}T00:00:00.000Z`) : new Date();
+    const start = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate(), 0, 0, 0));
+    const end = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate() + 1, 0, 0, 0));
+
+    // ★ グループの絞り込みは Reservation 直下ではなく Device 経由
+    const rows = await prisma.reservation.findMany({
+      where: {
+        device: { groupId: group.id },
+        NOT: [{ end: { lte: start } }],
+        AND: [{ start: { lt: end } }],
+      },
+      orderBy: { start: "asc" },
+      select: {
+        id: true,
+        start: true,
+        end: true,
+        device: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    // フロントが期待するキー名（startAt/endAt）に合わせて整形
+    const data = rows.map((r) => ({
+      id: r.id,
+      startAt: r.start,
+      endAt: r.end,
+      device: r.device,
+    }));
+
+    return NextResponse.json({ data }, { status: 200 });
+  } catch (e: any) {
+    const msg = e?.message ?? "予約取得に失敗しました";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
-
-  const range =
-    parseDayParam(dayParam) ?? parseFromIso(fromParam) ?? parseFromIso(toParam);
-  if (!range) {
-    return NextResponse.json({ message: "invalid date" }, { status: 400 });
-  }
-
-  const rows = await prisma.reservation.findMany({
-    where: {
-      device: { group: { slug } },
-      NOT: [{ end: { lte: range.start } }],
-      AND: [{ start: { lt: range.end } }],
-    },
-    orderBy: { start: "asc" },
-    select: {
-      id: true,
-      start: true,
-      end: true,
-      device: { select: { id: true, name: true, slug: true } },
-    },
-  });
-
-  const data = rows.map((reservation) => ({
-    id: reservation.id,
-    startAt: reservation.start.toISOString(),
-    endAt: reservation.end.toISOString(),
-    device: reservation.device,
-  }));
-
-  return NextResponse.json({ data });
 }

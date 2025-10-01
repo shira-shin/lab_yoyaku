@@ -1,100 +1,86 @@
 import { NextResponse } from "next/server";
-import { z } from "@/lib/zod-helpers";
-import { prisma } from "@/src/lib/prisma";
-import { normalizeSlugInput } from "@/lib/slug";
+import { z } from "@/lib/zod-shim";
+import { prisma } from "@/lib/prisma";
 
 const Body = z.object({
-  groupSlug: z.string(),
+  groupSlug: z.string().min(1),
+  // どちらかが来る想定。どちらも来たら deviceId を優先
   deviceId: z.string().optional(),
   deviceSlug: z.string().optional(),
-  start: z.string(),
-  end: z.string(),
+  start: z.string().min(1), // ISO or YYYY-MM-DD HH:mm
+  end: z.string().min(1),
 });
 
 function parseFlexibleDate(input: string): Date {
-  const trimmed = (input ?? "").trim();
-  if (!trimmed) {
-    throw new Error("Invalid datetime");
+  const s = (input ?? "").trim();
+  // Date コンストラクタで素直に解釈（API 側は UTC/ISO を前提）
+  const d = new Date(s);
+  if (isNaN(d.getTime())) {
+    throw new Error(`Invalid date: ${input}`);
   }
-  const replaced = trimmed.replace(/\//g, "-");
-  const spaced = replaced.replace(/\s+/g, " ");
-  const withTime = /^\d{4}-\d{2}-\d{2}$/.test(spaced)
-    ? `${spaced}T00:00:00`
-    : /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}$/.test(spaced)
-    ? spaced.replace(" ", "T") + ":00"
-    : spaced.includes("T")
-    ? spaced
-    : spaced.replace(" ", "T");
-  const date = new Date(withTime);
-  if (Number.isNaN(date.getTime())) {
-    throw new Error("Invalid datetime");
-  }
-  return date;
-}
-
-function toIso(input: string): string {
-  return parseFlexibleDate(input).toISOString();
+  return d;
 }
 
 export async function POST(req: Request) {
   try {
-    const { groupSlug: rawGroupSlug, deviceId, deviceSlug, start, end } = Body.parse(
-      await req.json(),
-    );
+    const raw = await req.json();
+    const body = Body.parse(raw);
 
-    const groupSlug = normalizeSlugInput(rawGroupSlug ?? "");
     const group = await prisma.group.findUnique({
-      where: { slug: groupSlug },
+      where: { slug: body.groupSlug },
       select: { id: true },
     });
     if (!group) {
-      return NextResponse.json({ message: "group not found" }, { status: 404 });
+      return NextResponse.json({ error: "グループが見つかりません" }, { status: 404 });
     }
 
-    let normalizedDeviceId: string | null = deviceId ?? null;
-    if (normalizedDeviceId) {
-      const device = await prisma.device.findFirst({
-        where: { id: normalizedDeviceId, groupId: group.id },
-        select: { id: true },
-      });
-      if (!device) {
-        return NextResponse.json({ message: "device not found" }, { status: 404 });
-      }
-      normalizedDeviceId = device.id;
-    } else if (deviceSlug) {
-      const device = await prisma.device.findFirst({
-        where: { slug: deviceSlug, groupId: group.id },
-        select: { id: true },
-      });
-      if (!device) {
-        return NextResponse.json({ message: "device not found" }, { status: 404 });
-      }
-      normalizedDeviceId = device.id;
+    // デバイス特定（id or slug）＋同一グループ所属チェック
+    const device = await prisma.device.findFirst({
+      where: {
+        AND: [
+          body.deviceId ? { id: body.deviceId } : {},
+          body.deviceSlug ? { slug: body.deviceSlug } : {},
+          { groupId: group.id },
+        ],
+      },
+      select: { id: true },
+    });
+    if (!device) {
+      return NextResponse.json({ error: "デバイスが見つからないか、グループ外です" }, { status: 400 });
     }
 
-    if (!normalizedDeviceId) {
-      return NextResponse.json(
-        { message: "deviceId or deviceSlug required" },
-        { status: 400 },
-      );
+    const startAt = parseFlexibleDate(body.start);
+    const endAt = parseFlexibleDate(body.end);
+    if (!(startAt < endAt)) {
+      return NextResponse.json({ error: "開始は終了より前である必要があります" }, { status: 400 });
     }
 
-    const startIso = toIso(start);
-    const endIso = toIso(end);
+    // 予約重複チェック（同デバイス、時間重なり）
+    const overlap = await prisma.reservation.findFirst({
+      where: {
+        deviceId: device.id,
+        NOT: [{ end: { lte: startAt } }],
+        AND: [{ start: { lt: endAt } }],
+      },
+      select: { id: true },
+    });
+    if (overlap) {
+      return NextResponse.json({ error: "同時間帯に既存の予約があります" }, { status: 409 });
+    }
 
+    // ★ ここが本題: deviceId 直書きではなく、リレーション connect を使う
     const created = await prisma.reservation.create({
       data: {
-        deviceId: normalizedDeviceId,
-        start: new Date(startIso),
-        end: new Date(endIso),
+        start: startAt,
+        end: endAt,
+        device: { connect: { id: device.id } },
       },
       select: { id: true },
     });
 
-    return NextResponse.json({ data: created }, { status: 201 });
-  } catch (error: any) {
-    const message =
-      error?.message ?? error?.cause?.message ?? "failed to create reservation";
-    return NextResponse.json({ message }, { status: 400 });
+    return NextResponse.json({ data: { id: created.id } }, { status: 201 });
+  } catch (e: any) {
+    const msg = e?.message ?? "予約作成に失敗しました";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 }
