@@ -55,27 +55,23 @@ export async function GET(
 
   const rows = await prisma.reservation.findMany({
     where: {
-      // リレーション経由でグループを絞る（groupId は存在しない）
-      group: { id: group.id },
-      // [範囲が重なっている] 条件
-      NOT: [{ end: { lte: start } }],
-      AND: [{ start: { lt: end } }],
+      // Device -> Group 経由でグループ絞り込み
+      device: { group: { id: group.id } },
+      // 期間が重なるものだけ
+      AND: [{ start: { lt: end } }, { end: { gt: start } }],
     },
     orderBy: { start: "asc" },
-    select: {
-      id: true,
-      start: true,
-      end: true,
+    include: {
       device: { select: { name: true, slug: true } },
-      note: true,
     },
   });
 
   // FE は startAt / endAt を想定しているのでキーを揃えて返す
-  const data = rows.map((r) => ({
+  const data = rows.map((r: any) => ({
     id: r.id,
     device: r.device,
-    note: r.note,
+    // Prisma スキーマに note が無い環境向けフォールバック
+    note: r.note ?? r.memo ?? null,
     startAt: r.start,
     endAt: r.end,
   }));
