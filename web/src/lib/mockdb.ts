@@ -25,7 +25,7 @@ export type UserRecord = {
   id: string;
   email: string;
   name?: string;
-  passHash: string; // sha256
+  passwordHash: string; // bcrypt (or legacy sha256)
 };
 
 type DB = { groups: Group[]; users: UserRecord[] };

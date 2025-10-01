@@ -32,12 +32,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok:false, error:'email already registered' }, { status:409 });
   }
 
+  const rounds = Number(process.env.BCRYPT_ROUNDS ?? 10);
+  const salt = await bcrypt.genSalt(rounds);
+  const passwordHash = await bcrypt.hash(normalizedPassword, salt);
+
   let user: UserRecord;
   user = {
     id: uid(),
     email: normalizedEmail,
     name: name ? String(name) : normalizedEmail.split('@')[0],
-    passHash: await bcrypt.hash(normalizedPassword, 10),
+    passwordHash,
   };
   await saveUser(user);
 
