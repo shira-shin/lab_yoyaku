@@ -51,8 +51,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "group not found" }, { status: 404 });
     }
 
-    let deviceId = body.deviceId ?? null;
-    if (!deviceId && body.deviceSlug) {
+    let deviceId: string | null = body.deviceId ?? null;
+    if (deviceId) {
+      const device = await prisma.device.findFirst({
+        where: { id: deviceId, groupId: group.id },
+        select: { id: true },
+      });
+      if (!device) {
+        return NextResponse.json({ message: "device not found" }, { status: 404 });
+      }
+      deviceId = device.id;
+    } else if (body.deviceSlug) {
       const device = await prisma.device.findFirst({
         where: { slug: body.deviceSlug, groupId: group.id },
         select: { id: true },
@@ -75,7 +84,6 @@ export async function POST(req: Request) {
 
     const created = await prisma.reservation.create({
       data: {
-        groupId: group.id,
         deviceId,
         start: new Date(startIso),
         end: new Date(endIso),
