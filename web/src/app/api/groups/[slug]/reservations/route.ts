@@ -56,14 +56,15 @@ export async function GET(
   const rows = await prisma.reservation.findMany({
     where: {
       groupId: group.id,
-      NOT: [{ endAt: { lte: start } }],
-      AND: [{ startAt: { lt: end } }],
+      // [範囲が重なっている] 条件
+      NOT: [{ end: { lte: start } }],
+      AND: [{ start: { lt: end } }],
     },
-    orderBy: { startAt: "asc" },
+    orderBy: { start: "asc" },
     select: {
       id: true,
-      startAt: true,
-      endAt: true,
+      start: true,
+      end: true,
       device: { select: { name: true, slug: true } },
       note: true,
     },
