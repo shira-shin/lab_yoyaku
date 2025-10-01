@@ -4,19 +4,12 @@ export const runtime = "nodejs";
 
 import { absUrl } from "@/lib/url";
 
-type ReservationRecord = {
+type ReservationItem = {
   id: string;
   deviceName?: string | null;
-  device?: { name?: string | null } | null;
   deviceId?: string | null;
-  deviceSlug?: string | null;
-  start?: string;
-  end?: string;
-  startAt?: string;
-  endAt?: string;
-  startsAt?: string;
-  endsAt?: string;
-  note?: string | null;
+  start?: string | null;
+  end?: string | null;
   purpose?: string | null;
 };
 
@@ -26,60 +19,43 @@ function formatDateTime(value: string) {
   return date.toLocaleString();
 }
 
-export default async function GroupReservationDayPage({
+export default async function Day({
   params,
 }: {
   params: { slug: string; date: string };
 }) {
-  const { slug, date } = params;
-  const detectedTz = (() => {
+  const tz = (() => {
     try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone;
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Tokyo";
     } catch {
-      return undefined;
+      return "Asia/Tokyo";
     }
   })();
-  const tz = detectedTz || "Asia/Tokyo";
-  const query = new URLSearchParams({
-    group: slug,
-    from: date,
-    tz,
-  });
-  const url = absUrl(`/api/reservations?${query.toString()}`);
+
+  const url = absUrl(
+    `/api/reservations/daily?groupSlug=${encodeURIComponent(params.slug)}&day=${encodeURIComponent(params.date)}&tz=${encodeURIComponent(tz)}`,
+  );
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     throw new Error("予約情報を取得できませんでした。");
   }
-  const payload = await res.json().catch(() => ({}));
-  const source = Array.isArray(payload?.data)
-    ? (payload.data as ReservationRecord[])
-    : Array.isArray(payload?.reservations)
-      ? (payload.reservations as ReservationRecord[])
-      : [];
 
-  const reservations = source
-    .map((item) => {
-      const start = item.startAt ?? item.startsAt ?? item.start ?? "";
-      const end = item.endAt ?? item.endsAt ?? item.end ?? "";
-      const deviceName =
-        item.deviceName ??
-        item.device?.name ??
-        item.deviceId ??
-        item.deviceSlug ??
-        "";
-      return {
-        id: item.id,
-        deviceName,
-        start,
-        end,
-        note: item.note ?? item.purpose ?? null,
-      };
-    })
+  const payload = await res.json().catch(() => ({ data: [] as ReservationItem[] }));
+  const data = Array.isArray(payload?.data) ? (payload.data as ReservationItem[]) : [];
+
+  const reservations = data
+    .map((item) => ({
+      id: item.id,
+      deviceName: item.deviceName || item.deviceId || "",
+      start: item.start ?? "",
+      end: item.end ?? "",
+      note: item.purpose ?? null,
+    }))
     .filter((item) => item.id && item.deviceName && item.start && item.end);
 
   return (
     <div className="p-4">
-      <h1 className="text-lg font-semibold">{date} の予約</h1>
+      <h1 className="text-lg font-semibold">{params.date} の予約</h1>
       {reservations.length ? (
         <ul className="mt-3 space-y-2">
           {reservations.map((reservation) => (
@@ -88,9 +64,7 @@ export default async function GroupReservationDayPage({
               <div className="text-gray-600">
                 {formatDateTime(reservation.start)} – {formatDateTime(reservation.end)}
               </div>
-              {reservation.note ? (
-                <div className="text-gray-500">{reservation.note}</div>
-              ) : null}
+              {reservation.note ? <div className="text-gray-500">{reservation.note}</div> : null}
             </li>
           ))}
         </ul>

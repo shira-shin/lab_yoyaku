@@ -5,7 +5,9 @@ import { createHash } from 'crypto';
 import { loadUsers } from './db';
 import { AUTH_COOKIE } from './auth/cookies';
 
-const secret = new TextEncoder().encode(process.env.AUTH_SECRET || 'dev-secret');
+const secret = new TextEncoder().encode(
+  process.env.AUTH_SECRET || process.env.JWT_SECRET || 'dev-secret',
+);
 export const SESSION_COOKIE = AUTH_COOKIE;
 
 export type User = { id: string; name: string; email: string };
@@ -14,8 +16,11 @@ export const hashPassword = (pw: string) =>
   createHash('sha256').update(pw).digest('hex');
 
 export async function signToken(user: User) {
-  return await new SignJWT(user).setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt().setExpirationTime('7d').sign(secret);
+  return await new SignJWT(user)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('30d')
+    .sign(secret);
 }
 
 export async function readUserFromCookie(): Promise<User | null> {

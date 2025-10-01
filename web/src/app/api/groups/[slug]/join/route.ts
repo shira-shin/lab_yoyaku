@@ -6,10 +6,10 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/src/lib/prisma'
 import { hashPassword, readUserFromCookie } from '@/lib/auth'
 
-function normalizeSlug(value: string | string[] | undefined) {
+function normalize(value: string | string[] | undefined) {
   if (!value) return ''
   const str = Array.isArray(value) ? value[0] : value
-  return String(str || '').trim().toLowerCase()
+  return String(str ?? '').trim().toLowerCase()
 }
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
@@ -23,7 +23,7 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
 
-    const slug = normalizeSlug(params?.slug)
+    const slug = normalize(params?.slug)
     if (!slug) {
       return NextResponse.json({ error: 'invalid slug' }, { status: 400 })
     }
@@ -34,25 +34,39 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
     } catch {
       body = null
     }
-    const passcodeRaw = body && typeof body === 'object' ? (body as any)?.passcode : undefined
-    const passcode = typeof passcodeRaw === 'string' ? passcodeRaw : undefined
+    const passRaw = body && typeof body === 'object' ? (body as any)?.passcode : undefined
+    const passcode = typeof passRaw === 'string' ? passRaw.trim() : ''
 
-    const group = await prisma.group.findUnique({ where: { slug } })
+    const group = await prisma.group.findFirst({
+      where: { slug: { equals: slug, mode: 'insensitive' } },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        passcode: true,
+        members: { select: { id: true, email: true, userId: true } },
+      },
+    })
     if (!group) {
       return NextResponse.json({ error: 'group not found' }, { status: 404 })
     }
 
     if (group.passcode) {
-      const hashed = hashPassword(passcode ?? '')
+      const hashed = hashPassword(passcode || '')
       if (hashed !== group.passcode) {
-        return NextResponse.json({ error: 'invalid passcode' }, { status: 403 })
+        return NextResponse.json({ error: 'invalid passcode' }, { status: 401 })
       }
     }
 
-    await prisma.groupMember.upsert({
-      where: { groupId_email: { groupId: group.id, email: me.email } },
-      update: { userId: me.id },
-      create: { groupId: group.id, email: me.email, userId: me.id, role: 'MEMBER' },
+    const alreadyMember = group.members.find(
+      (member) => member.email.toLowerCase() === me.email.toLowerCase() || (!!me.id && member.userId === me.id)
+    )
+    if (alreadyMember) {
+      return NextResponse.json({ ok: true, data: { slug: group.slug, name: group.name ?? group.slug } })
+    }
+
+    await prisma.groupMember.create({
+      data: { groupId: group.id, email: me.email, userId: me.id, role: 'MEMBER' },
     })
 
     return NextResponse.json({ ok: true, data: { slug: group.slug, name: group.name ?? group.slug } })
