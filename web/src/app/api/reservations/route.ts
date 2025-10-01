@@ -3,14 +3,15 @@ import { z } from "@/lib/zod-helpers";
 import { prisma } from "@/src/lib/prisma";
 import { normalizeSlugInput } from "@/lib/slug";
 
-const Body = z.object({
-  groupSlug: z.string(),
-  deviceId: z.string().optional(),
-  deviceSlug: z.string().optional(),
-  start: z.string(),
-  end: z.string(),
-  note: z.string().optional(),
-});
+const Body = z
+  .object({
+    groupSlug: z.string(),
+    deviceId: z.string().optional(),
+    deviceSlug: z.string().optional(),
+    start: z.string(),
+    end: z.string(),
+  })
+  .strip();
 
 function parseFlexibleDate(input: string): Date {
   const trimmed = (input ?? "").trim();
@@ -87,7 +88,6 @@ export async function POST(req: Request) {
         deviceId,
         start: new Date(startIso),
         end: new Date(endIso),
-        note: body.note ?? "",
       },
       select: { id: true },
     });
