@@ -55,7 +55,8 @@ export async function GET(
 
   const rows = await prisma.reservation.findMany({
     where: {
-      groupId: group.id,
+      // リレーション経由でグループを絞る（groupId は存在しない）
+      group: { id: group.id },
       // [範囲が重なっている] 条件
       NOT: [{ end: { lte: start } }],
       AND: [{ start: { lt: end } }],
@@ -70,5 +71,14 @@ export async function GET(
     },
   });
 
-  return NextResponse.json({ data: rows });
+  // FE は startAt / endAt を想定しているのでキーを揃えて返す
+  const data = rows.map((r) => ({
+    id: r.id,
+    device: r.device,
+    note: r.note,
+    startAt: r.start,
+    endAt: r.end,
+  }));
+
+  return NextResponse.json({ data });
 }
