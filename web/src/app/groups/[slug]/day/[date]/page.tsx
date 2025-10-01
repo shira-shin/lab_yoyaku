@@ -105,8 +105,8 @@ export default async function DayPage({
   const list = listRaw
     .map((item) => ({
       ...item,
-      startAt: item.startAt ?? item.startsAt ?? (item as any).start ?? '',
-      endAt: item.endAt ?? item.endsAt ?? (item as any).end ?? '',
+      startAt: item.startAt ?? (item as any).startAt ?? (item as any).start,
+      endAt: item.endAt ?? (item as any).endAt ?? (item as any).end,
     }))
     .filter((item) => item.startAt && item.endAt && item.device?.name)
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
