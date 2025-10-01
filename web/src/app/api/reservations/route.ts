@@ -3,15 +3,13 @@ import { z } from "@/lib/zod-helpers";
 import { prisma } from "@/src/lib/prisma";
 import { normalizeSlugInput } from "@/lib/slug";
 
-const Body = z
-  .object({
-    groupSlug: z.string(),
-    deviceId: z.string().optional(),
-    deviceSlug: z.string().optional(),
-    start: z.string(),
-    end: z.string(),
-  })
-  .strip();
+const Body = z.object({
+  groupSlug: z.string(),
+  deviceId: z.string().optional(),
+  deviceSlug: z.string().optional(),
+  start: z.string(),
+  end: z.string(),
+});
 
 function parseFlexibleDate(input: string): Date {
   const trimmed = (input ?? "").trim();
@@ -40,10 +38,11 @@ function toIso(input: string): string {
 
 export async function POST(req: Request) {
   try {
-    const raw = await req.json();
-    const body = Body.parse(raw);
+    const { groupSlug: rawGroupSlug, deviceId, deviceSlug, start, end } = Body.parse(
+      await req.json(),
+    );
 
-    const groupSlug = normalizeSlugInput(body.groupSlug ?? "");
+    const groupSlug = normalizeSlugInput(rawGroupSlug ?? "");
     const group = await prisma.group.findUnique({
       where: { slug: groupSlug },
       select: { id: true },
@@ -52,40 +51,40 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "group not found" }, { status: 404 });
     }
 
-    let deviceId: string | null = body.deviceId ?? null;
-    if (deviceId) {
+    let normalizedDeviceId: string | null = deviceId ?? null;
+    if (normalizedDeviceId) {
       const device = await prisma.device.findFirst({
-        where: { id: deviceId, groupId: group.id },
+        where: { id: normalizedDeviceId, groupId: group.id },
         select: { id: true },
       });
       if (!device) {
         return NextResponse.json({ message: "device not found" }, { status: 404 });
       }
-      deviceId = device.id;
-    } else if (body.deviceSlug) {
+      normalizedDeviceId = device.id;
+    } else if (deviceSlug) {
       const device = await prisma.device.findFirst({
-        where: { slug: body.deviceSlug, groupId: group.id },
+        where: { slug: deviceSlug, groupId: group.id },
         select: { id: true },
       });
       if (!device) {
         return NextResponse.json({ message: "device not found" }, { status: 404 });
       }
-      deviceId = device.id;
+      normalizedDeviceId = device.id;
     }
 
-    if (!deviceId) {
+    if (!normalizedDeviceId) {
       return NextResponse.json(
         { message: "deviceId or deviceSlug required" },
         { status: 400 },
       );
     }
 
-    const startIso = toIso(body.start);
-    const endIso = toIso(body.end);
+    const startIso = toIso(start);
+    const endIso = toIso(end);
 
     const created = await prisma.reservation.create({
       data: {
-        deviceId,
+        deviceId: normalizedDeviceId,
         start: new Date(startIso),
         end: new Date(endIso),
       },
