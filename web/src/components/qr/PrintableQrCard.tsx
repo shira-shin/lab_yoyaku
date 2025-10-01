@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useCallback, useRef, useState } from "react";
+import CopyableCode from "@/components/CopyableCode";
 
 type Props = {
   iconSrc: string;
@@ -203,28 +204,6 @@ export default function PrintableQrCard({
     }
   }, [iconSrc, qrDataUrl, title]);
 
-  const copyCode = useCallback(async () => {
-    if (!code) return;
-    try {
-      if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(code);
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = code;
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-      }
-      alert("コードをコピーしました");
-    } catch (error) {
-      console.error("copy failed", error);
-    }
-  }, [code]);
-
   return (
     <div className="space-y-3">
       <div
@@ -259,25 +238,11 @@ export default function PrintableQrCard({
             {title}
           </div>
 
-          <div className="mt-1 inline-flex items-center gap-2">
-            <code
-              className="px-2 py-0.5 rounded bg-gray-100 text-gray-800 text-[13px] font-mono tracking-wide select-all"
-              style={{ wordBreak: "normal", whiteSpace: "nowrap" }}
-              title={code}
-              data-qr-card-slug
-            >
-              {code}
-            </code>
-            {code ? (
-              <button
-                type="button"
-                className="px-2 py-1 text-xs rounded border hover:bg-gray-50"
-                onClick={copyCode}
-              >
-                コピー
-              </button>
-            ) : null}
-          </div>
+          {code ? (
+            <div className="mt-1 text-center">
+              <CopyableCode value={code} className="justify-center" />
+            </div>
+          ) : null}
 
           {note ? (
             <div className="text-xs text-gray-400 mt-1" data-qr-card-note>

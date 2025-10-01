@@ -12,6 +12,7 @@ import Image from 'next/image';
 import BackButton from '@/components/BackButton';
 import ReservationList, { ReservationItem } from '@/components/ReservationList';
 import { getUserFromCookies } from '@/lib/auth/server';
+import CopyableCode from '@/components/CopyableCode';
 
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
@@ -63,6 +64,7 @@ export default async function DeviceDetail({
   if (!res.ok) redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
   const json = await res.json();
   const dev = json?.device;
+  const deviceCode: string | null = dev?.code ?? null;
   const me = user;
 
   const baseMonth = (() => {
@@ -166,6 +168,12 @@ export default async function DeviceDetail({
             </div>
           </div>
         </div>
+        {deviceCode ? (
+          <div className="print:hidden">
+            <div className="text-sm font-medium text-gray-700">機器コード</div>
+            <CopyableCode value={deviceCode} />
+          </div>
+        ) : null}
         <CalendarWithBars weeks={weeks} month={month} spans={spans} />
         <div className="mt-4">
           <h2 className="text-xl font-semibold mb-2">予約一覧</h2>
