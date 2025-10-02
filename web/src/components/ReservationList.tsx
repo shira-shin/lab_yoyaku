@@ -15,13 +15,20 @@ function fmt(d: Date) {
 
 export default function ReservationList({ items }: { items: ReservationItem[] }) {
   if (!items.length) return <p className="text-sm text-neutral-500">予約がありません。</p>;
+  const now = Date.now();
   return (
     <ul className="list-disc pl-5 space-y-1 text-sm">
-      {items.map((i) => (
-        <li key={i.id}>
-          {`機器: ${i.deviceName} / 予約者: ${i.user} / 時間: ${fmt(i.start)} - ${fmt(i.end)}`}
-        </li>
-      ))}
+      {items.map((i) => {
+        const isPast = i.end.getTime() < now;
+        return (
+          <li
+            key={i.id}
+            className={isPast ? 'text-gray-400 opacity-60' : undefined}
+          >
+            {`機器: ${i.deviceName} / 予約者: ${i.user} / 時間: ${fmt(i.start)} - ${fmt(i.end)}`}
+          </li>
+        );
+      })}
     </ul>
   );
 }

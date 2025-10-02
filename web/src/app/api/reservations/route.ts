@@ -15,7 +15,7 @@ function parseDate(value: string | null): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function parseDateRangeFromDay(value: string | null): { from: Date; to: Date } | null {
+function parseDateRangeFromDay(value: string | null): { from: Date; toExclusive: Date } | null {
   if (!value) return null;
   const trimmed = value.trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
@@ -25,8 +25,8 @@ function parseDateRangeFromDay(value: string | null): { from: Date; to: Date } |
   const day = Number(dayStr);
   if ([year, month, day].some((n) => !Number.isFinite(n))) return null;
   const from = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
-  const to = new Date(from.getTime() + 24 * 60 * 60 * 1000);
-  return { from, to };
+  const toExclusive = new Date(from.getTime() + 24 * 60 * 60 * 1000);
+  return { from, toExclusive };
 }
 
 const Body = z.object({
@@ -137,11 +137,13 @@ export async function GET(req: Request) {
   let from = parseDate(url.searchParams.get("from"));
   let to = parseDate(url.searchParams.get("to"));
 
+  let useInclusiveUpperBound = false;
   if (!from && !to) {
     const dayRange = parseDateRangeFromDay(url.searchParams.get("date"));
     if (dayRange) {
       from = dayRange.from;
-      to = dayRange.to;
+      to = dayRange.toExclusive;
+      useInclusiveUpperBound = true;
     }
   }
 
@@ -158,10 +160,15 @@ export async function GET(req: Request) {
 
   const andConditions: Prisma.ReservationWhereInput[] = [];
   if (from) {
-    andConditions.push({ end: { gt: from } });
+    andConditions.push({ end: { gte: from } });
   }
   if (to) {
-    andConditions.push({ start: { lt: to } });
+    if (useInclusiveUpperBound) {
+      const inclusiveTo = new Date(to.getTime() - 1);
+      andConditions.push({ start: { lte: inclusiveTo } });
+    } else {
+      andConditions.push({ start: { lt: to } });
+    }
   }
   if (andConditions.length > 0) {
     where.AND = andConditions;
