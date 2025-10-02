@@ -76,6 +76,8 @@ export default function NewReservationClient({
     }
 
     const { start, end } = parsed.data;
+    const startRaw = String(fd.get('start') || '');
+    const endRaw = String(fd.get('end') || '');
     const purpose = parsed.data.purpose?.trim() ?? '';
     if (start >= end) {
       toast.error('終了時刻は開始時刻より後に設定してください');
@@ -85,8 +87,8 @@ export default function NewReservationClient({
     const payload = {
       groupSlug: params.slug,
       deviceSlug: parsed.data.deviceSlug,
-      start: start.toISOString(),
-      end: end.toISOString(),
+      start: startRaw,
+      end: endRaw,
       purpose,
     };
 

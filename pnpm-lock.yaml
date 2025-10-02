@@ -16,6 +16,12 @@ importers:
       '@prisma/client':
         specifier: 5.22.0
         version: 5.22.0(prisma@5.22.0)
+      date-fns:
+        specifier: ^3.6.0
+        version: 3.6.0
+      date-fns-tz:
+        specifier: ^3.0.2
+        version: 3.0.2(date-fns@3.6.0)
       clsx:
         specifier: ^2.1.0
         version: 2.1.1

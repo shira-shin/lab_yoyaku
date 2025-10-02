@@ -57,12 +57,14 @@ export function createApi(
         to?: string;
       } = {}
     ) => {
-      const params = new URLSearchParams({ groupSlug: slug });
+      const params = new URLSearchParams();
       if (options.deviceSlug) params.set('deviceSlug', options.deviceSlug);
       if (options.date) params.set('date', options.date);
       if (options.from) params.set('from', options.from);
       if (options.to) params.set('to', options.to);
-      return api(`/api/reservations?${params.toString()}`);
+      const query = params.toString();
+      const path = `/api/groups/${encodeURIComponent(slug)}/reservations${query ? `?${query}` : ''}`;
+      return api(path);
     },
     createReservation: (body: any) =>
       api('/api/reservations', {

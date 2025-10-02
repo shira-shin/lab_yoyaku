@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
+import { localDayRange, utcDateToLocalString } from '@/lib/time';
 
 export type Span = {
   id: string;
@@ -16,14 +17,18 @@ export type Span = {
 const pad = (n:number)=> n.toString().padStart(2,'0');
 const short = (s:string,len=16)=> s.length<=len ? s : s.slice(0,len-1)+'…';
 
-function strip(d:Date){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
-function add(d:Date,n:number){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-function overlaps(day:Date, s:Date, e:Date){ return day>=strip(s) && day<strip(add(e,1)); }
+const toYmd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+function overlaps(day:Date, s:Date, e:Date){
+  const { start, end } = localDayRange(toYmd(day));
+  return !(e <= start || s >= end);
+}
 
 function labelForDay(cell: Date, s: Date, e: Date) {
-  const cs = strip(cell), ce = add(cs, 1);
-  const from = s < cs ? '00:00' : `${pad(s.getHours())}:${pad(s.getMinutes())}`;
-  const to   = e > ce ? '24:00' : `${pad(e.getHours())}:${pad(e.getMinutes())}`;
+  const { start, end } = localDayRange(toYmd(cell));
+  const startStr = utcDateToLocalString(s);
+  const endStr = utcDateToLocalString(e);
+  const from = s <= start ? '00:00' : startStr.slice(11);
+  const to   = e >= end ? '24:00' : endStr.slice(11);
   return `${from}–${to}`;
 }
 
@@ -45,7 +50,7 @@ export default function CalendarWithBars({
   const map = useMemo(()=>{
     const m = new Map<string, Span[]>();
     weeks.flat().forEach(d=>{
-      const key=d.toDateString();
+      const key=toYmd(d);
       m.set(key, spans.filter(s=>overlaps(d,s.start,s.end)));
     });
     return m;
@@ -55,7 +60,7 @@ export default function CalendarWithBars({
     <>
       <div className="grid grid-cols-7 gap-1">
         {weeks.flat().map((d,i)=>{
-          const todays = map.get(d.toDateString()) ?? [];
+          const todays = map.get(toYmd(d)) ?? [];
           const isToday = d.toDateString() === new Date().toDateString();
           const isSun = d.getDay() === 0;
           const isSat = d.getDay() === 6;
@@ -108,7 +113,7 @@ export default function CalendarWithBars({
       {showModal && sel && (
         <DayModal
           date={sel}
-          items={(map.get(sel.toDateString()) ?? []).sort((a,b)=>a.start.getTime()-b.start.getTime())}
+          items={(map.get(toYmd(sel)) ?? []).sort((a,b)=>a.start.getTime()-b.start.getTime())}
           onClose={()=>setSel(null)}
         />
       )}
@@ -120,7 +125,7 @@ function DayModal({ date, items, onClose }:{
   date:Date; items:Span[]; onClose:()=>void;
 }){
   const pad=(n:number)=> n.toString().padStart(2,'0');
-  const hhmm=(d:Date)=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const hhmm=(d:Date)=>utcDateToLocalString(d).slice(11);
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-end sm:items-center justify-center z-50">

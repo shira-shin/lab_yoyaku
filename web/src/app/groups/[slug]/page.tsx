@@ -6,6 +6,7 @@ export const fetchCache = 'force-no-store';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { serverFetch } from '@/lib/http/serverFetch';
+import { localDayRange } from '@/lib/time';
 import GroupScreenClient from './GroupScreenClient';
 import Link from 'next/link';
 import { prisma } from '@/src/lib/prisma';
@@ -145,13 +146,18 @@ export default async function GroupPage({
   const rangeEnd = new Date(weeks[weeks.length - 1][6]);
   rangeEnd.setHours(0, 0, 0, 0);
   rangeEnd.setDate(rangeEnd.getDate() + 1);
+  const toYmd = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  const { start: rangeStartBoundary } = localDayRange(toYmd(rangeStart));
+  const { end: rangeEndBoundary } = localDayRange(toYmd(new Date(rangeEnd.getTime() - 24 * 60 * 60 * 1000)));
 
   const reservationParams = new URLSearchParams({
-    groupSlug: group.slug,
-    from: rangeStart.toISOString(),
-    to: rangeEnd.toISOString(),
+    from: rangeStartBoundary.toISOString(),
+    to: rangeEndBoundary.toISOString(),
   });
-  const reservationsRes = await serverFetch(`/api/reservations?${reservationParams.toString()}`);
+
+  const reservationsRes = await serverFetch(
+    `/api/groups/${encodeURIComponent(paramSlug)}/reservations?${reservationParams.toString()}`
+  );
   if (reservationsRes.status === 401) {
     redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
   }
@@ -162,9 +168,22 @@ export default async function GroupPage({
     redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
   }
   const reservationsJson = await reservationsRes.json();
-  const reservations: ReservationResponse[] = Array.isArray(reservationsJson?.reservations)
-    ? reservationsJson.reservations
-    : [];
+  const reservationsSource: ReservationResponse[] = Array.isArray(reservationsJson?.data)
+    ? reservationsJson.data
+    : Array.isArray(reservationsJson?.reservations)
+      ? reservationsJson.reservations
+      : [];
+  const reservations = reservationsSource
+    .map((r) => {
+      const start = new Date(r.start ?? (r as any).startAt ?? '');
+      const end = new Date(r.end ?? (r as any).endAt ?? '');
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+      return { ...r, start, end } as ReservationResponse & { start: Date; end: Date };
+    })
+    .filter((r): r is ReservationResponse & { start: Date; end: Date } => {
+      if (!r) return false;
+      return !(r.end <= rangeStartBoundary || r.start >= rangeEndBoundary);
+    });
   const nameOf = (r: any) => {
     if (me && r.userEmail === me.email) return me.name || me.email.split('@')[0];
     return r.userName || r.userEmail?.split('@')[0] || r.userName || '';
@@ -175,8 +194,8 @@ export default async function GroupPage({
     return {
       id: r.id,
       name: dev?.name ?? r.deviceName ?? r.deviceId,
-      start: new Date(r.start),
-      end: new Date(r.end),
+      start: r.start,
+      end: r.end,
       color: colorFromString(r.deviceId),
       groupSlug: group.slug,
       by: nameOf(r),
@@ -231,16 +250,18 @@ export default async function GroupPage({
 
   const calendarSpans = [...spans, ...dutySpans];
 
-  const listItems: ReservationItem[] = reservations.map((r) => {
-    const dev = devices.find((d: any) => d.id === r.deviceId || d.slug === r.deviceSlug);
-    return {
-      id: r.id,
-      deviceName: dev?.name ?? r.deviceName ?? r.deviceId,
-      user: nameOf(r),
-      start: new Date(r.start),
-      end: new Date(r.end),
-    };
-  });
+  const listItems: ReservationItem[] = reservations
+    .map((r) => {
+      const dev = devices.find((d: any) => d.id === r.deviceId || d.slug === r.deviceSlug);
+      return {
+        id: r.id,
+        deviceName: dev?.name ?? r.deviceName ?? r.deviceId,
+        user: nameOf(r),
+        start: r.start,
+        end: r.end,
+      };
+    })
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
