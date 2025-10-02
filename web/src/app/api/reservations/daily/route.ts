@@ -72,17 +72,13 @@ export async function GET(req: Request) {
   if (!dayStartUtc) {
     return NextResponse.json({ error: 'INVALID_DATE' }, { status: 400 });
   }
-  const dayEndUtc = new Date(dayStartUtc.getTime() + 24 * 60 * 60 * 1000 + 1);
+  const dayEndUtc = new Date(dayStartUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
 
   const reservations = await prisma.reservation.findMany({
     where: {
       device: { groupId: group.id },
-      NOT: {
-        OR: [
-          { end: { lte: dayStartUtc } },
-          { start: { gte: dayEndUtc } },
-        ],
-      },
+      start: { lte: dayEndUtc },
+      end: { gte: dayStartUtc },
     },
     orderBy: { start: 'asc' },
     include: {

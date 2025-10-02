@@ -53,20 +53,28 @@ export default async function Day({
     }))
     .filter((item) => item.id && item.deviceName && item.start && item.end);
 
+  const now = Date.now();
+
   return (
     <div className="p-4">
       <h1 className="text-lg font-semibold">{params.date} の予約</h1>
       {reservations.length ? (
         <ul className="mt-3 space-y-2">
-          {reservations.map((reservation) => (
-            <li key={reservation.id} className="rounded border p-2 text-sm">
-              <div className="font-medium">{reservation.deviceName}</div>
-              <div className="text-gray-600">
-                {formatDateTime(reservation.start)} – {formatDateTime(reservation.end)}
-              </div>
-              {reservation.note ? <div className="text-gray-500">{reservation.note}</div> : null}
-            </li>
-          ))}
+          {reservations.map((reservation) => {
+            const isPast = new Date(reservation.end).getTime() < now;
+            return (
+              <li
+                key={reservation.id}
+                className={`rounded border p-2 text-sm ${isPast ? 'bg-gray-50 text-gray-500 opacity-60' : ''}`}
+              >
+                <div className="font-medium">{reservation.deviceName}</div>
+                <div className="text-gray-600">
+                  {formatDateTime(reservation.start)} – {formatDateTime(reservation.end)}
+                </div>
+                {reservation.note ? <div className="text-gray-500">{reservation.note}</div> : null}
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <div className="mt-3 text-gray-500">この日に該当する予約はありません。</div>
