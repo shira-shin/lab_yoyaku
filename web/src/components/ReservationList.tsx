@@ -1,4 +1,5 @@
 import React from 'react';
+import { utcDateToLocalString } from '@/lib/time';
 
 export type ReservationItem = {
   id: string;
@@ -9,8 +10,7 @@ export type ReservationItem = {
 };
 
 function fmt(d: Date) {
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return utcDateToLocalString(d);
 }
 
 export default function ReservationList({ items }: { items: ReservationItem[] }) {

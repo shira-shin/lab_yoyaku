@@ -37,6 +37,10 @@ export async function auth() {
   return { user };
 }
 
+export async function getServerSession() {
+  return await auth();
+}
+
 export async function decodeSession(token: string): Promise<User> {
   const { payload } = await jwtVerify(token, secret);
   const id = payload?.id;

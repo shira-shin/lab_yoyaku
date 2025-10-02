@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 export const fetchCache = 'force-no-store';
 
 import { serverFetch } from '@/lib/http/serverFetch';
+import { localDayRange } from '@/lib/time';
 import { unstable_noStore as noStore } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
@@ -86,14 +87,18 @@ export default async function DeviceDetail({
   const rangeEnd = new Date(weeks[weeks.length - 1][6]);
   rangeEnd.setHours(0, 0, 0, 0);
   rangeEnd.setDate(rangeEnd.getDate() + 1);
+  const toYmd = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  const { start: rangeStartBoundary } = localDayRange(toYmd(rangeStart));
+  const { end: rangeEndBoundary } = localDayRange(toYmd(new Date(rangeEnd.getTime() - 24 * 60 * 60 * 1000)));
 
-  const query = new URLSearchParams({
-    groupSlug: group,
-    deviceSlug: deviceSlug,
-    from: rangeStart.toISOString(),
-    to: rangeEnd.toISOString(),
+  const reservationsParams = new URLSearchParams({
+    deviceSlug,
+    from: rangeStartBoundary.toISOString(),
+    to: rangeEndBoundary.toISOString(),
   });
-  const reservationsRes = await serverFetch(`/api/reservations?${query.toString()}`);
+  const reservationsRes = await serverFetch(
+    `/api/groups/${encodeURIComponent(group)}/reservations?${reservationsParams.toString()}`
+  );
   if (reservationsRes.status === 401) {
     redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
   }
@@ -107,9 +112,22 @@ export default async function DeviceDetail({
     redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
   }
   const reservationsJson = await reservationsRes.json();
-  const reservations: ReservationResponse[] = Array.isArray(reservationsJson?.reservations)
-    ? reservationsJson.reservations
-    : [];
+  const reservationsSource: ReservationResponse[] = Array.isArray(reservationsJson?.data)
+    ? reservationsJson.data
+    : Array.isArray(reservationsJson?.reservations)
+      ? reservationsJson.reservations
+      : [];
+  const reservations = reservationsSource
+    .map((r) => {
+      const start = new Date(r.start ?? (r as any).startAt ?? '');
+      const end = new Date(r.end ?? (r as any).endAt ?? '');
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+      return { ...r, start, end } as ReservationResponse & { start: Date; end: Date };
+    })
+    .filter((r): r is ReservationResponse & { start: Date; end: Date } => {
+      if (!r) return false;
+      return !(r.end <= rangeStartBoundary || r.start >= rangeEndBoundary);
+    });
   const nameOf = (r: any) => {
     if (me && r.userEmail === me.email) return me.name || me.email.split('@')[0];
     return r.userName || r.userEmail?.split('@')[0] || r.userName || '';
@@ -118,20 +136,22 @@ export default async function DeviceDetail({
   const spans: Span[] = reservations.map((r) => ({
     id: r.id,
     name: dev?.name ?? r.deviceName ?? r.deviceId,
-    start: new Date(r.start),
-    end: new Date(r.end),
+    start: r.start,
+    end: r.end,
     color: '#2563eb',
     groupSlug: group,
     by: nameOf(r),
   }));
 
-  const listItems: ReservationItem[] = reservations.map((r) => ({
-    id: r.id,
-    deviceName: dev?.name ?? r.deviceName ?? r.deviceId,
-    user: nameOf(r),
-    start: new Date(r.start),
-    end: new Date(r.end),
-  }));
+  const listItems: ReservationItem[] = reservations
+    .map((r) => ({
+      id: r.id,
+      deviceName: dev?.name ?? r.deviceName ?? r.deviceId,
+      user: nameOf(r),
+      start: r.start,
+      end: r.end,
+    }))
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
 
   return (
     <div className="max-w-4xl mx-auto space-y-4">

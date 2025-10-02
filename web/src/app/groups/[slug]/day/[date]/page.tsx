@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { serverFetch } from '@/lib/http/serverFetch';
+import { absUrl } from '@/lib/url';
+import { localDayRange, utcDateToLocalString } from '@/lib/time';
 import { prisma } from '@/src/lib/prisma';
 import DutyInlineEditor from './DutyInlineEditor';
 import DutyInlineCreate from './DutyInlineCreate';
@@ -24,24 +26,14 @@ function isValidDateFormat(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
-function jstRange(date: string) {
-  const [yearStr, monthStr, dayStr] = date.split('-');
-  const year = Number(yearStr);
-  const month = Number(monthStr) - 1;
-  const day = Number(dayStr);
-  const start = new Date(Date.UTC(year, month, day, -9, 0, 0, 0));
-  const end = new Date(Date.UTC(year, month, day + 1, -9, 0, 0, 0));
-  return { start, end };
-}
-
 function formatTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return utcDateToLocalString(date).slice(11);
 }
 
 async function fetchDuties(slug: string, date: string) {
-  const { start, end } = jstRange(date);
+  const { start, end } = localDayRange(date);
   const from = start.toISOString();
   const to = end.toISOString();
   const res = await serverFetch(
@@ -68,28 +60,16 @@ export default async function DayPage({
     notFound();
   }
 
-  const dayStart = `${date}T00:00:00`;
-  const dayEnd = `${date}T23:59:59`;
-  const reservationsUrl = `/api/groups/${encodeURIComponent(
-    normalizedSlug,
-  )}/reservations?from=${encodeURIComponent(dayStart)}&to=${encodeURIComponent(
-    dayEnd,
-  )}`;
-
-  const [reservationsRes, devicesRes] = await Promise.all([
-    serverFetch(reservationsUrl),
-    serverFetch(`/api/devices?groupSlug=${encodeURIComponent(normalizedSlug)}`),
-  ]);
+  const reservationsRes = await fetch(
+    absUrl(`/api/groups/${encodeURIComponent(normalizedSlug)}/reservations?date=${encodeURIComponent(date)}`),
+    { cache: 'no-store' },
+  );
+  const devicesRes = await serverFetch(`/api/devices?groupSlug=${encodeURIComponent(normalizedSlug)}`);
 
   if (reservationsRes.status === 401 || devicesRes.status === 401) {
     redirect(`/login?next=/groups/${encodeURIComponent(normalizedSlug)}/day/${date}`);
   }
-  if (
-    reservationsRes.status === 403 ||
-    reservationsRes.status === 404 ||
-    devicesRes.status === 403 ||
-    devicesRes.status === 404
-  ) {
+  if (devicesRes.status === 403 || devicesRes.status === 404) {
     redirect(`/groups/join?slug=${encodeURIComponent(normalizedSlug)}`);
   }
   if (!reservationsRes.ok) {
@@ -202,14 +182,20 @@ export default async function DayPage({
           <p className="text-gray-500">予約がありません。</p>
         ) : (
           <ul className="grid md:grid-cols-2 gap-3">
-            {list.map((r) => (
-              <li key={r.id} className="rounded-xl border p-3">
-                <div className="font-medium">{r.device.name}</div>
-                <div className="text-sm text-gray-600">
-                  {formatTime(r.startAt)} 〜 {formatTime(r.endAt)}
-                </div>
-              </li>
-            ))}
+            {list.map((r) => {
+              const isPast = new Date(r.endAt).getTime() < Date.now();
+              return (
+                <li
+                  key={r.id}
+                  className={`rounded-xl border p-3 ${isPast ? 'text-gray-400 opacity-60' : ''}`}
+                >
+                  <div className="font-medium">{r.device.name}</div>
+                  <div className="text-sm text-gray-600">
+                    {formatTime(r.startAt)} 〜 {formatTime(r.endAt)}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

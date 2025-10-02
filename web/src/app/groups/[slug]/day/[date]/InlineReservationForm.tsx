@@ -13,41 +13,45 @@ type Props = {
 
 export default function InlineReservationForm({ slug, date, devices }: Props) {
   const router = useRouter();
-  const [deviceSlug, setDeviceSlug] = useState(devices[0]?.slug ?? '');
+  const [deviceId, setDeviceId] = useState(devices[0]?.id ?? '');
   const [start, setStart] = useState(`${date}T13:00`);
   const [end, setEnd] = useState(`${date}T14:00`);
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    if (!deviceSlug) {
+    if (!deviceId) {
       alert('機器を選択してください');
       return;
     }
     setSaving(true);
     try {
+      const payload = {
+        groupSlug: slug,
+        deviceId,
+        start,
+        end,
+      };
       const res = await fetch('/api/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          groupSlug: slug,
-          deviceSlug,
-          start: start.replace('T', ' ').replace(/-/g, '/'),
-          end: end.replace('T', ' ').replace(/-/g, '/'),
-          note,
-        }),
+        body: JSON.stringify(payload),
         credentials: 'same-origin',
       });
-      const json = await res.json().catch(() => ({} as any));
       if (!res.ok) {
-        throw new Error(json?.message ?? json?.error ?? res.statusText);
+        const { message } = await res.json().catch(() => ({ message: '作成に失敗しました' }));
+        alert(`作成失敗: ${message}`);
+        return;
       }
+      alert('予約を作成しました');
+      router.push(`/groups/${slug}`);
       router.refresh();
     } catch (err) {
-      const msg =
-        (err && typeof err === 'object' && 'message' in err && (err as any).message) ||
-        (typeof err === 'string' ? err : '');
-      alert(`作成失敗: ${msg || '不明なエラー'}`);
+      const message =
+        (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
+          ? (err as any).message
+          : '') || '作成に失敗しました';
+      alert(`作成失敗: ${message}`);
     } finally {
       setSaving(false);
     }
@@ -63,12 +67,12 @@ export default function InlineReservationForm({ slug, date, devices }: Props) {
           <label className="space-y-1">
             <span className="text-sm text-gray-600">機器</span>
             <select
-              value={deviceSlug}
-              onChange={(e) => setDeviceSlug(e.target.value)}
+              value={deviceId}
+              onChange={(e) => setDeviceId(e.target.value)}
               className="w-full border rounded-lg p-2"
             >
               {devices.map((d) => (
-                <option key={d.id} value={d.slug}>
+                <option key={d.id} value={d.id}>
                   {d.name}
                 </option>
               ))}
