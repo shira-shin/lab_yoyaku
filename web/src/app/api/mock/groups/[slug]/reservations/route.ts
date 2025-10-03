@@ -6,7 +6,18 @@ import { NextResponse } from 'next/server';
 import { store } from '../../../_store';
 import { readUserFromCookie } from '@/lib/auth';
 import { loadDB } from '@/lib/mockdb';
-import { localDayRange, localStringToUtcDate } from '@/lib/time';
+import { localDayRange, toUtc } from '@/lib/time';
+
+const parseDateInput = (value?: string | null) => {
+  if (!value) return null;
+  const direct = new Date(value);
+  if (!Number.isNaN(direct.getTime())) return direct;
+  try {
+    return toUtc(value);
+  } catch {
+    return null;
+  }
+};
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
   const body = await req.json().catch(() => ({}));
@@ -25,15 +36,17 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
   const device = store.findDevice(groupSlug, deviceSlug);
   if (!device) return NextResponse.json({ error: 'device not found' }, { status: 404 });
 
-  if (!start || !end || new Date(start) >= new Date(end)) {
+  const startDate = parseDateInput(start);
+  const endDate = parseDateInput(end);
+  if (!startDate || !endDate || +startDate >= +endDate) {
     return NextResponse.json({ error: 'invalid time range' }, { status: 400 });
   }
 
   const reservation = store.createReservation({
     groupSlug,
     deviceId: device.id,
-    start,
-    end,
+    start: startDate.toISOString(),
+    end: endDate.toISOString(),
     purpose,
     user: me.email,
     userName: me.name || me.email,
@@ -55,41 +68,25 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
     list = list.filter((r: any) => r.deviceSlug === deviceSlug || r.deviceId === deviceSlug);
   }
   if (date) {
-    const { start, end } = localDayRange(date);
-    list = list.filter((r: any) => {
-      const startAt = new Date(r.start);
-      const endAt = new Date(r.end);
-      if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) return false;
-      return !(endAt <= start || startAt >= end);
-    });
-  } else {
-    if (fromParam) {
-      const fromDate = (() => {
-        const parsed = new Date(fromParam);
-        if (!Number.isNaN(parsed.getTime())) return parsed;
-        try {
-          return localStringToUtcDate(fromParam);
-        } catch {
-          return null;
-        }
-      })();
-      if (fromDate) {
-        list = list.filter((r: any) => new Date(r.end) > fromDate);
-      }
+    try {
+      const { start: dayStart, end: dayEnd } = localDayRange(date);
+      list = list.filter((r: any) => {
+        const startAt = new Date(r.start);
+        const endAt = new Date(r.end);
+        if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) return false;
+        return startAt < dayEnd && endAt > dayStart;
+      });
+    } catch {
+      list = [];
     }
-    if (toParam) {
-      const toDate = (() => {
-        const parsed = new Date(toParam);
-        if (!Number.isNaN(parsed.getTime())) return parsed;
-        try {
-          return localStringToUtcDate(toParam);
-        } catch {
-          return null;
-        }
-      })();
-      if (toDate) {
-        list = list.filter((r: any) => new Date(r.start) < toDate);
-      }
+  } else {
+    const fromDate = parseDateInput(fromParam);
+    const toDate = parseDateInput(toParam);
+    if (fromDate) {
+      list = list.filter((r: any) => new Date(r.end) > fromDate);
+    }
+    if (toDate) {
+      list = list.filter((r: any) => new Date(r.start) < toDate);
     }
   }
   const db = loadDB();

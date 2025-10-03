@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { localStringToUtcDate } from "@/lib/time";
+import { toUtc } from "@/lib/time";
+
+const parseDateInput = (value?: string | null) => {
+  if (!value) return null;
+  const direct = new Date(value);
+  if (!Number.isNaN(direct.getTime())) return direct;
+  try {
+    return toUtc(value);
+  } catch {
+    return null;
+  }
+};
 
 export async function POST(req: Request) {
   const session = await getServerSession();
@@ -24,8 +35,8 @@ export async function POST(req: Request) {
   if (!device) return NextResponse.json({ message: "device not found in the group" }, { status: 400 });
 
   // 「入力文字列をローカル時刻として」UTCに変換して保存（ズレ防止）
-  const startAt = localStringToUtcDate(start);
-  const endAt   = localStringToUtcDate(end);
+  const startAt = parseDateInput(start);
+  const endAt   = parseDateInput(end);
   if (!(startAt instanceof Date) || isNaN(+startAt) || !(endAt instanceof Date) || isNaN(+endAt))
     return NextResponse.json({ message: "invalid datetime" }, { status: 400 });
   if (+endAt <= +startAt)

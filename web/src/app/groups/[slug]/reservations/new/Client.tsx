@@ -3,6 +3,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from '@/lib/toast';
 import { z } from '@/lib/zod-helpers';
+import { toUtc } from '@/lib/time';
 
 const ReservationFormSchema = z.object({
   deviceSlug: z.string().min(1),
@@ -84,12 +85,37 @@ export default function NewReservationClient({
       return;
     }
 
+    let startUtc: Date | null = null;
+    let endUtc: Date | null = null;
+    try {
+      startUtc = toUtc(startRaw);
+    } catch {
+      startUtc = null;
+    }
+    try {
+      endUtc = toUtc(endRaw);
+    } catch {
+      endUtc = null;
+    }
+    if (!startUtc || Number.isNaN(startUtc.getTime())) {
+      toast.error('開始時刻が不正です');
+      return;
+    }
+    if (!endUtc || Number.isNaN(endUtc.getTime())) {
+      toast.error('終了時刻が不正です');
+      return;
+    }
+    if (+endUtc <= +startUtc) {
+      toast.error('終了時刻は開始時刻より後に設定してください');
+      return;
+    }
+
     const payload = {
       groupSlug: params.slug,
       deviceSlug: parsed.data.deviceSlug,
-      start: startRaw,
-      end: endRaw,
-      purpose,
+      start: startUtc.toISOString(),
+      end: endUtc.toISOString(),
+      ...(purpose ? { purpose } : {}),
     };
 
     setSubmitting(true);
@@ -119,7 +145,7 @@ export default function NewReservationClient({
       }
       toast.success('予約を作成しました');
       const nextDevice = payload.deviceSlug;
-      r.push(
+      r.replace(
         `/groups/${params.slug}${
           nextDevice ? `?device=${encodeURIComponent(nextDevice)}` : ''
         }`
