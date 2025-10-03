@@ -1,4 +1,4 @@
-import { APP_TZ, utcToZoned } from '@/lib/time';
+import { APP_TZ, toUtcIsoZ, utcToLocal } from '@/lib/time';
 
 type Maybe<T> = T | null | undefined;
 
@@ -65,7 +65,8 @@ export type NormalizedReservation = {
   end: Date;
 };
 
-const isIsoLike = (value: unknown): value is string => typeof value === 'string' && value.length >= 10;
+const isUtcIso = (value: unknown): value is string =>
+  typeof value === 'string' && /\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value);
 
 export function normalizeReservation(
   raw: ReservationDto | undefined,
@@ -90,7 +91,7 @@ export function normalizeReservation(
     raw.endsAt,
   );
 
-  if (!isIsoLike(startIso) || !isIsoLike(endIso)) {
+  if (!isUtcIso(startIso) || !isUtcIso(endIso)) {
     return null;
   }
 
@@ -100,8 +101,8 @@ export function normalizeReservation(
     return null;
   }
 
-  const start = utcToZoned(startUtc, tz);
-  const end = utcToZoned(endUtc, tz);
+  const start = utcToLocal(startUtc, tz);
+  const end = utcToLocal(endUtc, tz);
 
   const device = raw.device ?? {};
   const user = raw.user ?? null;
@@ -136,8 +137,8 @@ export function normalizeReservation(
             email: firstTruthy(raw.userEmail) ?? null,
           }
         : null,
-    startsAtUTC: startUtc.toISOString(),
-    endsAtUTC: endUtc.toISOString(),
+    startsAtUTC: toUtcIsoZ(startUtc),
+    endsAtUTC: toUtcIsoZ(endUtc),
     startUtc,
     endUtc,
     start,
@@ -152,11 +153,7 @@ export function extractReservationItems(payload: any): ReservationDto[] {
   return [];
 }
 
-export function overlapsRange(
-  reservation: NormalizedReservation,
-  rangeStart: Date,
-  rangeEnd: Date,
-): boolean {
-  return reservation.endUtc > rangeStart && reservation.startUtc < rangeEnd;
+export function overlapsRange(reservation: NormalizedReservation, rangeStart: Date, rangeEnd: Date): boolean {
+  return reservation.end.getTime() >= rangeStart.getTime() && reservation.start.getTime() <= rangeEnd.getTime();
 }
 
