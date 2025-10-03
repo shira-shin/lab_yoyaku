@@ -19,6 +19,20 @@ export default function InlineReservationForm({ slug, date, devices }: Props) {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const splitDateTime = (value: string) => {
+    const normalized = value.replace('T', ' ').trim();
+    const [datePart, timePart] = normalized.split(/\s+/);
+    if (!datePart || !timePart) return null;
+    const [hour, minute, second] = timePart.split(':');
+    const hh = hour?.padStart(2, '0') ?? '00';
+    const mm = minute?.padStart(2, '0') ?? '00';
+    const ss = second ? second.padStart(2, '0') : '';
+    return {
+      date: datePart,
+      time: ss ? `${hh}:${mm}:${ss}` : `${hh}:${mm}`,
+    };
+  };
+
   async function submit() {
     if (!deviceId) {
       alert('機器を選択してください');
@@ -26,11 +40,21 @@ export default function InlineReservationForm({ slug, date, devices }: Props) {
     }
     setSaving(true);
     try {
+      const startParts = splitDateTime(start);
+      const endParts = splitDateTime(end);
+      if (!startParts || !endParts) {
+        alert('開始・終了時刻を正しく入力してください');
+        return;
+      }
       const payload = {
         groupSlug: slug,
         deviceId,
-        start,
-        end,
+        date: startParts.date,
+        endDate: endParts.date,
+        start: startParts.time,
+        end: endParts.time,
+        startTime: startParts.time,
+        endTime: endParts.time,
       };
       const res = await fetch('/api/reservations', {
         method: 'POST',
