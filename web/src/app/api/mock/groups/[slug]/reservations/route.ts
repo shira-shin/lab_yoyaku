@@ -6,16 +6,14 @@ import { NextResponse } from 'next/server';
 import { store } from '../../../_store';
 import { readUserFromCookie } from '@/lib/auth';
 import { loadDB } from '@/lib/mockdb';
-import { APP_TZ, toUTC } from '@/lib/time';
+import { APP_TZ, localInputToUTC } from '@/lib/time';
 
 const toUtcFromLocalString = (value: string, tz: string = APP_TZ) => {
   const normalized = value.trim().replace(' ', 'T');
-  const iso = /T\d{2}:\d{2}(?::\d{2})?$/.test(normalized) ? normalized : `${normalized}:00`;
-  const base = new Date(iso);
-  if (Number.isNaN(base.getTime())) throw new Error(`Invalid date string: ${value}`);
-  const projected = toUTC(base, tz);
-  const offset = projected.getTime() - base.getTime();
-  return new Date(base.getTime() - offset);
+  const match = normalized.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+  if (!match) throw new Error(`Invalid date string: ${value}`);
+  const [, day, hm] = match;
+  return localInputToUTC(`${day}T${hm}`, tz);
 };
 
 const localDayRange = (yyyyMmDd: string, tz: string = APP_TZ) => {
@@ -41,7 +39,16 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
   const device = store.findDevice(groupSlug, deviceSlug);
   if (!device) return NextResponse.json({ error: 'device not found' }, { status: 404 });
 
-  if (!start || !end || new Date(start) >= new Date(end)) {
+  if (!start || !end) {
+    return NextResponse.json({ error: 'invalid time range' }, { status: 400 });
+  }
+  try {
+    const startUtc = toUtcFromLocalString(start);
+    const endUtc = toUtcFromLocalString(end);
+    if (endUtc.getTime() <= startUtc.getTime()) {
+      return NextResponse.json({ error: 'invalid time range' }, { status: 400 });
+    }
+  } catch {
     return NextResponse.json({ error: 'invalid time range' }, { status: 400 });
   }
 

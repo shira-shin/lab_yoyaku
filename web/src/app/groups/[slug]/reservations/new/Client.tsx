@@ -3,28 +3,19 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from '@/lib/toast';
 import { z } from '@/lib/zod-helpers';
-import { APP_TZ, localWallclockToUtc } from '@/lib/time';
+import { localInputToUTC, toUtcIsoZ } from '@/lib/time';
 
 const ReservationFormSchema = z.object({
   deviceSlug: z.string().min(1),
-  start: z.coerce.date(),
-  end: z.coerce.date(),
+  start: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
+  end: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
   purpose: z.string().optional(),
 });
 
-function toLocalInputValue(date: Date) {
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}T${pad(
-    local.getHours()
-  )}:${pad(local.getMinutes())}`;
-}
-
 function buildDefaultValue(param: string | null, time: string) {
-  if (!param) return '';
-  const candidate = new Date(`${param}T${time}`);
-  if (Number.isNaN(candidate.getTime())) return '';
-  return toLocalInputValue(candidate);
+  if (!param || !/^\d{4}-\d{2}-\d{2}$/.test(param)) return '';
+  if (!/^\d{2}:\d{2}$/.test(time)) return '';
+  return `${param}T${time}`;
 }
 
 export default function NewReservationClient({
@@ -45,11 +36,11 @@ export default function NewReservationClient({
   );
 
   const defaultStartValue = useMemo(
-    () => buildDefaultValue(dateParam, '13:00:00'),
+    () => buildDefaultValue(dateParam, '13:00'),
     [dateParam]
   );
   const defaultEndValue = useMemo(
-    () => buildDefaultValue(dateParam, '14:00:00'),
+    () => buildDefaultValue(dateParam, '14:00'),
     [dateParam]
   );
 
@@ -76,20 +67,32 @@ export default function NewReservationClient({
       return;
     }
 
-    const { start, end } = parsed.data;
-    const startUtc = localWallclockToUtc(start, APP_TZ);
-    const endUtc = localWallclockToUtc(end, APP_TZ);
+    let startUtc: Date;
+    let endUtc: Date;
+    try {
+      startUtc = localInputToUTC(parsed.data.start);
+      endUtc = localInputToUTC(parsed.data.end);
+    } catch (error) {
+      console.error('[form datetime parse error]', error);
+      toast.error('開始・終了時刻を正しく入力してください');
+      return;
+    }
     const purpose = parsed.data.purpose?.trim() ?? '';
     if (endUtc.getTime() <= startUtc.getTime()) {
       toast.error('終了時刻は開始時刻より後に設定してください');
       return;
     }
 
+    const startsAtUTC = toUtcIsoZ(startUtc);
+    const endsAtUTC = toUtcIsoZ(endUtc);
+    console.info('[form→api]', parsed.data.start, startsAtUTC);
+    console.info('[form→api]', parsed.data.end, endsAtUTC);
+
     const payload = {
       groupSlug: params.slug,
       deviceSlug: parsed.data.deviceSlug,
-      startsAtUTC: startUtc.toISOString(),
-      endsAtUTC: endUtc.toISOString(),
+      startsAtUTC,
+      endsAtUTC,
       purpose,
     };
 

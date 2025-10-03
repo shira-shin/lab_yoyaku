@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 export const fetchCache = 'force-no-store';
 
 import { serverFetch } from '@/lib/http/serverFetch';
-import { dayRangeInUtc } from '@/lib/time';
+import { dayRangeInUtc, utcToLocal } from '@/lib/time';
 import {
   extractReservationItems,
   normalizeReservation,
@@ -82,19 +82,21 @@ export default async function DeviceDetail({
   rangeEnd.setHours(0, 0, 0, 0);
   rangeEnd.setDate(rangeEnd.getDate() + 1);
   const toYmd = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-  const { dayStartUtc: rangeStartBoundary } = dayRangeInUtc(toYmd(rangeStart));
-  const { dayEndUtc: rangeEndBoundary } = dayRangeInUtc(
+  const { dayStartUtc: rangeStartBoundaryUtc } = dayRangeInUtc(toYmd(rangeStart));
+  const { dayEndUtc: rangeEndBoundaryUtc } = dayRangeInUtc(
     toYmd(new Date(rangeEnd.getTime() - 24 * 60 * 60 * 1000)),
   );
+  const rangeStartBoundary = utcToLocal(rangeStartBoundaryUtc);
+  const rangeEndBoundary = utcToLocal(rangeEndBoundaryUtc);
 
   const reservationsParams = new URLSearchParams({
     deviceSlug,
-    from: rangeStartBoundary.toISOString(),
-    to: rangeEndBoundary.toISOString(),
+    from: rangeStartBoundaryUtc.toISOString(),
+    to: rangeEndBoundaryUtc.toISOString(),
   });
   const reservationsRes = await serverFetch(
     `/api/groups/${encodeURIComponent(group)}/reservations?${reservationsParams.toString()}`,
-    { cache: 'no-store' },
+    { cache: 'no-store', next: { revalidate: 0 } },
   );
   if (reservationsRes.status === 401) {
     redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);

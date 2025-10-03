@@ -1,22 +1,13 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { APP_TZ, localWallclockToUtc } from "@/lib/time";
+import { toUtcIsoZ } from "@/lib/time";
 
-function parseIncomingDate(value: unknown): Date | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const date = new Date(trimmed);
-  if (Number.isNaN(date.getTime())) return null;
-  if (/Z$|[+-]\d{2}:?\d{2}$/.test(trimmed)) {
-    return date;
+function mustUtcIsoZ(value: unknown): string {
+  if (typeof value !== "string" || !/\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) {
+    throw new Error(`Require UTC ISO (Z): ${value}`);
   }
-  try {
-    return localWallclockToUtc(date, APP_TZ);
-  } catch {
-    return null;
-  }
+  return value;
 }
 
 export async function POST(req: Request) {
@@ -24,14 +15,12 @@ export async function POST(req: Request) {
   if (!session?.user?.email) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const { deviceId, deviceSlug, groupSlug, startsAtUTC, endsAtUTC, start, end, purpose } = body as {
+  const { deviceId, deviceSlug, groupSlug, startsAtUTC, endsAtUTC, purpose } = body as {
     deviceId?: string;
     deviceSlug?: string;
     groupSlug?: string;
     startsAtUTC?: string;
     endsAtUTC?: string;
-    start?: string;
-    end?: string;
     purpose?: string;
   };
 
@@ -46,9 +35,21 @@ export async function POST(req: Request) {
   });
   if (!device) return NextResponse.json({ message: "device not found in the group" }, { status: 400 });
 
-  const startAt = parseIncomingDate(startsAtUTC ?? start ?? "");
-  const endAt = parseIncomingDate(endsAtUTC ?? end ?? "");
-  if (!startAt || !endAt)
+  let startAt: Date;
+  let endAt: Date;
+  try {
+    const startIso = mustUtcIsoZ(startsAtUTC);
+    const endIso = mustUtcIsoZ(endsAtUTC);
+    startAt = new Date(startIso);
+    endAt = new Date(endIso);
+    console.info('[api payload]', { startsAtUTC: startIso, endsAtUTC: endIso });
+  } catch (error) {
+    console.error('[api payload parse error]', error);
+    return NextResponse.json({ message: "invalid datetime" }, { status: 400 });
+  }
+  if (!(startAt instanceof Date) || Number.isNaN(startAt.getTime()))
+    return NextResponse.json({ message: "invalid datetime" }, { status: 400 });
+  if (!(endAt instanceof Date) || Number.isNaN(endAt.getTime()))
     return NextResponse.json({ message: "invalid datetime" }, { status: 400 });
   if (endAt.getTime() <= startAt.getTime())
     return NextResponse.json({ message: "end must be after start" }, { status: 400 });
@@ -61,10 +62,29 @@ export async function POST(req: Request) {
       device: { connect: { id: device.id } },
       purpose: purpose?.trim() ? purpose.trim() : undefined,
     },
-    select: { id: true },
+    select: { id: true, start: true, end: true },
   });
 
-  return NextResponse.json({ id: created.id }, { status: 201 });
+  const createdStartsAt = toUtcIsoZ(created.start);
+  const createdEndsAt = toUtcIsoZ(created.end);
+
+  return new NextResponse(
+    JSON.stringify({
+      id: created.id,
+      item: {
+        ...created,
+        startsAtUTC: createdStartsAt,
+        endsAtUTC: createdEndsAt,
+      },
+    }),
+    {
+      status: 201,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+      },
+    },
+  );
 }
 
 // （不要な GET 叩きに 405 を返す）

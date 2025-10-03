@@ -8,7 +8,7 @@ import { notFound, redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { absUrl } from '@/lib/url';
-import { APP_TZ, dayRangeInUtc, formatInTZ } from '@/lib/time';
+import { dayRangeInUtc, utcToLocal } from '@/lib/time';
 import {
   extractReservationItems,
   normalizeReservation,
@@ -23,10 +23,10 @@ function isValidDateFormat(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
-function formatTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return formatInTZ(date, APP_TZ, { hour: '2-digit', minute: '2-digit', hour12: false });
+const pad = (value: number) => value.toString().padStart(2, '0');
+
+function formatTime(value: Date) {
+  return `${pad(value.getHours())}:${pad(value.getMinutes())}`;
 }
 
 async function fetchDuties(slug: string, date: string) {
@@ -59,9 +59,12 @@ export default async function DayPage({
 
   const reservationsRes = await fetch(
     absUrl(`/api/groups/${encodeURIComponent(normalizedSlug)}/reservations?date=${encodeURIComponent(date)}`),
-    { cache: 'no-store' },
+    { cache: 'no-store', next: { revalidate: 0 } },
   );
-  const devicesRes = await serverFetch(`/api/devices?groupSlug=${encodeURIComponent(normalizedSlug)}`);
+    const devicesRes = await serverFetch(
+      `/api/devices?groupSlug=${encodeURIComponent(normalizedSlug)}`,
+      { cache: 'no-store', next: { revalidate: 0 } },
+    );
 
   if (reservationsRes.status === 401 || devicesRes.status === 401) {
     redirect(`/login?next=/groups/${encodeURIComponent(normalizedSlug)}/day/${date}`);
@@ -83,12 +86,20 @@ export default async function DayPage({
     .filter((item): item is NormalizedReservation => Boolean(item))
     .sort((a, b) => a.startUtc.getTime() - b.startUtc.getTime());
 
-  const list = reservations.map((item) => ({
-    id: item.id,
-    startAt: item.startsAtUTC,
-    endAt: item.endsAtUTC,
-    device: { name: item.deviceName ?? item.deviceId },
-  }));
+  const list = reservations.map((item) => {
+    console.info('[render]', { raw: item.startsAtUTC, local: utcToLocal(item.startsAtUTC) });
+    console.info('[render]', { raw: item.endsAtUTC, local: utcToLocal(item.endsAtUTC) });
+    return {
+      id: item.id,
+      startUtc: item.startUtc,
+      endUtc: item.endUtc,
+      startLocal: item.start,
+      endLocal: item.end,
+      device: { name: item.deviceName ?? item.deviceId },
+      startsAtUTC: item.startsAtUTC,
+      endsAtUTC: item.endsAtUTC,
+    };
+  });
 
   const devicesJson = await devicesRes.json().catch(() => ({} as any));
   const devicesSource = Array.isArray(devicesJson?.devices) ? devicesJson.devices : [];
@@ -182,7 +193,7 @@ export default async function DayPage({
         ) : (
           <ul className="grid md:grid-cols-2 gap-3">
             {list.map((r) => {
-              const isPast = new Date(r.endAt).getTime() < Date.now();
+              const isPast = r.endUtc.getTime() < Date.now();
               return (
                 <li
                   key={r.id}
@@ -190,7 +201,7 @@ export default async function DayPage({
                 >
                   <div className="font-medium">{r.device.name}</div>
                   <div className="text-sm text-gray-600">
-                    {formatTime(r.startAt)} 〜 {formatTime(r.endAt)}
+                    {formatTime(r.startLocal)} 〜 {formatTime(r.endLocal)}
                   </div>
                 </li>
               );

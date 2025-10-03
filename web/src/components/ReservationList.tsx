@@ -1,5 +1,5 @@
 import React from 'react';
-import { APP_TZ, formatInTZ } from '@/lib/time';
+const pad = (value: number) => value.toString().padStart(2, '0');
 
 export type ReservationItem = {
   id: string;
@@ -10,14 +10,7 @@ export type ReservationItem = {
 };
 
 const fmt = (d: Date) =>
-  formatInTZ(d, APP_TZ, {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
 export default function ReservationList({ items }: { items: ReservationItem[] }) {
   if (!items.length) return <p className="text-sm text-neutral-500">予約がありません。</p>;
