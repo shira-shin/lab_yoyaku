@@ -6,14 +6,16 @@ import { NextResponse } from 'next/server';
 import { store } from '../../../_store';
 import { readUserFromCookie } from '@/lib/auth';
 import { loadDB } from '@/lib/mockdb';
-import { localDayRange, localStringToUtcDate } from '@/lib/time';
+import { dayRangeUtc, localPartsToUtc, localStringToUtcDate } from '@/lib/time';
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
   const body = await req.json().catch(() => ({}));
   const groupSlug = params.slug?.toLowerCase();
   const deviceSlug = String(body.device || '').toLowerCase();
-  const start = String(body.start || '');
-  const end = String(body.end || '');
+  const date = String(body.date || '').trim();
+  const endDate = String(body.endDate || '').trim();
+  const start = String(body.start || body.startTime || '').trim();
+  const end = String(body.end || body.endTime || '').trim();
   const purpose = String(body.purpose || '');
 
   const me = await readUserFromCookie();
@@ -25,15 +27,35 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
   const device = store.findDevice(groupSlug, deviceSlug);
   if (!device) return NextResponse.json({ error: 'device not found' }, { status: 404 });
 
-  if (!start || !end || new Date(start) >= new Date(end)) {
+  const toParts = (value: string, fallbackDate?: string) => {
+    const normalized = value.replace('T', ' ').trim();
+    const [datePart, timePart] = normalized.split(/\s+/);
+    if (datePart && timePart) return { date: datePart, time: timePart };
+    if (fallbackDate && value && !value.includes('T') && !value.includes(' ')) {
+      return { date: fallbackDate, time: value };
+    }
+    return null;
+  };
+
+  const startParts = toParts(start, date);
+  const endParts = toParts(end, endDate || date);
+
+  if (!startParts || !endParts) {
+    return NextResponse.json({ error: 'invalid time range' }, { status: 400 });
+  }
+
+  const startAt = localPartsToUtc(startParts.date, startParts.time);
+  const endAt = localPartsToUtc(endParts.date, endParts.time);
+
+  if (endAt <= startAt) {
     return NextResponse.json({ error: 'invalid time range' }, { status: 400 });
   }
 
   const reservation = store.createReservation({
     groupSlug,
     deviceId: device.id,
-    start,
-    end,
+    start: startAt.toISOString(),
+    end: endAt.toISOString(),
     purpose,
     user: me.email,
     userName: me.name || me.email,
@@ -55,12 +77,12 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
     list = list.filter((r: any) => r.deviceSlug === deviceSlug || r.deviceId === deviceSlug);
   }
   if (date) {
-    const { start, end } = localDayRange(date);
+    const { startUtc, endUtc } = dayRangeUtc(date);
     list = list.filter((r: any) => {
       const startAt = new Date(r.start);
       const endAt = new Date(r.end);
       if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) return false;
-      return !(endAt <= start || startAt >= end);
+      return !(endAt <= startUtc || startAt >= endUtc);
     });
   } else {
     if (fromParam) {

@@ -26,6 +26,20 @@ function buildDefaultValue(param: string | null, time: string) {
   return toLocalInputValue(candidate);
 }
 
+function splitDateTime(value: string) {
+  const normalized = value.replace('T', ' ').trim();
+  const [datePart, timePart] = normalized.split(/\s+/);
+  if (!datePart || !timePart) return null;
+  const [hour, minute, second] = timePart.split(':');
+  const hh = hour?.padStart(2, '0') ?? '00';
+  const mm = minute?.padStart(2, '0') ?? '00';
+  const ss = second ? second.padStart(2, '0') : '';
+  return {
+    date: datePart,
+    time: ss ? `${hh}:${mm}:${ss}` : `${hh}:${mm}`,
+  };
+}
+
 export default function NewReservationClient({
   params,
   devices,
@@ -84,11 +98,22 @@ export default function NewReservationClient({
       return;
     }
 
+    const startParts = splitDateTime(startRaw);
+    const endParts = splitDateTime(endRaw);
+    if (!startParts || !endParts) {
+      toast.error('開始・終了時刻を正しく入力してください');
+      return;
+    }
+
     const payload = {
       groupSlug: params.slug,
       deviceSlug: parsed.data.deviceSlug,
-      start: startRaw,
-      end: endRaw,
+      date: startParts.date,
+      endDate: endParts.date,
+      start: startParts.time,
+      end: endParts.time,
+      startTime: startParts.time,
+      endTime: endParts.time,
       purpose,
     };
 

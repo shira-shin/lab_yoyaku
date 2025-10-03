@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { localDayRange, localStringToUtcDate } from "@/lib/time";
+import { dayRangeUtc, localStringToUtcDate } from "@/lib/time";
 
 export async function GET(_: Request, { params, url }: { params: { slug: string }, url: string }) {
   const u = new URL(url);
@@ -22,9 +22,9 @@ export async function GET(_: Request, { params, url }: { params: { slug: string 
   const andConditions: any[] = [];
 
   if (date) {
-    const { start, end } = localDayRange(date);
-    notConditions.push({ end: { lte: start } });
-    andConditions.push({ start: { lt: end } });
+    const { startUtc, endUtc } = dayRangeUtc(date);
+    notConditions.push({ end: { lte: startUtc } });
+    andConditions.push({ start: { lt: endUtc } });
   } else {
     if (fromParam) {
       const fromDate = (() => {
@@ -68,5 +68,12 @@ export async function GET(_: Request, { params, url }: { params: { slug: string 
     include: { device: { select: { name: true, slug: true } } },
   });
 
-  return NextResponse.json({ data: rows });
+  const data = rows.map((r) => ({
+    id: r.id,
+    startAt: r.start.toISOString(),
+    endAt: r.end.toISOString(),
+    device: r.device,
+  }));
+
+  return NextResponse.json({ ok: true, data });
 }
