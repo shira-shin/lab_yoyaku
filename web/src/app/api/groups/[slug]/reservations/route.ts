@@ -1,88 +1,60 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { APP_TZ, toUTC } from "@/lib/time";
+import { APP_TZ, dayRangeInUtc } from "@/lib/time";
 
-const toUtcFromLocalString = (value: string, tz: string = APP_TZ) => {
-  const normalized = value.trim().replace(" ", "T");
-  const iso = /T\d{2}:\d{2}(?::\d{2})?$/.test(normalized) ? normalized : `${normalized}:00`;
-  const base = new Date(iso);
-  if (Number.isNaN(base.getTime())) throw new Error(`Invalid date string: ${value}`);
-  const projected = toUTC(base, tz);
-  const offset = projected.getTime() - base.getTime();
-  return new Date(base.getTime() - offset);
-};
+export async function GET(req: Request, { params }: { params: { slug: string } }) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const dateParam = searchParams.get("date");
+    const deviceId = searchParams.get("deviceId") ?? undefined;
+    const deviceSlug = searchParams.get("deviceSlug") ?? undefined;
 
-const localDayRange = (yyyyMmDd: string, tz: string = APP_TZ) => {
-  const start = toUtcFromLocalString(`${yyyyMmDd}T00:00`, tz);
-  const end = toUtcFromLocalString(`${yyyyMmDd}T24:00`, tz);
-  return { start, end };
-};
+    const targetDate =
+      dateParam ??
+      new Intl.DateTimeFormat("en-CA", { timeZone: APP_TZ }).format(new Date());
 
-export async function GET(_: Request, { params, url }: { params: { slug: string }, url: string }) {
-  const u = new URL(url);
-  const date = u.searchParams.get("date"); // "YYYY-MM-DD" 指定時は日別
-  const deviceId = u.searchParams.get("deviceId") ?? undefined;
-  const deviceSlug = u.searchParams.get("deviceSlug") ?? undefined;
-  const fromParam = u.searchParams.get("from");
-  const toParam = u.searchParams.get("to");
-  const group = await prisma.group.findUnique({ where: { slug: params.slug }, select: { id: true } });
-  if (!group) return NextResponse.json({ data: [] });
+    const { dayStartUtc, dayEndUtc } = dayRangeInUtc(targetDate);
 
-  const deviceFilter = {
-    groupId: group.id,
-    ...(deviceId ? { id: deviceId } : {}),
-    ...(deviceSlug ? { slug: deviceSlug } : {}),
-  };
+    const rows = await prisma.reservation.findMany({
+      where: {
+        device: {
+          group: { slug: params.slug },
+          ...(deviceId ? { id: deviceId } : {}),
+          ...(deviceSlug ? { slug: deviceSlug } : {}),
+        },
+        NOT: [{ end: { lte: dayStartUtc } }],
+        AND: [{ start: { lt: dayEndUtc } }],
+      },
+      orderBy: { start: "asc" },
+      select: {
+        id: true,
+        start: true,
+        end: true,
+        userEmail: true,
+        device: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+    });
 
-  const notConditions: any[] = [];
-  const andConditions: any[] = [];
+    const items = rows.map((reservation) => ({
+      id: reservation.id,
+      startAt: reservation.start.toISOString(),
+      endAt: reservation.end.toISOString(),
+      userEmail: reservation.userEmail,
+      device: reservation.device,
+    }));
 
-  if (date) {
-    const { start, end } = localDayRange(date);
-    notConditions.push({ end: { lte: start } });
-    andConditions.push({ start: { lt: end } });
-  } else {
-    if (fromParam) {
-      const fromDate = (() => {
-        const parsed = new Date(fromParam);
-        if (!Number.isNaN(parsed.getTime())) return parsed;
-        try {
-          return toUtcFromLocalString(fromParam);
-        } catch {
-          return null;
-        }
-      })();
-      if (fromDate) {
-        notConditions.push({ end: { lte: fromDate } });
-      }
-    }
-    if (toParam) {
-      const toDate = (() => {
-        const parsed = new Date(toParam);
-        if (!Number.isNaN(parsed.getTime())) return parsed;
-        try {
-          return toUtcFromLocalString(toParam);
-        } catch {
-          return null;
-        }
-      })();
-      if (toDate) {
-        andConditions.push({ start: { lt: toDate } });
-      }
-    }
+    return NextResponse.json({ items }, { status: 200 });
+  } catch (err) {
+    console.error("[group.reservations.GET]", err);
+    return NextResponse.json(
+      { error: "Failed to load reservations" },
+      { status: 500 },
+    );
   }
-
-  const where = {
-    device: deviceFilter,
-    ...(notConditions.length ? { NOT: notConditions } : {}),
-    ...(andConditions.length ? { AND: andConditions } : {}),
-  };
-
-  const rows = await prisma.reservation.findMany({
-    where,
-    orderBy: { start: "asc" },
-    include: { device: { select: { name: true, slug: true } } },
-  });
-
-  return NextResponse.json({ data: rows });
 }
