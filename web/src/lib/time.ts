@@ -1,46 +1,71 @@
+// web/src/lib/time.ts
 import { addDays } from "date-fns";
-import { zonedTimeToUtc } from "date-fns-tz";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
 
+/** App canonical timezone (server + client). */
 export const APP_TZ = process.env.NEXT_PUBLIC_TZ || "Asia/Tokyo";
 
-// Local Date -> UTC (based on APP_TZ)
-export function toUTC(date: Date, tz: string = APP_TZ): Date {
-  const fmt = new Intl.DateTimeFormat("en-US", {
-    timeZone: tz,
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-    hour12: false,
-  });
-  const parts = fmt.formatToParts(date);
-  const values: any = {};
-  parts.forEach(p => { if (p.type !== "literal") values[p.type] = parseInt(p.value, 10); });
-  return new Date(Date.UTC(values.year, values.month - 1, values.day, values.hour, values.minute, values.second));
+/** Normalize incoming value to Date. */
+function asDate(input: Date | string): Date {
+  if (input instanceof Date) return input;
+  // Accept "YYYY-MM-DD HH:mm" or "YYYY-MM-DDTHH:mm" as wall-clock strings.
+  const normalized = input.trim().replace(" ", "T");
+  return new Date(normalized);
 }
 
-// UTC -> Local TZ Date
-export function fromUTC(date: Date, tz: string = APP_TZ): Date {
-  const iso = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: tz,
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-    hour12: false,
-  }).format(date);
-  return new Date(iso);
+/** Convert a wall-clock time in APP_TZ to the corresponding UTC instant. */
+export function localWallclockToUtc(input: Date | string): Date {
+  return fromZonedTime(asDate(input), APP_TZ);
 }
 
-// Formatter
-export function formatInTZ(date: Date, tz: string = APP_TZ, opts: Intl.DateTimeFormatOptions = {}): string {
-  return new Intl.DateTimeFormat("ja-JP", { timeZone: tz, ...opts }).format(date);
+/** Convert a UTC instant to a zoned Date for display/formatting. */
+export function utcToZoned(input: Date | string): Date {
+  return toZonedTime(asDate(input), APP_TZ);
 }
 
-export function dayRangeInUtc(yyyyMmDd: string, tz: string = APP_TZ) {
-  const trimmed = yyyyMmDd.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    throw new Error(`Invalid date string: ${yyyyMmDd}`);
+/** Format a date in the app timezone (ja-JP by default). */
+export function formatInAppTz(
+  input: Date | string,
+  opts: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   }
-
-  const dayStartUtc = zonedTimeToUtc(`${trimmed}T00:00:00`, tz);
-  const dayEndUtc = addDays(dayStartUtc, 1);
-
-  return { dayStartUtc, dayEndUtc };
+): string {
+  const d = asDate(input);
+  return new Intl.DateTimeFormat("ja-JP", { timeZone: APP_TZ, ...opts }).format(d);
 }
+
+/** Whether the given instant (UTC) is already past. */
+export function isPast(input: Date | string): boolean {
+  return asDate(input).getTime() < Date.now();
+}
+
+/** Given YYYY-MM-DD (local APP_TZ), return the UTC window [start, end). */
+export function dayRangeInUtc(dateStr: string): {
+  dayStartUtc: Date;
+  dayEndUtc: Date;
+} {
+  const startLocal = new Date(`${dateStr}T00:00:00`);
+  const endLocal = addDays(startLocal, 1);
+  return {
+    dayStartUtc: localWallclockToUtc(startLocal),
+    dayEndUtc: localWallclockToUtc(endLocal),
+  };
+}
+
+/* -----------------------------
+ * Legacy aliases (for backward compatibility)
+ * ----------------------------- */
+
+/** Legacy: previously imported as `toUTC` throughout the app. */
+export const toUTC = localWallclockToUtc;
+
+/** Legacy: previously imported as `formatInTZ` throughout the app. */
+export const formatInTZ = formatInAppTz;
+
+/** Optional convenience aliases used in some code paths. */
+export const toZoned = utcToZoned;
+export const dayWindowUTC = dayRangeInUtc;
