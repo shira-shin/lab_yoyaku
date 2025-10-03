@@ -1,25 +1,38 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { APP_TZ, toUTC } from "@/lib/time";
+import { APP_TZ, localWallclockToUtc } from "@/lib/time";
 
-const toUtcFromLocalString = (value: string, tz: string = APP_TZ) => {
-  const normalized = value.trim().replace(" ", "T");
-  const iso = /T\d{2}:\d{2}(?::\d{2})?$/.test(normalized) ? normalized : `${normalized}:00`;
-  const base = new Date(iso);
-  if (Number.isNaN(base.getTime())) throw new Error(`Invalid date string: ${value}`);
-  const projected = toUTC(base, tz);
-  const offset = projected.getTime() - base.getTime();
-  return new Date(base.getTime() - offset);
-};
+function parseIncomingDate(value: unknown): Date | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const date = new Date(trimmed);
+  if (Number.isNaN(date.getTime())) return null;
+  if (/Z$|[+-]\d{2}:?\d{2}$/.test(trimmed)) {
+    return date;
+  }
+  try {
+    return localWallclockToUtc(date, APP_TZ);
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(req: Request) {
   const session = await getServerSession();
   if (!session?.user?.email) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const { deviceId, deviceSlug, groupSlug, start, end } = body as {
-    deviceId?: string; deviceSlug?: string; groupSlug?: string; start: string; end: string;
+  const { deviceId, deviceSlug, groupSlug, startsAtUTC, endsAtUTC, start, end, purpose } = body as {
+    deviceId?: string;
+    deviceSlug?: string;
+    groupSlug?: string;
+    startsAtUTC?: string;
+    endsAtUTC?: string;
+    start?: string;
+    end?: string;
+    purpose?: string;
   };
 
   // group & device を厳格に突き合わせ（他グループデバイスへの誤登録を防止）
@@ -33,12 +46,11 @@ export async function POST(req: Request) {
   });
   if (!device) return NextResponse.json({ message: "device not found in the group" }, { status: 400 });
 
-  // 「入力文字列をローカル時刻として」UTCに変換して保存（ズレ防止）
-  const startAt = toUtcFromLocalString(start);
-  const endAt   = toUtcFromLocalString(end);
-  if (!(startAt instanceof Date) || isNaN(+startAt) || !(endAt instanceof Date) || isNaN(+endAt))
+  const startAt = parseIncomingDate(startsAtUTC ?? start ?? "");
+  const endAt = parseIncomingDate(endsAtUTC ?? end ?? "");
+  if (!startAt || !endAt)
     return NextResponse.json({ message: "invalid datetime" }, { status: 400 });
-  if (+endAt <= +startAt)
+  if (endAt.getTime() <= startAt.getTime())
     return NextResponse.json({ message: "end must be after start" }, { status: 400 });
 
   const created = await prisma.reservation.create({
@@ -47,6 +59,7 @@ export async function POST(req: Request) {
       end: endAt,
       userEmail: session.user.email,     // スキーマの必須項目
       device: { connect: { id: device.id } },
+      purpose: purpose?.trim() ? purpose.trim() : undefined,
     },
     select: { id: true },
   });

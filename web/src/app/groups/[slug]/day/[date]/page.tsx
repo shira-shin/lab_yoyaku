@@ -8,7 +8,7 @@ import { notFound, redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { absUrl } from '@/lib/url';
-import { APP_TZ, toUTC, formatInTZ } from '@/lib/time';
+import { APP_TZ, dayRangeInUtc, formatInTZ } from '@/lib/time';
 import {
   extractReservationItems,
   normalizeReservation,
@@ -29,26 +29,10 @@ function formatTime(value: string) {
   return formatInTZ(date, APP_TZ, { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-const toUtcFromLocalString = (value: string, tz: string = APP_TZ) => {
-  const normalized = value.trim().replace(' ', 'T');
-  const iso = /T\d{2}:\d{2}(?::\d{2})?$/.test(normalized) ? normalized : `${normalized}:00`;
-  const base = new Date(iso);
-  if (Number.isNaN(base.getTime())) throw new Error(`Invalid date string: ${value}`);
-  const projected = toUTC(base, tz);
-  const offset = projected.getTime() - base.getTime();
-  return new Date(base.getTime() - offset);
-};
-
-const localDayRange = (yyyyMmDd: string, tz: string = APP_TZ) => {
-  const start = toUtcFromLocalString(`${yyyyMmDd}T00:00`, tz);
-  const end = toUtcFromLocalString(`${yyyyMmDd}T24:00`, tz);
-  return { start, end };
-};
-
 async function fetchDuties(slug: string, date: string) {
-  const { start, end } = localDayRange(date);
-  const from = start.toISOString();
-  const to = end.toISOString();
+  const { dayStartUtc, dayEndUtc } = dayRangeInUtc(date);
+  const from = dayStartUtc.toISOString();
+  const to = dayEndUtc.toISOString();
   const res = await serverFetch(
     `/api/duties?groupSlug=${encodeURIComponent(slug)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&include=type`
   );

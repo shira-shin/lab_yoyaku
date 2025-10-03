@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { APP_TZ, localWallclockToUtc } from '@/lib/time';
 
 type DeviceOption = { id: string; slug: string; name: string };
 
@@ -24,13 +25,26 @@ export default function InlineReservationForm({ slug, date, devices }: Props) {
       alert('機器を選択してください');
       return;
     }
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      alert('開始・終了時刻を正しく入力してください');
+      return;
+    }
+    const startUtc = localWallclockToUtc(startDate, APP_TZ);
+    const endUtc = localWallclockToUtc(endDate, APP_TZ);
+    if (endUtc.getTime() <= startUtc.getTime()) {
+      alert('終了時刻は開始時刻より後に設定してください');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
         groupSlug: slug,
         deviceId,
-        start,
-        end,
+        startsAtUTC: startUtc.toISOString(),
+        endsAtUTC: endUtc.toISOString(),
+        purpose: note.trim() ? note.trim() : undefined,
       };
       const res = await fetch('/api/reservations', {
         method: 'POST',

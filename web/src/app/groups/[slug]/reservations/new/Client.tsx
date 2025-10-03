@@ -3,6 +3,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from '@/lib/toast';
 import { z } from '@/lib/zod-helpers';
+import { APP_TZ, localWallclockToUtc } from '@/lib/time';
 
 const ReservationFormSchema = z.object({
   deviceSlug: z.string().min(1),
@@ -76,10 +77,10 @@ export default function NewReservationClient({
     }
 
     const { start, end } = parsed.data;
-    const startRaw = String(fd.get('start') || '');
-    const endRaw = String(fd.get('end') || '');
+    const startUtc = localWallclockToUtc(start, APP_TZ);
+    const endUtc = localWallclockToUtc(end, APP_TZ);
     const purpose = parsed.data.purpose?.trim() ?? '';
-    if (start >= end) {
+    if (endUtc.getTime() <= startUtc.getTime()) {
       toast.error('終了時刻は開始時刻より後に設定してください');
       return;
     }
@@ -87,8 +88,8 @@ export default function NewReservationClient({
     const payload = {
       groupSlug: params.slug,
       deviceSlug: parsed.data.deviceSlug,
-      start: startRaw,
-      end: endRaw,
+      startsAtUTC: startUtc.toISOString(),
+      endsAtUTC: endUtc.toISOString(),
       purpose,
     };
 

@@ -1,53 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
+import { dayRangeInUtc } from '@/lib/time';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-
-function getTimeZoneOffset(date: Date, timeZone: string) {
-  try {
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      hour12: false,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-    const parts = formatter.formatToParts(date);
-    const filled: Record<string, number> = {};
-    for (const part of parts) {
-      if (part.type !== 'literal') {
-        filled[part.type] = Number(part.value);
-      }
-    }
-    const asUTC = Date.UTC(
-      filled.year ?? date.getUTCFullYear(),
-      (filled.month ?? date.getUTCMonth() + 1) - 1,
-      filled.day ?? date.getUTCDate(),
-      filled.hour ?? 0,
-      filled.minute ?? 0,
-      filled.second ?? 0,
-    );
-    return (asUTC - date.getTime()) / 60000;
-  } catch {
-    return 0;
-  }
-}
-
-function startOfDayInTimeZone(value: string, timeZone: string): Date | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  const [yearStr, monthStr, dayStr] = value.split('-');
-  const year = Number(yearStr);
-  const month = Number(monthStr) - 1;
-  const day = Number(dayStr);
-  if ([year, month, day].some((n) => !Number.isFinite(n))) return null;
-  const utcMidnight = Date.UTC(year, month, day, 0, 0, 0, 0);
-  const offsetMinutes = getTimeZoneOffset(new Date(utcMidnight), timeZone);
-  return new Date(utcMidnight - offsetMinutes * 60 * 1000);
-}
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -68,11 +24,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ data: [] });
   }
 
-  const dayStartUtc = startOfDayInTimeZone(day, tz);
-  if (!dayStartUtc) {
+  let dayStartUtc: Date;
+  let dayEndUtc: Date;
+  try {
+    const { dayStartUtc: start, dayEndUtc: end } = dayRangeInUtc(day, tz);
+    dayStartUtc = start;
+    dayEndUtc = new Date(end.getTime() - 1);
+  } catch {
     return NextResponse.json({ error: 'INVALID_DATE' }, { status: 400 });
   }
-  const dayEndUtc = new Date(dayStartUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
 
   const reservations = await prisma.reservation.findMany({
     where: {
@@ -89,6 +49,7 @@ export async function GET(req: Request) {
           slug: true,
         },
       },
+      user: { select: { id: true, name: true, email: true } },
     },
   });
 
@@ -97,12 +58,21 @@ export async function GET(req: Request) {
     deviceId: reservation.deviceId,
     deviceName: reservation.device?.name ?? null,
     deviceSlug: reservation.device?.slug ?? null,
+    startsAtUTC: reservation.start.toISOString(),
+    endsAtUTC: reservation.end.toISOString(),
     start: reservation.start.toISOString(),
     end: reservation.end.toISOString(),
     purpose: reservation.purpose,
     reminderMinutes: reservation.reminderMinutes,
     userEmail: reservation.userEmail,
-    userName: reservation.userName,
+    userName: reservation.user?.name ?? reservation.userName ?? null,
+    user: reservation.user
+      ? {
+          id: reservation.user.id,
+          name: reservation.user.name ?? null,
+          email: reservation.user.email ?? reservation.userEmail ?? null,
+        }
+      : null,
   }));
 
   return NextResponse.json({ data });

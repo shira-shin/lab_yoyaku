@@ -13,7 +13,9 @@ import { redirect } from 'next/navigation';
 type Mine = {
   id:string; deviceId:string; deviceName?:string; userEmail:string; userName?:string;
   participants?: string[];
-  start:string; end:string; purpose?:string; groupSlug:string; groupName:string;
+  start:string; end:string; startsAtUTC?:string; endsAtUTC?:string;
+  purpose?:string; groupSlug:string; groupName:string;
+  user?: { id?: string | null; name?: string | null; email?: string | null } | null;
 };
 
 function colorFromString(s:string){
@@ -43,14 +45,15 @@ export default async function DashboardPage() {
 
   const mineAll = json?.all ?? [];
   const nameOf = (r: any) => {
-    if (me && r.userEmail === me.email) return me.name || me.email.split('@')[0];
-    return r.userName || r.userEmail?.split('@')[0] || r.userName || '';
+    const email: string | undefined = r.user?.email ?? r.userEmail ?? undefined;
+    if (me && email && email === me.email) return me.name || email.split('@')[0];
+    return r.user?.name || r.userName || (email ? email.split('@')[0] : '');
   };
   spans = mineAll.map((r: any) => ({
     id: r.id,
     name: r.deviceName ?? r.deviceId,
-    start: new Date(r.start),
-    end: new Date(r.end),
+    start: new Date(r.startsAtUTC ?? r.start),
+    end: new Date(r.endsAtUTC ?? r.end),
     color: colorFromString(r.deviceId),
     groupSlug: r.groupSlug,
     by: nameOf(r),

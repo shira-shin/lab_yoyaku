@@ -17,7 +17,12 @@ async function buildGroupPayload(slug: string) {
       members: true,
       devices: {
         orderBy: { name: 'asc' },
-        include: { reservations: { orderBy: { start: 'asc' } } },
+        include: {
+          reservations: {
+            orderBy: { start: 'asc' },
+            include: { user: { select: { id: true, name: true, email: true } } },
+          },
+        },
       },
       dutyTypes: {
         orderBy: { name: 'asc' },
@@ -41,6 +46,13 @@ async function buildGroupPayload(slug: string) {
       userName: reservation.userName ?? null,
       reminderMinutes: reservation.reminderMinutes ?? null,
       userId: reservation.userId,
+      user: reservation.user
+        ? {
+            id: reservation.user.id,
+            name: reservation.user.name ?? null,
+            email: reservation.user.email ?? null,
+          }
+        : null,
     }))
   )
 
@@ -49,6 +61,7 @@ async function buildGroupPayload(slug: string) {
       group.hostEmail,
       ...group.members.map((member) => member.email),
       ...reservations.map((reservation) => reservation.userEmail),
+      ...reservations.map((reservation) => reservation.user?.email).filter(Boolean) as string[],
     ])
   )
 
@@ -62,15 +75,26 @@ async function buildGroupPayload(slug: string) {
     deviceId: reservation.deviceId,
     deviceSlug: reservation.deviceSlug,
     deviceName: reservation.deviceName,
+    startsAtUTC: reservation.start.toISOString(),
+    endsAtUTC: reservation.end.toISOString(),
     start: reservation.start.toISOString(),
     end: reservation.end.toISOString(),
     purpose: reservation.purpose,
     reminderMinutes: reservation.reminderMinutes,
     userEmail: reservation.userEmail,
     userName:
+      reservation.user?.name ||
       reservation.userName ||
       displayNameMap.get(reservation.userEmail) ||
       reservation.userEmail.split('@')[0],
+    user:
+      reservation.user
+        ? {
+            id: reservation.user.id,
+            name: reservation.user.name ?? null,
+            email: reservation.user.email ?? reservation.userEmail ?? null,
+          }
+        : null,
     userId: reservation.userId,
   }))
 

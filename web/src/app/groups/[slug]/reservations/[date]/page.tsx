@@ -10,6 +10,8 @@ type ReservationItem = {
   deviceId?: string | null;
   start?: string | null;
   end?: string | null;
+  startsAtUTC?: string | null;
+  endsAtUTC?: string | null;
   purpose?: string | null;
 };
 
@@ -47,8 +49,8 @@ export default async function Day({
     .map((item) => ({
       id: item.id,
       deviceName: item.deviceName || item.deviceId || "",
-      start: item.start ?? "",
-      end: item.end ?? "",
+      start: item.startsAtUTC ?? item.start ?? "",
+      end: item.endsAtUTC ?? item.end ?? "",
       note: item.purpose ?? null,
     }))
     .filter((item) => item.id && item.deviceName && item.start && item.end);

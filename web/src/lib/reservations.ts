@@ -21,6 +21,11 @@ export type ReservationDto = {
   purpose?: string | null;
   userEmail?: string | null;
   userName?: string | null;
+  user?: {
+    id?: string | null;
+    name?: string | null;
+    email?: string | null;
+  } | null;
   note?: string | null;
   start?: string;
   end?: string;
@@ -47,6 +52,11 @@ export type NormalizedReservation = {
   purpose: string | null;
   userEmail: string | null;
   userName: string | null;
+  user: {
+    id: string | null;
+    name: string | null;
+    email: string | null;
+  } | null;
   startsAtUTC: string;
   endsAtUTC: string;
   startUtc: Date;
@@ -94,6 +104,7 @@ export function normalizeReservation(
   const end = utcToZoned(endUtc, tz);
 
   const device = raw.device ?? {};
+  const user = raw.user ?? null;
   const deviceId = firstTruthy(raw.deviceId, device.id);
   if (!deviceId) {
     return null;
@@ -110,8 +121,21 @@ export function normalizeReservation(
     deviceSlug: firstTruthy(raw.deviceSlug, device.slug) ?? null,
     deviceName: firstTruthy(raw.deviceName, device.name) ?? null,
     purpose: firstTruthy(raw.purpose, raw.note) ?? null,
-    userEmail: raw.userEmail ?? null,
-    userName: raw.userName ?? null,
+    userEmail: firstTruthy(raw.userEmail, user?.email) ?? null,
+    userName: firstTruthy(raw.userName, user?.name) ?? null,
+    user: user
+      ? {
+          id: firstTruthy(user.id) ?? null,
+          name: firstTruthy(user.name) ?? null,
+          email: firstTruthy(user.email, raw.userEmail) ?? null,
+        }
+      : raw.userEmail || raw.userName
+        ? {
+            id: null,
+            name: firstTruthy(raw.userName) ?? null,
+            email: firstTruthy(raw.userEmail) ?? null,
+          }
+        : null,
     startsAtUTC: startUtc.toISOString(),
     endsAtUTC: endUtc.toISOString(),
     startUtc,
