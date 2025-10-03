@@ -5,7 +5,7 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/src/lib/prisma'
-import { readUserFromCookie } from '@/lib/auth'
+import { getServerSession } from '@/lib/auth'
 import { normalizeSlugInput } from '@/lib/slug'
 import { normalizeJoinInput } from '@/lib/text'
 
@@ -25,12 +25,11 @@ const decodeSlug = (value: string) => {
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
   try {
-    const me = await readUserFromCookie()
-    console.info('[api.groups.join.POST]', {
-      hasUserId: Boolean(me?.id),
-      hasEmail: Boolean(me?.email),
-    })
-    if (!me?.email) {
+    const session = await getServerSession()
+    const email = session?.user?.email?.trim().toLowerCase()
+    const name = session?.user?.name?.trim() || null
+
+    if (!email) {
       return NextResponse.json({ ok: false, code: 'unauthorized', error: 'unauthorized' }, { status: 401 })
     }
 
@@ -70,6 +69,19 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
       return NextResponse.json({ ok: false, code: 'group_not_found', error: 'group not found' }, { status: 404 })
     }
 
+    let dbUser = await prisma.user.findUnique({ where: { email } })
+    const fallbackName = email.split('@')[0]
+    if (!dbUser) {
+      dbUser = await prisma.user.create({
+        data: {
+          email,
+          name: name || fallbackName,
+        },
+      })
+    } else if (name && dbUser.name !== name) {
+      dbUser = await prisma.user.update({ where: { email }, data: { name } })
+    }
+
     if (group.passcode) {
       let ok = false
       const stored = group.passcode
@@ -96,29 +108,35 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
       }
 
       if (!ok) {
-        return NextResponse.json({ ok: false, code: 'invalid_passcode', error: 'invalid passcode' }, { status: 401 })
+        return NextResponse.json({ ok: false, code: 'bad_password', error: 'invalid passcode' }, { status: 401 })
       }
     }
 
-    const alreadyMember = group.members.find(
-      (member) => member.email.toLowerCase() === me.email.toLowerCase() || (!!me.id && member.userId === me.id)
-    )
-    if (alreadyMember) {
-      return NextResponse.json({
-        ok: true,
-        code: 'already_member',
-        data: { slug: group.slug, name: group.name ?? group.slug },
-      })
-    }
+    const existingMember = group.members.find((member) => member.email.toLowerCase() === email)
 
-    await prisma.groupMember.create({
-      data: { groupId: group.id, email: me.email, userId: me.id, role: 'MEMBER' },
+    const membership = await prisma.groupMember.upsert({
+      where: { groupId_email: { groupId: group.id, email } },
+      update: { userId: dbUser.id },
+      create: { groupId: group.id, email, userId: dbUser.id, role: 'MEMBER' },
     })
+
+    console.info('[join]', { email, userId: dbUser.id, groupId: group.id })
+
+    if (existingMember) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: 'already_member',
+          data: { slug: group.slug, name: group.name ?? group.slug, memberId: membership.id },
+        },
+        { status: 409 },
+      )
+    }
 
     return NextResponse.json({
       ok: true,
       code: 'joined',
-      data: { slug: group.slug, name: group.name ?? group.slug },
+      data: { slug: group.slug, name: group.name ?? group.slug, memberId: membership.id },
     })
   } catch (error) {
     console.error('join group failed', error)
