@@ -36,8 +36,8 @@ export default function GroupJoinPage() {
       });
       const payload = await res.json().catch(() => null);
       if (!res.ok || !payload?.ok) {
-        const code = payload?.code || payload?.error;
-        setErr(mapJoinError(code));
+        const code = payload?.code || payload?.error || 'join_failed';
+        setErr(String(code));
         return;
       }
       const nextSlug = payload?.data?.slug || slug;
@@ -92,17 +92,3 @@ export default function GroupJoinPage() {
   );
 }
 
-const JOIN_ERROR_MESSAGES: Record<string, string> = {
-  unauthorized: 'ログインしてください。',
-  invalid_slug: 'グループの識別子が正しくありません。',
-  group_not_found: '指定されたグループが見つかりませんでした。',
-  invalid_passcode: 'パスコードが一致しません。',
-  internal_error: '参加処理でエラーが発生しました。',
-};
-
-function mapJoinError(code?: string) {
-  if (!code) return '参加に失敗しました';
-  if (JOIN_ERROR_MESSAGES[code]) return JOIN_ERROR_MESSAGES[code];
-  if (code === 'already_member') return 'すでにこのグループのメンバーです。';
-  return '参加に失敗しました';
-}
