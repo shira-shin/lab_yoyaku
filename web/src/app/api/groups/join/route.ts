@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/src/lib/prisma'
 import { readUserFromCookie } from '@/lib/auth'
 import { normalizeSlugInput } from '@/lib/slug'
+import { normalizeJoinInput } from '@/lib/text'
 
 const normalize = (value: string) => normalizeSlugInput(value)
 
@@ -28,7 +29,9 @@ export async function POST(req: Request) {
 
     const slugRaw = String((body as any).slug || '').trim()
     const queryRaw = String((body as any).query || slugRaw).trim()
-    const passwordRaw = String((body as any).password || '').trim()
+    const passwordInput = String((body as any).password || '')
+    const passwordRaw = normalizeJoinInput(passwordInput)
+    const trimmedPassword = passwordInput.trim()
     if (!queryRaw) {
       return NextResponse.json({ ok: false, error: 'query is required' }, { status: 400 })
     }
@@ -49,7 +52,29 @@ export async function POST(req: Request) {
     }
 
     if (group.passcode) {
-      const ok = await bcrypt.compare(passwordRaw, group.passcode)
+      let ok = false
+      const stored = group.passcode
+      const roundsRaw = parseInt(process.env.BCRYPT_ROUNDS ?? '10', 10)
+      const rounds = Number.isNaN(roundsRaw) ? 10 : roundsRaw
+
+      if (stored.startsWith('$2')) {
+        if (passwordRaw) {
+          ok = await bcrypt.compare(passwordRaw, stored)
+        } else {
+          ok = await bcrypt.compare('', stored)
+        }
+        if (!ok && passwordRaw !== trimmedPassword) {
+          ok = await bcrypt.compare(trimmedPassword, stored)
+        }
+      } else {
+        const normalizedStored = normalizeJoinInput(stored)
+        ok = normalizedStored === passwordRaw || normalizedStored === normalizeJoinInput(trimmedPassword)
+        if (ok) {
+          const newHash = await bcrypt.hash(normalizedStored, rounds)
+          await prisma.group.update({ where: { id: group.id }, data: { passcode: newHash } })
+        }
+      }
+
       if (!ok) {
         return NextResponse.json({ ok: false, error: 'wrong password' }, { status: 403 })
       }

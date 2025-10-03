@@ -34,13 +34,13 @@ export default function GroupJoinPage() {
         credentials: 'same-origin',
         cache: 'no-store',
       });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        setErr(j?.error || '参加に失敗しました');
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || !payload?.ok) {
+        const code = payload?.code || payload?.error;
+        setErr(mapJoinError(code));
         return;
       }
-      const { data } = await res.json();
-      const nextSlug = data?.slug || slug;
+      const nextSlug = payload?.data?.slug || slug;
       router.push(`/groups/${nextSlug}`);
     } catch (e: any) {
       setErr(e.message || '参加に失敗しました');
@@ -90,4 +90,19 @@ export default function GroupJoinPage() {
       </form>
     </div>
   );
+}
+
+const JOIN_ERROR_MESSAGES: Record<string, string> = {
+  unauthorized: 'ログインしてください。',
+  invalid_slug: 'グループの識別子が正しくありません。',
+  group_not_found: '指定されたグループが見つかりませんでした。',
+  invalid_passcode: 'パスコードが一致しません。',
+  internal_error: '参加処理でエラーが発生しました。',
+};
+
+function mapJoinError(code?: string) {
+  if (!code) return '参加に失敗しました';
+  if (JOIN_ERROR_MESSAGES[code]) return JOIN_ERROR_MESSAGES[code];
+  if (code === 'already_member') return 'すでにこのグループのメンバーです。';
+  return '参加に失敗しました';
 }
