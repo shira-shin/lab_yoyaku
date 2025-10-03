@@ -1,5 +1,5 @@
 import React from 'react';
-import { utcDateToLocalString } from '@/lib/time';
+import { formatJp } from '@/lib/time';
 
 export type ReservationItem = {
   id: string;
@@ -10,7 +10,7 @@ export type ReservationItem = {
 };
 
 function fmt(d: Date) {
-  return utcDateToLocalString(d);
+  return formatJp(d);
 }
 
 export default function ReservationList({ items }: { items: ReservationItem[] }) {

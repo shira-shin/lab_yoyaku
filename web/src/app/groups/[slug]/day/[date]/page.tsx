@@ -8,7 +8,7 @@ import { notFound, redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { absUrl } from '@/lib/url';
-import { localDayRange, utcDateToLocalString } from '@/lib/time';
+import { formatJp, localDayRange } from '@/lib/time';
 import { prisma } from '@/src/lib/prisma';
 import DutyInlineEditor from './DutyInlineEditor';
 import DutyInlineCreate from './DutyInlineCreate';
@@ -26,10 +26,8 @@ function isValidDateFormat(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
-function formatTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return utcDateToLocalString(date).slice(11);
+function formatTime(value: Date) {
+  return formatJp(value, 'HH:mm');
 }
 
 async function fetchDuties(slug: string, date: string) {
@@ -82,14 +80,22 @@ export default async function DayPage({
   const payload = await reservationsRes.json().catch(() => ({}));
   const source = payload?.data ?? payload?.reservations ?? [];
   const listRaw = Array.isArray(source) ? (source as Reservation[]) : [];
-  const list = listRaw
-    .map((item) => ({
-      ...item,
-      startAt: item.startAt ?? (item as any).startAt ?? (item as any).start,
-      endAt: item.endAt ?? (item as any).endAt ?? (item as any).end,
-    }))
-    .filter((item) => item.startAt && item.endAt && item.device?.name)
-    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+  const { start: dayStart, end: dayEnd } = localDayRange(date);
+  const reservations = listRaw
+    .map((item) => {
+      const startAt = item.startAt ?? (item as any).startAt ?? (item as any).start;
+      const endAt = item.endAt ?? (item as any).endAt ?? (item as any).end;
+      if (!startAt || !endAt || !item.device?.name) return null;
+      const startDate = new Date(startAt);
+      const endDate = new Date(endAt);
+      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return null;
+      return { ...item, startAt, endAt, startDate, endDate };
+    })
+    .filter((item): item is typeof item & { startDate: Date; endDate: Date } => {
+      if (!item) return false;
+      return item.startDate < dayEnd && item.endDate > dayStart;
+    })
+    .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
 
   const devicesJson = await devicesRes.json().catch(() => ({} as any));
   const devicesSource = Array.isArray(devicesJson?.devices) ? devicesJson.devices : [];
@@ -178,12 +184,12 @@ export default async function DayPage({
       </div>
 
       <section className="rounded-2xl border p-4 bg-white">
-        {list.length === 0 ? (
+        {reservations.length === 0 ? (
           <p className="text-gray-500">予約がありません。</p>
         ) : (
           <ul className="grid md:grid-cols-2 gap-3">
-            {list.map((r) => {
-              const isPast = new Date(r.endAt).getTime() < Date.now();
+            {reservations.map((r) => {
+              const isPast = r.endDate.getTime() < Date.now();
               return (
                 <li
                   key={r.id}
@@ -191,7 +197,7 @@ export default async function DayPage({
                 >
                   <div className="font-medium">{r.device.name}</div>
                   <div className="text-sm text-gray-600">
-                    {formatTime(r.startAt)} 〜 {formatTime(r.endAt)}
+                    {formatTime(r.startDate)} 〜 {formatTime(r.endDate)}
                   </div>
                 </li>
               );

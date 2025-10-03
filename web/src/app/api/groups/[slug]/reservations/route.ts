@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { localDayRange, localStringToUtcDate } from "@/lib/time";
+import { localDayRange, toUtc } from "@/lib/time";
+
+const parseBoundary = (value?: string | null) => {
+  if (!value) return null;
+  const direct = new Date(value);
+  if (!Number.isNaN(direct.getTime())) return direct;
+  try {
+    return toUtc(value);
+  } catch {
+    return null;
+  }
+};
 
 export async function GET(_: Request, { params, url }: { params: { slug: string }, url: string }) {
   const u = new URL(url);
@@ -18,47 +29,33 @@ export async function GET(_: Request, { params, url }: { params: { slug: string 
     ...(deviceSlug ? { slug: deviceSlug } : {}),
   };
 
-  const notConditions: any[] = [];
-  const andConditions: any[] = [];
+  let startBoundary: Date | null = null;
+  let endBoundary: Date | null = null;
 
   if (date) {
-    const { start, end } = localDayRange(date);
-    notConditions.push({ end: { lte: start } });
-    andConditions.push({ start: { lt: end } });
+    try {
+      const { start, end } = localDayRange(date);
+      startBoundary = start;
+      endBoundary = end;
+    } catch {
+      startBoundary = null;
+      endBoundary = null;
+    }
   } else {
-    if (fromParam) {
-      const fromDate = (() => {
-        const parsed = new Date(fromParam);
-        if (!Number.isNaN(parsed.getTime())) return parsed;
-        try {
-          return localStringToUtcDate(fromParam);
-        } catch {
-          return null;
-        }
-      })();
-      if (fromDate) {
-        notConditions.push({ end: { lte: fromDate } });
-      }
-    }
-    if (toParam) {
-      const toDate = (() => {
-        const parsed = new Date(toParam);
-        if (!Number.isNaN(parsed.getTime())) return parsed;
-        try {
-          return localStringToUtcDate(toParam);
-        } catch {
-          return null;
-        }
-      })();
-      if (toDate) {
-        andConditions.push({ start: { lt: toDate } });
-      }
-    }
+    startBoundary = parseBoundary(fromParam);
+    endBoundary = parseBoundary(toParam);
+  }
+
+  const andConditions: any[] = [];
+  if (endBoundary) {
+    andConditions.push({ start: { lt: endBoundary } });
+  }
+  if (startBoundary) {
+    andConditions.push({ end: { gt: startBoundary } });
   }
 
   const where = {
     device: deviceFilter,
-    ...(notConditions.length ? { NOT: notConditions } : {}),
     ...(andConditions.length ? { AND: andConditions } : {}),
   };
 

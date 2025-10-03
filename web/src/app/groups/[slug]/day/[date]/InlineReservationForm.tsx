@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toUtc } from '@/lib/time';
+import { toast } from '@/lib/toast';
 
 type DeviceOption = { id: string; slug: string; name: string };
 
@@ -21,16 +23,43 @@ export default function InlineReservationForm({ slug, date, devices }: Props) {
 
   async function submit() {
     if (!deviceId) {
-      alert('機器を選択してください');
+      toast.error('機器を選択してください');
       return;
     }
+    const noteValue = note.trim();
     setSaving(true);
     try {
+      let startDate: Date | null = null;
+      let endDate: Date | null = null;
+      try {
+        startDate = toUtc(start);
+      } catch {
+        startDate = null;
+      }
+      try {
+        endDate = toUtc(end);
+      } catch {
+        endDate = null;
+      }
+      if (!startDate || Number.isNaN(startDate.getTime())) {
+        toast.error('開始時刻が不正です');
+        return;
+      }
+      if (!endDate || Number.isNaN(endDate.getTime())) {
+        toast.error('終了時刻が不正です');
+        return;
+      }
+      if (+endDate <= +startDate) {
+        toast.error('終了時刻は開始時刻より後に設定してください');
+        return;
+      }
+
       const payload = {
         groupSlug: slug,
         deviceId,
-        start,
-        end,
+        start: startDate.toISOString(),
+        end: endDate.toISOString(),
+        ...(noteValue ? { purpose: noteValue } : {}),
       };
       const res = await fetch('/api/reservations', {
         method: 'POST',
@@ -38,20 +67,29 @@ export default function InlineReservationForm({ slug, date, devices }: Props) {
         body: JSON.stringify(payload),
         credentials: 'same-origin',
       });
-      if (!res.ok) {
-        const { message } = await res.json().catch(() => ({ message: '作成に失敗しました' }));
-        alert(`作成失敗: ${message}`);
+      const json = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        toast.error('認証が必要です。ページを再読み込みしてください。');
         return;
       }
-      alert('予約を作成しました');
-      router.push(`/groups/${slug}`);
+      if (res.status === 409) {
+        toast.error('既存の予約と時間が重複しています');
+        return;
+      }
+      if (!res.ok) {
+        const message =
+          (typeof json?.error === 'string' && json.error) ||
+          (typeof json?.message === 'string' && json.message) ||
+          json?.error?.formErrors?.[0] ||
+          '予約の作成に失敗しました';
+        toast.error(message);
+        return;
+      }
+      toast.success('予約を作成しました');
+      router.replace(`/groups/${slug}`);
       router.refresh();
     } catch (err) {
-      const message =
-        (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
-          ? (err as any).message
-          : '') || '作成に失敗しました';
-      alert(`作成失敗: ${message}`);
+      toast.error('予約の作成に失敗しました');
     } finally {
       setSaving(false);
     }
