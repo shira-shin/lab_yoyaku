@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
-import { localDayRange, utcDateToLocalString } from '@/lib/time';
+import { APP_TZ, toUTC, formatInTZ } from '@/lib/time';
 
 export type Span = {
   id: string;
@@ -18,6 +18,23 @@ const pad = (n:number)=> n.toString().padStart(2,'0');
 const short = (s:string,len=16)=> s.length<=len ? s : s.slice(0,len-1)+'…';
 
 const toYmd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+const toUtcFromLocalString = (value: string, tz: string = APP_TZ) => {
+  const normalized = value.trim().replace(' ', 'T');
+  const iso = /T\d{2}:\d{2}(?::\d{2})?$/.test(normalized) ? normalized : `${normalized}:00`;
+  const base = new Date(iso);
+  if (Number.isNaN(base.getTime())) throw new Error(`Invalid date string: ${value}`);
+  const projected = toUTC(base, tz);
+  const offset = projected.getTime() - base.getTime();
+  return new Date(base.getTime() - offset);
+};
+
+const localDayRange = (yyyyMmDd: string, tz: string = APP_TZ) => {
+  const start = toUtcFromLocalString(`${yyyyMmDd}T00:00`, tz);
+  const end = toUtcFromLocalString(`${yyyyMmDd}T24:00`, tz);
+  return { start, end };
+};
+
 function overlaps(day:Date, s:Date, e:Date){
   const { start, end } = localDayRange(toYmd(day));
   return !(e <= start || s >= end);
@@ -25,10 +42,10 @@ function overlaps(day:Date, s:Date, e:Date){
 
 function labelForDay(cell: Date, s: Date, e: Date) {
   const { start, end } = localDayRange(toYmd(cell));
-  const startStr = utcDateToLocalString(s);
-  const endStr = utcDateToLocalString(e);
-  const from = s <= start ? '00:00' : startStr.slice(11);
-  const to   = e >= end ? '24:00' : endStr.slice(11);
+  const startStr = formatInTZ(s, APP_TZ, { hour: '2-digit', minute: '2-digit', hour12: false });
+  const endStr = formatInTZ(e, APP_TZ, { hour: '2-digit', minute: '2-digit', hour12: false });
+  const from = s <= start ? '00:00' : startStr;
+  const to   = e >= end ? '24:00' : endStr;
   return `${from}–${to}`;
 }
 
@@ -125,7 +142,7 @@ function DayModal({ date, items, onClose }:{
   date:Date; items:Span[]; onClose:()=>void;
 }){
   const pad=(n:number)=> n.toString().padStart(2,'0');
-  const hhmm=(d:Date)=>utcDateToLocalString(d).slice(11);
+  const hhmm=(d:Date)=>formatInTZ(d, APP_TZ, { hour: '2-digit', minute: '2-digit', hour12: false });
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-end sm:items-center justify-center z-50">

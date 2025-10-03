@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { localStringToUtcDate } from "@/lib/time";
+import { APP_TZ, toUTC } from "@/lib/time";
+
+const toUtcFromLocalString = (value: string, tz: string = APP_TZ) => {
+  const normalized = value.trim().replace(" ", "T");
+  const iso = /T\d{2}:\d{2}(?::\d{2})?$/.test(normalized) ? normalized : `${normalized}:00`;
+  const base = new Date(iso);
+  if (Number.isNaN(base.getTime())) throw new Error(`Invalid date string: ${value}`);
+  const projected = toUTC(base, tz);
+  const offset = projected.getTime() - base.getTime();
+  return new Date(base.getTime() - offset);
+};
 
 export async function POST(req: Request) {
   const session = await getServerSession();
@@ -24,8 +34,8 @@ export async function POST(req: Request) {
   if (!device) return NextResponse.json({ message: "device not found in the group" }, { status: 400 });
 
   // 「入力文字列をローカル時刻として」UTCに変換して保存（ズレ防止）
-  const startAt = localStringToUtcDate(start);
-  const endAt   = localStringToUtcDate(end);
+  const startAt = toUtcFromLocalString(start);
+  const endAt   = toUtcFromLocalString(end);
   if (!(startAt instanceof Date) || isNaN(+startAt) || !(endAt instanceof Date) || isNaN(+endAt))
     return NextResponse.json({ message: "invalid datetime" }, { status: 400 });
   if (+endAt <= +startAt)

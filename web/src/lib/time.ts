@@ -1,21 +1,31 @@
-import { zonedTimeToUtc, utcToZonedTime, format } from "date-fns-tz";
-
 export const APP_TZ = process.env.NEXT_PUBLIC_TZ || "Asia/Tokyo";
 
-// "2025-10-11 13:00" / "2025-10-11T13:00" をローカル(=APP_TZ)としてUTC Dateに
-export function localStringToUtcDate(s: string): Date {
-  const normalized = s.replace("T", " "); // datetime-local/文字列の両対応
-  return zonedTimeToUtc(normalized, APP_TZ);
+// Local Date -> UTC (based on APP_TZ)
+export function toUTC(date: Date, tz: string = APP_TZ): Date {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(date);
+  const values: any = {};
+  parts.forEach(p => { if (p.type !== "literal") values[p.type] = parseInt(p.value, 10); });
+  return new Date(Date.UTC(values.year, values.month - 1, values.day, values.hour, values.minute, values.second));
 }
 
-// UTC Date をローカル(=APP_TZ)の "yyyy-MM-dd HH:mm" 文字列に
-export function utcDateToLocalString(d: Date): string {
-  return format(utcToZonedTime(d, APP_TZ), "yyyy-MM-dd HH:mm", { timeZone: APP_TZ });
+// UTC -> Local TZ Date
+export function fromUTC(date: Date, tz: string = APP_TZ): Date {
+  const iso = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: tz,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hour12: false,
+  }).format(date);
+  return new Date(iso);
 }
 
-// ローカル日付の 1 日の境界
-export function localDayRange(yyyyMmDd: string) {
-  const start = zonedTimeToUtc(`${yyyyMmDd} 00:00`, APP_TZ);
-  const end   = zonedTimeToUtc(`${yyyyMmDd} 24:00`, APP_TZ); // [start, end) の半開区間
-  return { start, end };
+// Formatter
+export function formatInTZ(date: Date, tz: string = APP_TZ, opts: Intl.DateTimeFormatOptions = {}): string {
+  return new Intl.DateTimeFormat("ja-JP", { timeZone: tz, ...opts }).format(date);
 }
