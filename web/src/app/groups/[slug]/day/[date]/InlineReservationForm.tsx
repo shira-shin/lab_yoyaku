@@ -2,7 +2,31 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { z } from 'zod';
 import { localInputToUTC, toUtcIsoZ } from '@/lib/time';
+
+const Schema = z
+  .object({
+    deviceId: z.string().min(1, '機器を選択してください'),
+    start: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, '開始時刻を正しく入力してください')
+      .transform((value) => toUtcIsoZ(localInputToUTC(value))),
+    end: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, '終了時刻を正しく入力してください')
+      .transform((value) => toUtcIsoZ(localInputToUTC(value))),
+    purpose: z.string().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (new Date(value.end).getTime() <= new Date(value.start).getTime()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['end'],
+        message: '終了は開始より後にしてください',
+      });
+    }
+  });
 
 type DeviceOption = { id: string; slug: string; name: string };
 
@@ -21,42 +45,39 @@ export default function InlineReservationForm({ slug, date, devices }: Props) {
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    if (!deviceId) {
-      alert('機器を選択してください');
+    const parsed = Schema.safeParse({
+      deviceId,
+      start,
+      end,
+      purpose: note,
+    });
+    if (!parsed.success) {
+      const flattened = parsed.error.flatten();
+      const message =
+        flattened.formErrors[0] ||
+        Object.values(flattened.fieldErrors)[0]?.[0] ||
+        '入力内容を確認してください';
+      alert(message);
       return;
     }
-    let startUtc: Date;
-    let endUtc: Date;
-    try {
-      startUtc = localInputToUTC(start);
-      endUtc = localInputToUTC(end);
-    } catch (error) {
-      console.error('[form datetime parse error]', error);
-      alert('開始・終了時刻を正しく入力してください');
-      return;
-    }
-    if (endUtc.getTime() <= startUtc.getTime()) {
-      alert('終了時刻は開始時刻より後に設定してください');
-      return;
-    }
-    const startsAtUTC = toUtcIsoZ(startUtc);
-    const endsAtUTC = toUtcIsoZ(endUtc);
-    console.info('[form→api]', start, startsAtUTC);
-    console.info('[form→api]', end, endsAtUTC);
+    const payloadFromSchema = parsed.data;
+    const startsAtUTC = payloadFromSchema.start;
+    const endsAtUTC = payloadFromSchema.end;
     setSaving(true);
     try {
       const payload = {
         groupSlug: slug,
-        deviceId,
+        deviceId: payloadFromSchema.deviceId,
         startsAtUTC,
         endsAtUTC,
-        purpose: note.trim() ? note.trim() : undefined,
+        purpose: payloadFromSchema.purpose?.trim() ? payloadFromSchema.purpose.trim() : undefined,
       };
       const res = await fetch('/api/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         credentials: 'same-origin',
+        cache: 'no-store',
       });
       if (!res.ok) {
         const { message } = await res.json().catch(() => ({ message: '作成に失敗しました' }));

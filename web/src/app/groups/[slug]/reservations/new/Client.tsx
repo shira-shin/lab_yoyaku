@@ -1,16 +1,32 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
+import { z } from 'zod';
 import { toast } from '@/lib/toast';
-import { z } from '@/lib/zod-helpers';
 import { localInputToUTC, toUtcIsoZ } from '@/lib/time';
 
-const ReservationFormSchema = z.object({
-  deviceSlug: z.string().min(1),
-  start: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
-  end: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
-  purpose: z.string().optional(),
-});
+const ReservationFormSchema = z
+  .object({
+    deviceSlug: z.string().min(1, '機器を選択してください'),
+    start: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, '開始時刻を正しく入力してください')
+      .transform((value) => toUtcIsoZ(localInputToUTC(value))),
+    end: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, '終了時刻を正しく入力してください')
+      .transform((value) => toUtcIsoZ(localInputToUTC(value))),
+    purpose: z.string().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (new Date(value.end).getTime() <= new Date(value.start).getTime()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['end'],
+        message: '終了は開始より後にしてください',
+      });
+    }
+  });
 
 function buildDefaultValue(param: string | null, time: string) {
   if (!param || !/^\d{4}-\d{2}-\d{2}$/.test(param)) return '';
@@ -50,11 +66,12 @@ export default function NewReservationClient({
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const deviceValue = deviceSlug || String(fd.get('device') || '');
+    const purposeRaw = fd.get('purpose');
     const parsed = ReservationFormSchema.safeParse({
       deviceSlug: deviceValue,
       start: String(fd.get('start') || ''),
       end: String(fd.get('end') || ''),
-      purpose: String(fd.get('purpose') ?? ''),
+      purpose: typeof purposeRaw === 'string' ? purposeRaw : undefined,
     });
 
     if (!parsed.success) {
@@ -67,30 +84,13 @@ export default function NewReservationClient({
       return;
     }
 
-    let startUtc: Date;
-    let endUtc: Date;
-    try {
-      startUtc = localInputToUTC(parsed.data.start);
-      endUtc = localInputToUTC(parsed.data.end);
-    } catch (error) {
-      console.error('[form datetime parse error]', error);
-      toast.error('開始・終了時刻を正しく入力してください');
-      return;
-    }
-    const purpose = parsed.data.purpose?.trim() ?? '';
-    if (endUtc.getTime() <= startUtc.getTime()) {
-      toast.error('終了時刻は開始時刻より後に設定してください');
-      return;
-    }
-
-    const startsAtUTC = toUtcIsoZ(startUtc);
-    const endsAtUTC = toUtcIsoZ(endUtc);
-    console.info('[form→api]', parsed.data.start, startsAtUTC);
-    console.info('[form→api]', parsed.data.end, endsAtUTC);
-
+    const payloadFromSchema = parsed.data;
+    const purpose = payloadFromSchema.purpose?.trim() ?? '';
+    const startsAtUTC = payloadFromSchema.start;
+    const endsAtUTC = payloadFromSchema.end;
     const payload = {
       groupSlug: params.slug,
-      deviceSlug: parsed.data.deviceSlug,
+      deviceSlug: payloadFromSchema.deviceSlug,
       startsAtUTC,
       endsAtUTC,
       purpose,
@@ -103,6 +103,7 @@ export default function NewReservationClient({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         credentials: 'same-origin',
+        cache: 'no-store',
       });
       const j = await res.json().catch(() => ({}));
       if (res.status === 401) {
