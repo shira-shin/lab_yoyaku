@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 import { store } from '../../../_store';
 import { readUserFromCookie } from '@/lib/auth';
 import { loadDB } from '@/lib/mockdb';
-import { localDayRange, localStringToUtcDate } from '@/lib/time';
+import { dayRangeUtc, localStringToUtcDate } from '@/lib/time';
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
   const body = await req.json().catch(() => ({}));
@@ -55,12 +55,12 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
     list = list.filter((r: any) => r.deviceSlug === deviceSlug || r.deviceId === deviceSlug);
   }
   if (date) {
-    const { start, end } = localDayRange(date);
+    const { startUtc, endUtc } = dayRangeUtc(date);
     list = list.filter((r: any) => {
       const startAt = new Date(r.start);
       const endAt = new Date(r.end);
       if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) return false;
-      return !(endAt <= start || startAt >= end);
+      return !(endAt <= startUtc || startAt >= endUtc);
     });
   } else {
     if (fromParam) {
