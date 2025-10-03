@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   let spans: Span[] = [];
   let myGroups: { slug: string; name: string }[] = [];
 
-  const res = await serverFetch('/api/me/reservations?take=50');
+  const res = await serverFetch('/api/me/reservations?take=50', { cache: 'no-store' });
   if (res.status === 401) redirect('/login?next=/dashboard');
   if (!res.ok) redirect('/login?next=/dashboard');
 

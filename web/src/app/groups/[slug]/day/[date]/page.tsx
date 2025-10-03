@@ -9,18 +9,15 @@ import { unstable_noStore as noStore } from 'next/cache';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { absUrl } from '@/lib/url';
 import { APP_TZ, toUTC, formatInTZ } from '@/lib/time';
+import {
+  extractReservationItems,
+  normalizeReservation,
+  type NormalizedReservation,
+} from '@/lib/reservations';
 import { prisma } from '@/src/lib/prisma';
 import DutyInlineEditor from './DutyInlineEditor';
 import DutyInlineCreate from './DutyInlineCreate';
 import InlineReservationForm from './InlineReservationForm';
-
-type Reservation = {
-  id: string;
-  startAt: string;
-  endAt: string;
-  device: { name: string; slug?: string };
-  note?: string;
-};
 
 function isValidDateFormat(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -96,16 +93,18 @@ export default async function DayPage({
   }
 
   const payload = await reservationsRes.json().catch(() => ({}));
-  const source = payload?.data ?? payload?.reservations ?? [];
-  const listRaw = Array.isArray(source) ? (source as Reservation[]) : [];
-  const list = listRaw
-    .map((item) => ({
-      ...item,
-      startAt: item.startAt ?? (item as any).startAt ?? (item as any).start,
-      endAt: item.endAt ?? (item as any).endAt ?? (item as any).end,
-    }))
-    .filter((item) => item.startAt && item.endAt && item.device?.name)
-    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+  const reservationItems = extractReservationItems(payload);
+  const reservations = reservationItems
+    .map((item) => normalizeReservation(item))
+    .filter((item): item is NormalizedReservation => Boolean(item))
+    .sort((a, b) => a.startUtc.getTime() - b.startUtc.getTime());
+
+  const list = reservations.map((item) => ({
+    id: item.id,
+    startAt: item.startsAtUTC,
+    endAt: item.endsAtUTC,
+    device: { name: item.deviceName ?? item.deviceId },
+  }));
 
   const devicesJson = await devicesRes.json().catch(() => ({} as any));
   const devicesSource = Array.isArray(devicesJson?.devices) ? devicesJson.devices : [];

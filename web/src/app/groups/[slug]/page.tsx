@@ -7,6 +7,12 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { APP_TZ, toUTC } from '@/lib/time';
+import {
+  extractReservationItems,
+  normalizeReservation,
+  overlapsRange,
+  type NormalizedReservation,
+} from '@/lib/reservations';
 import GroupScreenClient from './GroupScreenClient';
 import Link from 'next/link';
 import { prisma } from '@/src/lib/prisma';
@@ -41,18 +47,6 @@ function colorFromString(s: string) {
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return palette[h % palette.length];
 }
-
-type ReservationResponse = {
-  id: string;
-  deviceId: string;
-  deviceSlug: string;
-  deviceName: string;
-  start: string;
-  end: string;
-  purpose: string | null;
-  userEmail: string;
-  userName: string;
-};
 
 export default async function GroupPage({
   params,
@@ -170,7 +164,8 @@ export default async function GroupPage({
   });
 
   const reservationsRes = await serverFetch(
-    `/api/groups/${encodeURIComponent(paramSlug)}/reservations?${reservationParams.toString()}`
+    `/api/groups/${encodeURIComponent(paramSlug)}/reservations?${reservationParams.toString()}`,
+    { cache: 'no-store' },
   );
   if (reservationsRes.status === 401) {
     redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
@@ -182,25 +177,14 @@ export default async function GroupPage({
     redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
   }
   const reservationsJson = await reservationsRes.json();
-  const reservationsSource: ReservationResponse[] = Array.isArray(reservationsJson?.data)
-    ? reservationsJson.data
-    : Array.isArray(reservationsJson?.reservations)
-      ? reservationsJson.reservations
-      : [];
-  const reservations = reservationsSource
-    .map((r) => {
-      const start = new Date(r.start ?? (r as any).startAt ?? '');
-      const end = new Date(r.end ?? (r as any).endAt ?? '');
-      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-      return { ...r, start, end } as ReservationResponse & { start: Date; end: Date };
-    })
-    .filter((r): r is ReservationResponse & { start: Date; end: Date } => {
-      if (!r) return false;
-      return !(r.end <= rangeStartBoundary || r.start >= rangeEndBoundary);
-    });
-  const nameOf = (r: any) => {
+  const reservationItems = extractReservationItems(reservationsJson);
+  const reservations = reservationItems
+    .map((item) => normalizeReservation(item))
+    .filter((item): item is NormalizedReservation => Boolean(item))
+    .filter((reservation) => overlapsRange(reservation, rangeStartBoundary, rangeEndBoundary));
+  const nameOf = (r: NormalizedReservation) => {
     if (me && r.userEmail === me.email) return me.name || me.email.split('@')[0];
-    return r.userName || r.userEmail?.split('@')[0] || r.userName || '';
+    return r.userName || r.userEmail?.split('@')[0] || '';
   };
 
   const spans: Span[] = reservations.map((r) => {
