@@ -1,5 +1,5 @@
 import React from 'react';
-import { utcDateToLocalString } from '@/lib/time';
+import { APP_TZ, formatInTZ } from '@/lib/time';
 
 export type ReservationItem = {
   id: string;
@@ -9,9 +9,15 @@ export type ReservationItem = {
   end: Date;
 };
 
-function fmt(d: Date) {
-  return utcDateToLocalString(d);
-}
+const fmt = (d: Date) =>
+  formatInTZ(d, APP_TZ, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 
 export default function ReservationList({ items }: { items: ReservationItem[] }) {
   if (!items.length) return <p className="text-sm text-neutral-500">予約がありません。</p>;

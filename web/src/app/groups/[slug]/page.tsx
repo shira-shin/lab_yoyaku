@@ -6,7 +6,7 @@ export const fetchCache = 'force-no-store';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { serverFetch } from '@/lib/http/serverFetch';
-import { localDayRange } from '@/lib/time';
+import { APP_TZ, toUTC } from '@/lib/time';
 import GroupScreenClient from './GroupScreenClient';
 import Link from 'next/link';
 import { prisma } from '@/src/lib/prisma';
@@ -147,6 +147,20 @@ export default async function GroupPage({
   rangeEnd.setHours(0, 0, 0, 0);
   rangeEnd.setDate(rangeEnd.getDate() + 1);
   const toYmd = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  const toUtcFromLocalString = (value: string, tz: string = APP_TZ) => {
+    const normalized = value.trim().replace(' ', 'T');
+    const iso = /T\d{2}:\d{2}(?::\d{2})?$/.test(normalized) ? normalized : `${normalized}:00`;
+    const base = new Date(iso);
+    if (Number.isNaN(base.getTime())) throw new Error(`Invalid date string: ${value}`);
+    const projected = toUTC(base, tz);
+    const offset = projected.getTime() - base.getTime();
+    return new Date(base.getTime() - offset);
+  };
+  const localDayRange = (yyyyMmDd: string, tz: string = APP_TZ) => {
+    const start = toUtcFromLocalString(`${yyyyMmDd}T00:00`, tz);
+    const end = toUtcFromLocalString(`${yyyyMmDd}T24:00`, tz);
+    return { start, end };
+  };
   const { start: rangeStartBoundary } = localDayRange(toYmd(rangeStart));
   const { end: rangeEndBoundary } = localDayRange(toYmd(new Date(rangeEnd.getTime() - 24 * 60 * 60 * 1000)));
 

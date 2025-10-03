@@ -6,7 +6,23 @@ import { NextResponse } from 'next/server';
 import { store } from '../../../_store';
 import { readUserFromCookie } from '@/lib/auth';
 import { loadDB } from '@/lib/mockdb';
-import { localDayRange, localStringToUtcDate } from '@/lib/time';
+import { APP_TZ, toUTC } from '@/lib/time';
+
+const toUtcFromLocalString = (value: string, tz: string = APP_TZ) => {
+  const normalized = value.trim().replace(' ', 'T');
+  const iso = /T\d{2}:\d{2}(?::\d{2})?$/.test(normalized) ? normalized : `${normalized}:00`;
+  const base = new Date(iso);
+  if (Number.isNaN(base.getTime())) throw new Error(`Invalid date string: ${value}`);
+  const projected = toUTC(base, tz);
+  const offset = projected.getTime() - base.getTime();
+  return new Date(base.getTime() - offset);
+};
+
+const localDayRange = (yyyyMmDd: string, tz: string = APP_TZ) => {
+  const start = toUtcFromLocalString(`${yyyyMmDd}T00:00`, tz);
+  const end = toUtcFromLocalString(`${yyyyMmDd}T24:00`, tz);
+  return { start, end };
+};
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
   const body = await req.json().catch(() => ({}));
@@ -68,7 +84,7 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
         const parsed = new Date(fromParam);
         if (!Number.isNaN(parsed.getTime())) return parsed;
         try {
-          return localStringToUtcDate(fromParam);
+          return toUtcFromLocalString(fromParam);
         } catch {
           return null;
         }
@@ -82,7 +98,7 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
         const parsed = new Date(toParam);
         if (!Number.isNaN(parsed.getTime())) return parsed;
         try {
-          return localStringToUtcDate(toParam);
+          return toUtcFromLocalString(toParam);
         } catch {
           return null;
         }

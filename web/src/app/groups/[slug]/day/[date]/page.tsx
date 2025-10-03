@@ -8,7 +8,7 @@ import { notFound, redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { absUrl } from '@/lib/url';
-import { localDayRange, utcDateToLocalString } from '@/lib/time';
+import { APP_TZ, toUTC, formatInTZ } from '@/lib/time';
 import { prisma } from '@/src/lib/prisma';
 import DutyInlineEditor from './DutyInlineEditor';
 import DutyInlineCreate from './DutyInlineCreate';
@@ -29,8 +29,24 @@ function isValidDateFormat(value: string) {
 function formatTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return utcDateToLocalString(date).slice(11);
+  return formatInTZ(date, APP_TZ, { hour: '2-digit', minute: '2-digit', hour12: false });
 }
+
+const toUtcFromLocalString = (value: string, tz: string = APP_TZ) => {
+  const normalized = value.trim().replace(' ', 'T');
+  const iso = /T\d{2}:\d{2}(?::\d{2})?$/.test(normalized) ? normalized : `${normalized}:00`;
+  const base = new Date(iso);
+  if (Number.isNaN(base.getTime())) throw new Error(`Invalid date string: ${value}`);
+  const projected = toUTC(base, tz);
+  const offset = projected.getTime() - base.getTime();
+  return new Date(base.getTime() - offset);
+};
+
+const localDayRange = (yyyyMmDd: string, tz: string = APP_TZ) => {
+  const start = toUtcFromLocalString(`${yyyyMmDd}T00:00`, tz);
+  const end = toUtcFromLocalString(`${yyyyMmDd}T24:00`, tz);
+  return { start, end };
+};
 
 async function fetchDuties(slug: string, date: string) {
   const { start, end } = localDayRange(date);
