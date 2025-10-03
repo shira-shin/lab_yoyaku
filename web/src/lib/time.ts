@@ -1,3 +1,6 @@
+import { addDays } from "date-fns";
+import { zonedTimeToUtc } from "date-fns-tz";
+
 export const APP_TZ = process.env.NEXT_PUBLIC_TZ || "Asia/Tokyo";
 
 // Local Date -> UTC (based on APP_TZ)
@@ -28,4 +31,16 @@ export function fromUTC(date: Date, tz: string = APP_TZ): Date {
 // Formatter
 export function formatInTZ(date: Date, tz: string = APP_TZ, opts: Intl.DateTimeFormatOptions = {}): string {
   return new Intl.DateTimeFormat("ja-JP", { timeZone: tz, ...opts }).format(date);
+}
+
+export function dayRangeInUtc(yyyyMmDd: string, tz: string = APP_TZ) {
+  const trimmed = yyyyMmDd.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    throw new Error(`Invalid date string: ${yyyyMmDd}`);
+  }
+
+  const dayStartUtc = zonedTimeToUtc(`${trimmed}T00:00:00`, tz);
+  const dayEndUtc = addDays(dayStartUtc, 1);
+
+  return { dayStartUtc, dayEndUtc };
 }
