@@ -1,5 +1,6 @@
 import React from 'react';
-import { utcDateToLocalString } from '@/lib/time';
+import clsx from 'clsx';
+import { isPast, utcDateToLocalString } from '@/lib/time';
 
 export type ReservationItem = {
   id: string;
@@ -15,15 +16,14 @@ function fmt(d: Date) {
 
 export default function ReservationList({ items }: { items: ReservationItem[] }) {
   if (!items.length) return <p className="text-sm text-neutral-500">予約がありません。</p>;
-  const now = Date.now();
   return (
     <ul className="list-disc pl-5 space-y-1 text-sm">
       {items.map((i) => {
-        const isPast = i.end.getTime() < now;
+        const past = isPast(i.end);
         return (
           <li
             key={i.id}
-            className={isPast ? 'text-gray-400 opacity-60' : undefined}
+            className={clsx({ 'text-gray-400 opacity-60': past })}
           >
             {`機器: ${i.deviceName} / 予約者: ${i.user} / 時間: ${fmt(i.start)} - ${fmt(i.end)}`}
           </li>

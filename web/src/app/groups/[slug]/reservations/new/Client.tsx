@@ -26,6 +26,11 @@ function buildDefaultValue(param: string | null, time: string) {
   return toLocalInputValue(candidate);
 }
 
+function splitDateTime(value: string) {
+  const [datePart = '', timePart = ''] = value.split('T');
+  return { date: datePart, time: timePart.slice(0, 5) };
+}
+
 export default function NewReservationClient({
   params,
   devices,
@@ -84,11 +89,19 @@ export default function NewReservationClient({
       return;
     }
 
+    const { date: startDate, time: startTime } = splitDateTime(startRaw);
+    const { date: endDate, time: endTime } = splitDateTime(endRaw);
+    if (!startDate || !startTime || !endTime || startDate !== endDate) {
+      toast.error('同じ日の開始・終了時刻を入力してください');
+      return;
+    }
+
     const payload = {
       groupSlug: params.slug,
       deviceSlug: parsed.data.deviceSlug,
-      start: startRaw,
-      end: endRaw,
+      date: startDate,
+      start: startTime,
+      end: endTime,
       purpose,
     };
 
@@ -124,7 +137,6 @@ export default function NewReservationClient({
           nextDevice ? `?device=${encodeURIComponent(nextDevice)}` : ''
         }`
       );
-      r.refresh();
     } catch (error) {
       toast.error('予約の作成に失敗しました');
     } finally {

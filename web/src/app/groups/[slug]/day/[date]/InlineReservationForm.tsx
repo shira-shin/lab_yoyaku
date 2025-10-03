@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from '@/lib/toast';
 
 type DeviceOption = { id: string; slug: string; name: string };
 
@@ -19,18 +20,32 @@ export default function InlineReservationForm({ slug, date, devices }: Props) {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
+  function extractDateAndTime(value: string) {
+    if (!value) return { date: '', time: '' };
+    const [datePart = '', timePart = ''] = value.split('T');
+    const time = timePart.slice(0, 5);
+    return { date: datePart, time };
+  }
+
   async function submit() {
     if (!deviceId) {
-      alert('機器を選択してください');
+      toast.error('機器を選択してください');
       return;
     }
     setSaving(true);
     try {
+      const { date: startDate, time: startTime } = extractDateAndTime(start);
+      const { date: endDate, time: endTime } = extractDateAndTime(end);
+      if (!startDate || !startTime || !endTime || startDate !== endDate) {
+        toast.error('同じ日の開始・終了時刻を入力してください');
+        return;
+      }
       const payload = {
         groupSlug: slug,
         deviceId,
-        start,
-        end,
+        date: startDate,
+        start: startTime,
+        end: endTime,
       };
       const res = await fetch('/api/reservations', {
         method: 'POST',
@@ -40,18 +55,17 @@ export default function InlineReservationForm({ slug, date, devices }: Props) {
       });
       if (!res.ok) {
         const { message } = await res.json().catch(() => ({ message: '作成に失敗しました' }));
-        alert(`作成失敗: ${message}`);
+        toast.error(`作成失敗: ${message}`);
         return;
       }
-      alert('予約を作成しました');
+      toast.success('予約を作成しました');
       router.push(`/groups/${slug}`);
-      router.refresh();
     } catch (err) {
       const message =
         (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
           ? (err as any).message
           : '') || '作成に失敗しました';
-      alert(`作成失敗: ${message}`);
+      toast.error(`作成失敗: ${message}`);
     } finally {
       setSaving(false);
     }
