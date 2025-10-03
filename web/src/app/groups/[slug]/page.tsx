@@ -6,7 +6,7 @@ export const fetchCache = 'force-no-store';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { serverFetch } from '@/lib/http/serverFetch';
-import { APP_TZ, toUTC } from '@/lib/time';
+import { dayRangeInUtc } from '@/lib/time';
 import {
   extractReservationItems,
   normalizeReservation,
@@ -142,22 +142,10 @@ export default async function GroupPage({
   rangeEnd.setHours(0, 0, 0, 0);
   rangeEnd.setDate(rangeEnd.getDate() + 1);
   const toYmd = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-  const toUtcFromLocalString = (value: string, tz: string = APP_TZ) => {
-    const normalized = value.trim().replace(' ', 'T');
-    const iso = /T\d{2}:\d{2}(?::\d{2})?$/.test(normalized) ? normalized : `${normalized}:00`;
-    const base = new Date(iso);
-    if (Number.isNaN(base.getTime())) throw new Error(`Invalid date string: ${value}`);
-    const projected = toUTC(base, tz);
-    const offset = projected.getTime() - base.getTime();
-    return new Date(base.getTime() - offset);
-  };
-  const localDayRange = (yyyyMmDd: string, tz: string = APP_TZ) => {
-    const start = toUtcFromLocalString(`${yyyyMmDd}T00:00`, tz);
-    const end = toUtcFromLocalString(`${yyyyMmDd}T24:00`, tz);
-    return { start, end };
-  };
-  const { start: rangeStartBoundary } = localDayRange(toYmd(rangeStart));
-  const { end: rangeEndBoundary } = localDayRange(toYmd(new Date(rangeEnd.getTime() - 24 * 60 * 60 * 1000)));
+  const { dayStartUtc: rangeStartBoundary } = dayRangeInUtc(toYmd(rangeStart));
+  const { dayEndUtc: rangeEndBoundary } = dayRangeInUtc(
+    toYmd(new Date(rangeEnd.getTime() - 24 * 60 * 60 * 1000)),
+  );
 
   const reservationParams = new URLSearchParams({
     from: rangeStartBoundary.toISOString(),
@@ -184,8 +172,11 @@ export default async function GroupPage({
     .filter((item): item is NormalizedReservation => Boolean(item))
     .filter((reservation) => overlapsRange(reservation, rangeStartBoundary, rangeEndBoundary));
   const nameOf = (r: NormalizedReservation) => {
-    if (me && r.userEmail === me.email) return me.name || me.email.split('@')[0];
-    return r.userName || r.userEmail?.split('@')[0] || '';
+    const email = r.user?.email ?? r.userEmail ?? undefined;
+    if (me && email && email === me.email) {
+      return me.name || email.split('@')[0];
+    }
+    return r.user?.name || r.userName || (email ? email.split('@')[0] : '');
   };
 
   const spans: Span[] = reservations.map((r) => {

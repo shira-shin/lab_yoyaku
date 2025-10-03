@@ -36,7 +36,7 @@ async function loadReservation(id: string) {
           },
         },
       },
-      user: { select: { id: true } },
+      user: { select: { id: true, name: true, email: true } },
     },
   })
 }
@@ -67,13 +67,26 @@ function toPayload(reservation: NonNullable<Awaited<ReturnType<typeof loadReserv
     deviceSlug: reservation.device.slug,
     deviceName: reservation.device.name,
     groupSlug: reservation.device.group.slug,
+    startsAtUTC: reservation.start.toISOString(),
+    endsAtUTC: reservation.end.toISOString(),
     start: reservation.start.toISOString(),
     end: reservation.end.toISOString(),
     purpose: reservation.purpose ?? null,
     reminderMinutes: reservation.reminderMinutes ?? null,
     userEmail: reservation.userEmail,
-    userName: reservation.userName ?? null,
+    userName: reservation.user?.name ?? reservation.userName ?? null,
     userId: reservation.user?.id ?? reservation.userId ?? null,
+    user: reservation.user
+      ? {
+          id: reservation.user.id,
+          name: reservation.user.name ?? null,
+          email: reservation.user.email ?? reservation.userEmail ?? null,
+        }
+      : {
+          id: reservation.userId ?? null,
+          name: reservation.userName ?? null,
+          email: reservation.userEmail,
+        },
   }
 }
 
@@ -143,7 +156,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
           },
         },
       },
-      user: { select: { id: true } },
+      user: { select: { id: true, name: true, email: true } },
     },
   })
 

@@ -40,12 +40,7 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
         ...(rangeEnd ? { start: { lt: rangeEnd } } : {}),
       },
       orderBy: { start: "asc" },
-      select: {
-        id: true,
-        start: true,
-        end: true,
-        purpose: true,
-        userEmail: true,
+      include: {
         device: {
           select: {
             id: true,
@@ -53,7 +48,7 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
             slug: true,
           },
         },
-        userName: true,
+        user: { select: { id: true, name: true, email: true } },
       },
     });
 
@@ -66,7 +61,14 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
       endsAtUTC: reservation.end.toISOString(),
       purpose: reservation.purpose,
       userEmail: reservation.userEmail,
-      userName: reservation.userName,
+      userName: reservation.user?.name ?? reservation.userName ?? null,
+      user: reservation.user
+        ? {
+            id: reservation.user.id,
+            name: reservation.user.name ?? null,
+            email: reservation.user.email ?? reservation.userEmail ?? null,
+          }
+        : null,
     }));
 
     return new NextResponse(JSON.stringify({ items }), {

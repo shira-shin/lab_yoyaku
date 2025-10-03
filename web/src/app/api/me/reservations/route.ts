@@ -60,6 +60,7 @@ export async function GET(req: Request) {
           group: { select: { id: true, slug: true, name: true } },
         },
       },
+      user: { select: { id: true, name: true, email: true } },
     },
   })
 
@@ -71,12 +72,26 @@ export async function GET(req: Request) {
     groupId: reservation.device.group.id,
     groupSlug: reservation.device.group.slug,
     groupName: reservation.device.group.name ?? reservation.device.group.slug,
+    startsAtUTC: reservation.start.toISOString(),
+    endsAtUTC: reservation.end.toISOString(),
     start: reservation.start.toISOString(),
     end: reservation.end.toISOString(),
     purpose: reservation.purpose ?? null,
     reminderMinutes: reservation.reminderMinutes ?? null,
     userEmail: reservation.userEmail,
     userId: reservation.userId ?? null,
+    userName: reservation.user?.name ?? me.name ?? null,
+    user: reservation.user
+      ? {
+          id: reservation.user.id,
+          name: reservation.user.name ?? null,
+          email: reservation.user.email ?? null,
+        }
+      : {
+          id: reservation.userId ?? null,
+          name: me.name ?? null,
+          email: reservation.userEmail,
+        },
     participants: [] as string[],
   }))
 

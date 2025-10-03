@@ -23,7 +23,10 @@ export async function GET(
       where: { slug: deviceSlug, group: { slug: groupSlug } },
       include: {
         group: { include: { members: true } },
-        reservations: { orderBy: { start: 'asc' } },
+        reservations: {
+          orderBy: { start: 'asc' },
+          include: { user: { select: { id: true, name: true, email: true } } },
+        },
       },
     })
 
@@ -43,6 +46,7 @@ export async function GET(
         device.group.hostEmail,
         ...device.group.members.map((member) => member.email),
         ...device.reservations.map((reservation) => reservation.userEmail),
+        ...device.reservations.map((reservation) => reservation.user?.email).filter(Boolean) as string[],
       ])
     )
     const profiles = profileEmails.length
@@ -50,22 +54,35 @@ export async function GET(
       : []
     const displayNameMap = new Map(profiles.map((profile) => [profile.email, profile.displayName || '']))
 
-    const reservations = device.reservations.map((reservation) => ({
-      id: reservation.id,
-      deviceId: reservation.deviceId,
-      deviceSlug: device.slug,
-      deviceName: device.name,
-      start: reservation.start.toISOString(),
-      end: reservation.end.toISOString(),
-      purpose: reservation.purpose ?? null,
-      userEmail: reservation.userEmail,
-      userName:
+    const reservations = device.reservations.map((reservation) => {
+      const fallbackName =
         reservation.userName ||
         displayNameMap.get(reservation.userEmail) ||
-        reservation.userEmail.split('@')[0],
-      reminderMinutes: reservation.reminderMinutes ?? null,
-      userId: reservation.userId,
-    }))
+        reservation.userEmail.split('@')[0]
+
+      return {
+        id: reservation.id,
+        deviceId: reservation.deviceId,
+        deviceSlug: device.slug,
+        deviceName: device.name,
+        startsAtUTC: reservation.start.toISOString(),
+        endsAtUTC: reservation.end.toISOString(),
+        start: reservation.start.toISOString(),
+        end: reservation.end.toISOString(),
+        purpose: reservation.purpose ?? null,
+        userEmail: reservation.userEmail,
+        userName: reservation.user?.name ?? fallbackName,
+        user: reservation.user
+          ? {
+              id: reservation.user.id,
+              name: reservation.user.name ?? null,
+              email: reservation.user.email ?? reservation.userEmail ?? null,
+            }
+          : null,
+        reminderMinutes: reservation.reminderMinutes ?? null,
+        userId: reservation.userId,
+      }
+    })
 
     return NextResponse.json({
       device: {
