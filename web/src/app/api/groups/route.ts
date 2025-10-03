@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/src/lib/prisma'
 import { readUserFromCookie } from '@/lib/auth'
 import { makeSlug } from '@/lib/slug'
+import { normalizeJoinInput } from '@/lib/text'
 import type { Prisma } from '@prisma/client'
 
 function parseDate(value: unknown) {
@@ -92,7 +93,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'slug already exists' }, { status: 409 })
     }
 
-    const passwordRaw = String((body as any).password || '').trim()
+    const passwordRaw = normalizeJoinInput(String((body as any).password || ''))
     let passcode: string | null = null
     if (passwordRaw) {
       const roundsRaw = parseInt(process.env.BCRYPT_ROUNDS ?? '10', 10)
