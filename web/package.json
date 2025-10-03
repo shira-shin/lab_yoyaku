@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && if [ \"$USE_MOCK\" != \"true\" ]; then prisma migrate deploy; else echo 'Skipping prisma migrate deploy in mock mode'; fi && next build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "echo skip prisma generate on postinstall",
