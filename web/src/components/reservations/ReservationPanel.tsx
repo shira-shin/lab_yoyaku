@@ -1,13 +1,32 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { deviceColor } from '@/lib/color';
-import { formatUtcInAppTz } from '@/lib/time';
+import { deviceColor, deviceColorSoft } from '@/lib/color';
+import { APP_TZ, formatUtcInAppTz, isPastUtc } from '@/lib/time';
 import type { ReservationListItem } from './ReservationList';
 
 export type { ReservationListItem } from './ReservationList';
 
-export default function ReservationPanel({ items }: { items: ReservationListItem[] }) {
+const ymdFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: APP_TZ,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function reservationMatchesDate(reservation: ReservationListItem, selectedYmd: string | null) {
+  if (!selectedYmd) return true;
+  const itemYmd = ymdFormatter.format(new Date(reservation.startsAtUTC));
+  return itemYmd === selectedYmd;
+}
+
+export default function ReservationPanel({
+  items,
+  selectedDate,
+}: {
+  items: ReservationListItem[];
+  selectedDate?: Date | null;
+}) {
   const [q, setQ] = useState('');
   const [device, setDevice] = useState<string>('all');
 
@@ -19,7 +38,10 @@ export default function ReservationPanel({ items }: { items: ReservationListItem
     return Array.from(map, ([id, name]) => ({ id, name }));
   }, [items]);
 
+  const selectedYmd = selectedDate ? ymdFormatter.format(selectedDate) : null;
+
   const filtered = items.filter((i) => {
+    if (!reservationMatchesDate(i, selectedYmd)) return false;
     const okDevice = device === 'all' || i.device.id === device;
     const userName = i.user.name ?? '';
     const hit =
@@ -52,14 +74,11 @@ export default function ReservationPanel({ items }: { items: ReservationListItem
         />
       </div>
 
-      <ul className="divide-y rounded-xl border">
+      <ul className="space-y-2">
         {filtered.map((r) => {
-          const startLabel = formatUtcInAppTz(r.startsAtUTC, {
-            month: 'numeric',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          });
+          const past = isPastUtc(r.endsAtUTC);
+          const startDateLabel = formatUtcInAppTz(r.startsAtUTC, { month: 'numeric', day: 'numeric' });
+          const startTimeLabel = formatUtcInAppTz(r.startsAtUTC, { hour: '2-digit', minute: '2-digit' });
           const endLabel = formatUtcInAppTz(r.endsAtUTC, {
             month: 'numeric',
             day: 'numeric',
@@ -68,17 +87,27 @@ export default function ReservationPanel({ items }: { items: ReservationListItem
           });
           const userName = r.user.name ?? '（予約者不明）';
           return (
-            <li key={r.id} className="p-3 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span
-                  className="inline-block w-3 h-3 rounded-full"
-                  style={{ background: deviceColor(r.device.id) }}
-                />
-                <div className="text-sm">
-                  <div className="font-medium">{r.device.name}</div>
-                  <div className="text-gray-500">
-                    {startLabel} → {endLabel}（{userName}）
-                  </div>
+            <li
+              key={r.id}
+              className="rounded-2xl border overflow-hidden"
+              style={{
+                background: deviceColorSoft(r.device.id),
+                borderColor: deviceColor(r.device.id),
+              }}
+            >
+              <div
+                className="flex items-center justify-between px-3 py-2"
+                style={{ background: deviceColor(r.device.id), color: 'white' }}
+              >
+                <div className="font-semibold">{r.device.name}</div>
+                <div className="text-xs opacity-90">ID: {r.id.slice(0, 8)}…</div>
+              </div>
+              <div className={`px-4 py-3 ${past ? 'opacity-50' : ''}`}>
+                <div className="text-lg font-bold leading-tight">
+                  {startDateLabel} {startTimeLabel} → {endLabel}
+                </div>
+                <div className="mt-1 text-base">
+                  予約者：<span className="font-medium">{userName}</span>
                 </div>
               </div>
             </li>

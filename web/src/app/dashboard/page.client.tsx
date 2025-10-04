@@ -3,9 +3,6 @@ import { useMemo, useState } from 'react';
 import UpcomingReservations, { Item } from '../_parts/UpcomingReservations';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 import { addMonths, buildWeeks, firstOfMonth } from '@/lib/date-cal';
-import { deviceColor } from '@/lib/color';
-
-const short = (s: string, len = 10) => (s.length <= len ? s : s.slice(0, len - 1) + '…');
 
 export default function DashboardClient({ initialItems, initialSpans, isLoggedIn }: { initialItems: Item[]; initialSpans: Span[]; isLoggedIn: boolean }) {
   const [spans, setSpans] = useState<Span[]>(initialSpans);
@@ -23,14 +20,9 @@ export default function DashboardClient({ initialItems, initialSpans, isLoggedIn
     return { month: m, weeks: w, monthSpans: ms };
   }, [anchor, spans]);
 
-  const legend = useMemo(
-    () => Array.from(new Map(spans.map((s) => [s.name, s.color])).entries()),
-    [spans]
-  );
-
   const handleLoaded = (j: any) => {
     const all = (j.all ?? []) as any[];
-      const updated: Span[] = all.map((r: any) => {
+    const updated: Span[] = all.map((r: any) => {
         const userObj = typeof r.user === 'object' && r.user !== null ? r.user : null;
         const userEmail: string | undefined = userObj?.email ?? (typeof r.user === 'string' ? r.user : undefined) ?? r.userEmail;
         const displayName =
@@ -44,10 +36,10 @@ export default function DashboardClient({ initialItems, initialSpans, isLoggedIn
           name: r.deviceName ?? r.deviceId,
           start: new Date(r.startsAtUTC ?? r.start),
           end: new Date(r.endsAtUTC ?? r.end),
-          color: deviceColor(r.deviceId),
           groupSlug: r.groupSlug,
           by: displayName,
           participants: r.participants ?? [],
+          device: r.deviceId ? { id: r.deviceId, name: r.deviceName ?? r.deviceId } : null,
         };
       });
     setSpans(updated);
@@ -79,18 +71,6 @@ export default function DashboardClient({ initialItems, initialSpans, isLoggedIn
           </button>
         </div>
         <CalendarWithBars weeks={weeks} month={month} spans={monthSpans} />
-        {legend.length > 0 && (
-          <div className="mt-4">
-            <div className="text-xs text-gray-500 mb-1">色の対応</div>
-            <div className="flex flex-wrap gap-3">
-              {legend.map(([name, color]) => (
-                <span key={name} className="inline-flex items-center gap-1.5 text-sm">
-                  <i className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} /> {short(name)}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </section>
     </div>
   );

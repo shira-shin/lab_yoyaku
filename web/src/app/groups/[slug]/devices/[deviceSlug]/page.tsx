@@ -5,7 +5,6 @@ export const fetchCache = 'force-no-store';
 
 import { serverFetch } from '@/lib/http/serverFetch';
 import { dayRangeInUtc, utcToLocal } from '@/lib/time';
-import { deviceColor } from '@/lib/color';
 import {
   extractReservationItems,
   normalizeReservation,
@@ -126,15 +125,18 @@ export default async function DeviceDetail({
     return r.user?.name || r.userName || (email ? email.split('@')[0] : '');
   };
 
-  const spans: Span[] = reservations.map((r) => ({
-    id: r.id,
-    name: dev?.name ?? r.deviceName ?? r.deviceId,
-    start: r.start,
-    end: r.end,
-    color: deviceColor(r.deviceId),
-    groupSlug: group,
-    by: nameOf(r),
-  }));
+  const spans: Span[] = reservations.map((r) => {
+    const deviceName = dev?.name ?? r.deviceName ?? r.deviceId;
+    return {
+      id: r.id,
+      name: deviceName,
+      start: r.start,
+      end: r.end,
+      groupSlug: group,
+      by: nameOf(r),
+      device: { id: r.deviceId, name: deviceName },
+    } satisfies Span;
+  });
 
   const listItems: ReservationListItem[] = reservations
     .map((r) => {

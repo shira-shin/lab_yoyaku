@@ -7,7 +7,6 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { dayRangeInUtc, utcToLocal } from '@/lib/time';
-import { deviceColor } from '@/lib/color';
 import {
   extractReservationItems,
   normalizeReservation,
@@ -178,15 +177,16 @@ export default async function GroupPage({
   const spans: Span[] = reservations.map((r) => {
     const dev = devices.find((d: any) => d.id === r.deviceId || d.slug === r.deviceSlug);
     const deviceId = dev?.id ?? r.deviceId;
+    const deviceName = dev?.name ?? r.deviceName ?? r.deviceId;
     return {
       id: r.id,
-      name: dev?.name ?? r.deviceName ?? r.deviceId,
+      name: deviceName,
       start: r.start,
       end: r.end,
-      color: deviceColor(deviceId),
       groupSlug: group.slug,
       by: nameOf(r),
-    };
+      device: { id: deviceId, name: deviceName },
+    } satisfies Span;
   });
 
   const dutyParams = new URLSearchParams({
@@ -229,9 +229,10 @@ export default async function GroupPage({
       name: `[当番] ${type.name ?? '当番'}`,
       start,
       end,
-      color: type.color ?? '#7c3aed',
       groupSlug: group.slug,
       by: assigneeName,
+      color: type.color ?? '#7c3aed',
+      device: null,
     } satisfies Span;
   });
 
