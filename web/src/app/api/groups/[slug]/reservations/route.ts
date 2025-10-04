@@ -57,6 +57,11 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
       deviceId: reservation.device.id,
       deviceSlug: reservation.device.slug,
       deviceName: reservation.device.name,
+      device: {
+        id: reservation.device.id,
+        name: reservation.device.name,
+        slug: reservation.device.slug,
+      },
       startsAtUTC: reservation.start.toISOString(),
       endsAtUTC: reservation.end.toISOString(),
       purpose: reservation.purpose,

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { updateReservation, deleteReservation } from '@/lib/api';
 import { toast } from '@/lib/toast';
+import { deviceColor } from '@/lib/color';
 
 export type Item = {
   id: string;
@@ -26,13 +27,6 @@ function fmtRange(s: string, e: string) {
     ? `${d(S)}–${pad(E.getHours())}:${pad(E.getMinutes())}`
     : `${d(S)} → ${d(E)}`;
 }
-function colorFromString(s: string) {
-  const palette = ['#2563eb', '#16a34a', '#f59e0b', '#ef4444', '#7c3aed', '#0ea5e9', '#f97316', '#14b8a6'];
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return palette[h % palette.length];
-}
-
 export default function UpcomingReservations({
   initialItems,
   onLoaded,
@@ -109,7 +103,7 @@ export default function UpcomingReservations({
             >
               <span
                 className="inline-block h-2.5 w-2.5 rounded-full mt-2"
-                style={{ backgroundColor: colorFromString(r.deviceId) }}
+                style={{ backgroundColor: deviceColor(r.deviceId) }}
               />
               <div className="flex-1">
                 <div className="text-sm text-muted">

@@ -1,7 +1,8 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
-import ReservationList, { ReservationItem } from '@/components/ReservationList';
+import ReservationPanel from '@/components/reservations/ReservationPanel';
+import type { ReservationListItem } from '@/components/reservations/ReservationList';
 
 export default function CalendarReservationSection({
   weeks,
@@ -13,7 +14,7 @@ export default function CalendarReservationSection({
   weeks: Date[][];
   month: number;
   spans: Span[];
-  listItems: ReservationItem[];
+  listItems: ReservationListItem[];
   groupSlug: string;
 }) {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function CalendarReservationSection({
       />
       <div className="mt-4">
         <h2 className="text-xl font-semibold mb-2">予約一覧</h2>
-        <ReservationList items={listItems} />
+        <ReservationPanel items={listItems} />
       </div>
     </>
   );

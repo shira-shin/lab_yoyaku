@@ -9,6 +9,7 @@ import DashboardClient from './page.client';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { deviceColor } from '@/lib/color';
 
 type Mine = {
   id:string; deviceId:string; deviceName?:string; userEmail:string; userName?:string;
@@ -18,11 +19,6 @@ type Mine = {
   user?: { id?: string | null; name?: string | null; email?: string | null } | null;
 };
 
-function colorFromString(s:string){
-  const palette=['#2563eb','#16a34a','#f59e0b','#ef4444','#7c3aed','#0ea5e9','#f97316','#14b8a6'];
-  let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0;
-  return palette[h%palette.length];
-}
 export default async function DashboardPage() {
   noStore();
   const me = await readUserFromCookie();
@@ -54,7 +50,7 @@ export default async function DashboardPage() {
     name: r.deviceName ?? r.deviceId,
     start: new Date(r.startsAtUTC ?? r.start),
     end: new Date(r.endsAtUTC ?? r.end),
-    color: colorFromString(r.deviceId),
+    color: deviceColor(r.deviceId),
     groupSlug: r.groupSlug,
     by: nameOf(r),
     participants: r.participants ?? [],
