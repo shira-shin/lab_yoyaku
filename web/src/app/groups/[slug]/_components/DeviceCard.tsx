@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { deviceColor, deviceColorSoft } from "@/lib/color";
+import { deviceBg, deviceColor } from "@/lib/color";
 
 type DeviceInfo = {
   id: string;
@@ -47,7 +47,7 @@ export function DeviceCard({ device, onReserve, onDelete, onShowQR, canManage }:
   return (
     <div
       className="rounded-2xl border shadow-sm hover:shadow-md transition p-4 flex items-center justify-between gap-4"
-      style={{ background: deviceColorSoft(device.id), borderColor: color }}
+      style={{ background: deviceBg(device.id), borderColor: color }}
     >
       <div className="min-w-0 space-y-1">
         <div className="flex items-center gap-3 min-w-0">
