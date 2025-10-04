@@ -5,6 +5,7 @@ export const fetchCache = 'force-no-store';
 
 import { serverFetch } from '@/lib/http/serverFetch';
 import { dayRangeInUtc, utcToLocal } from '@/lib/time';
+import { deviceColor } from '@/lib/color';
 import {
   extractReservationItems,
   normalizeReservation,
@@ -17,7 +18,8 @@ import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 import PrintButton from '@/components/PrintButton';
 import Image from 'next/image';
 import BackButton from '@/components/BackButton';
-import ReservationList, { ReservationItem } from '@/components/ReservationList';
+import ReservationPanel from '@/components/reservations/ReservationPanel';
+import type { ReservationListItem } from '@/components/reservations/ReservationList';
 import { getUserFromCookies } from '@/lib/auth/server';
 import CopyableCode from '@/components/CopyableCode';
 
@@ -129,20 +131,25 @@ export default async function DeviceDetail({
     name: dev?.name ?? r.deviceName ?? r.deviceId,
     start: r.start,
     end: r.end,
-    color: '#2563eb',
+    color: deviceColor(r.deviceId),
     groupSlug: group,
     by: nameOf(r),
   }));
 
-  const listItems: ReservationItem[] = reservations
-    .map((r) => ({
-      id: r.id,
-      deviceName: dev?.name ?? r.deviceName ?? r.deviceId,
-      user: nameOf(r),
-      start: r.start,
-      end: r.end,
-    }))
-    .sort((a, b) => a.start.getTime() - b.start.getTime());
+  const listItems: ReservationListItem[] = reservations
+    .map((r) => {
+      const deviceName = dev?.name ?? r.deviceName ?? r.deviceId;
+      return {
+        id: r.id,
+        device: { id: r.deviceId, name: deviceName },
+        user: { name: nameOf(r) },
+        startsAtUTC: r.startsAtUTC,
+        endsAtUTC: r.endsAtUTC,
+      } satisfies ReservationListItem;
+    })
+    .sort(
+      (a, b) => new Date(a.startsAtUTC).getTime() - new Date(b.startsAtUTC).getTime(),
+    );
 
   return (
     <div className="max-w-4xl mx-auto space-y-4">
@@ -188,7 +195,7 @@ export default async function DeviceDetail({
         <CalendarWithBars weeks={weeks} month={month} spans={spans} />
         <div className="mt-4">
           <h2 className="text-xl font-semibold mb-2">予約一覧</h2>
-          <ReservationList items={listItems} />
+          <ReservationPanel items={listItems} />
         </div>
         <Image
           src={`/api/devices/${encodeURIComponent(deviceSlug)}/qr`}

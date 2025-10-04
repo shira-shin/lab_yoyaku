@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { dayRangeInUtc, utcToLocal } from '@/lib/time';
+import { deviceColor } from '@/lib/color';
 import {
   extractReservationItems,
   normalizeReservation,
@@ -18,7 +19,7 @@ import Link from 'next/link';
 import { prisma } from '@/src/lib/prisma';
 import type { Span } from '@/components/CalendarWithBars';
 import PrintButton from '@/components/PrintButton';
-import type { ReservationItem } from '@/components/ReservationList';
+import type { ReservationListItem } from '@/components/reservations/ReservationList';
 import CalendarReservationSection from './CalendarReservationSection';
 import Image from 'next/image';
 import { AUTH_COOKIE } from '@/lib/auth/cookies';
@@ -42,13 +43,6 @@ function buildMonth(base = new Date()) {
   }
   return { weeks, month: m, year: y };
 }
-function colorFromString(s: string) {
-  const palette = ['#2563eb', '#16a34a', '#f59e0b', '#ef4444', '#7c3aed', '#0ea5e9', '#f97316', '#14b8a6'];
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return palette[h % palette.length];
-}
-
 export default async function GroupPage({
   params,
   searchParams,
@@ -183,12 +177,13 @@ export default async function GroupPage({
 
   const spans: Span[] = reservations.map((r) => {
     const dev = devices.find((d: any) => d.id === r.deviceId || d.slug === r.deviceSlug);
+    const deviceId = dev?.id ?? r.deviceId;
     return {
       id: r.id,
       name: dev?.name ?? r.deviceName ?? r.deviceId,
       start: r.start,
       end: r.end,
-      color: colorFromString(r.deviceId),
+      color: deviceColor(deviceId),
       groupSlug: group.slug,
       by: nameOf(r),
     };
@@ -242,18 +237,22 @@ export default async function GroupPage({
 
   const calendarSpans = [...spans, ...dutySpans];
 
-  const listItems: ReservationItem[] = reservations
+  const listItems: ReservationListItem[] = reservations
     .map((r) => {
       const dev = devices.find((d: any) => d.id === r.deviceId || d.slug === r.deviceSlug);
+      const deviceId = dev?.id ?? r.deviceId;
+      const deviceName = dev?.name ?? r.deviceName ?? r.deviceId;
       return {
         id: r.id,
-        deviceName: dev?.name ?? r.deviceName ?? r.deviceId,
-        user: nameOf(r),
-        start: r.start,
-        end: r.end,
-      };
+        device: { id: deviceId, name: deviceName },
+        user: { name: nameOf(r) },
+        startsAtUTC: r.startsAtUTC,
+        endsAtUTC: r.endsAtUTC,
+      } satisfies ReservationListItem;
     })
-    .sort((a, b) => a.start.getTime() - b.start.getTime());
+    .sort(
+      (a, b) => new Date(a.startsAtUTC).getTime() - new Date(b.startsAtUTC).getTime(),
+    );
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">

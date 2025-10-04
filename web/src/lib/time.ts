@@ -119,3 +119,20 @@ export function dayRangeInUtc(yyyyMmDd: string, tz: string = APP_TZ) {
   const dayEndUtc = localInputToUTC(`${nextDay}T00:00`, tz);
   return { dayStartUtc, dayEndUtc };
 }
+
+export function formatUtcInAppTz(
+  isoZ: string,
+  opt: Intl.DateTimeFormatOptions = {},
+  locale: string = DEFAULT_LOCALE,
+) {
+  const date = ensureUtcDate(isoZ);
+  const base: Intl.DateTimeFormatOptions = {
+    timeZone: APP_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  };
+  return new Intl.DateTimeFormat(locale, { ...base, ...opt }).format(date);
+}
