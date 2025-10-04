@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { deviceColor, deviceColorSoft } from "@/lib/color";
 
 type DeviceInfo = {
   id: string;
@@ -42,22 +43,24 @@ export function DeviceCard({ device, onReserve, onDelete, onShowQR, canManage }:
     };
   }, [open]);
 
+  const color = deviceColor(device.id);
   return (
-    <div className="rounded-2xl border bg-white shadow-sm hover:shadow-md transition p-4 flex items-center justify-between gap-4">
+    <div
+      className="rounded-2xl border shadow-sm hover:shadow-md transition p-4 flex items-center justify-between gap-4"
+      style={{ background: deviceColorSoft(device.id), borderColor: color }}
+    >
       <div className="min-w-0 space-y-1">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
-            機器
-          </span>
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="inline-block w-3 h-3 rounded-full" style={{ background: color }} />
           {device.href ? (
-            <Link href={device.href} className="font-semibold truncate hover:text-indigo-600">
+            <Link href={device.href} className="font-semibold truncate hover:opacity-90">
               {device.name}
             </Link>
           ) : (
             <h3 className="font-semibold truncate">{device.name}</h3>
           )}
         </div>
-        <div className="text-xs text-gray-500 truncate">ID: {device.id}</div>
+        <div className="text-xs text-gray-600 truncate">ID: {device.id}</div>
       </div>
 
       <div className="flex items-center gap-2 shrink-0">

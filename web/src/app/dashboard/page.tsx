@@ -9,7 +9,6 @@ import DashboardClient from './page.client';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { deviceColor } from '@/lib/color';
 
 type Mine = {
   id:string; deviceId:string; deviceName?:string; userEmail:string; userName?:string;
@@ -45,16 +44,19 @@ export default async function DashboardPage() {
     if (me && email && email === me.email) return me.name || email.split('@')[0];
     return r.user?.name || r.userName || (email ? email.split('@')[0] : '');
   };
-  spans = mineAll.map((r: any) => ({
-    id: r.id,
-    name: r.deviceName ?? r.deviceId,
-    start: new Date(r.startsAtUTC ?? r.start),
-    end: new Date(r.endsAtUTC ?? r.end),
-    color: deviceColor(r.deviceId),
-    groupSlug: r.groupSlug,
-    by: nameOf(r),
-    participants: r.participants ?? [],
-  }));
+  spans = mineAll.map((r: any) => {
+    const deviceName = r.deviceName ?? r.deviceId;
+    return {
+      id: r.id,
+      name: deviceName,
+      start: new Date(r.startsAtUTC ?? r.start),
+      end: new Date(r.endsAtUTC ?? r.end),
+      groupSlug: r.groupSlug,
+      by: nameOf(r),
+      participants: r.participants ?? [],
+      device: r.deviceId ? { id: r.deviceId, name: deviceName } : null,
+    } satisfies Span;
+  });
 
   const gRes = await serverFetch('/api/groups?mine=1');
   if (gRes.status === 401) redirect('/login?next=/dashboard');

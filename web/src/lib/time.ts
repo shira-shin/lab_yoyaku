@@ -1,7 +1,7 @@
 const DEFAULT_LOCALE = 'ja-JP';
 const UTC_ISO_Z_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
-export const APP_TZ = process.env.NEXT_PUBLIC_APP_TZ || process.env.NEXT_PUBLIC_TZ || 'Asia/Tokyo';
+export const APP_TZ = process.env.NEXT_PUBLIC_APP_TZ || 'Asia/Tokyo';
 
 function ensureUtcDate(input: Date | string): Date {
   if (input instanceof Date) {
@@ -128,11 +128,22 @@ export function formatUtcInAppTz(
   const date = ensureUtcDate(isoZ);
   const base: Intl.DateTimeFormatOptions = {
     timeZone: APP_TZ,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+    month: 'numeric',
+    day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   };
-  return new Intl.DateTimeFormat(locale, { ...base, ...opt }).format(date);
+  const options: Intl.DateTimeFormatOptions = { ...base, ...opt };
+  if (Object.keys(opt).length > 0) {
+    if (!('month' in opt)) delete options.month;
+    if (!('day' in opt)) delete options.day;
+    if (!('hour' in opt)) delete options.hour;
+    if (!('minute' in opt)) delete options.minute;
+  }
+  return new Intl.DateTimeFormat(locale, options).format(date);
+}
+
+export function isPastUtc(isoZ: string) {
+  const target = ensureUtcDate(isoZ);
+  return target.getTime() < new Date().getTime();
 }
