@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { deviceColor, deviceColorSoft } from '@/lib/color';
+import { deviceBg, deviceBgPast, deviceColor } from '@/lib/color';
 import { APP_TZ, formatUtcInAppTz, isPastUtc } from '@/lib/time';
 import type { ReservationListItem } from './ReservationList';
 
@@ -77,38 +77,29 @@ export default function ReservationPanel({
       <ul className="space-y-2">
         {filtered.map((r) => {
           const past = isPastUtc(r.endsAtUTC);
-          const startDateLabel = formatUtcInAppTz(r.startsAtUTC, { month: 'numeric', day: 'numeric' });
-          const startTimeLabel = formatUtcInAppTz(r.startsAtUTC, { hour: '2-digit', minute: '2-digit' });
-          const endLabel = formatUtcInAppTz(r.endsAtUTC, {
-            month: 'numeric',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          });
+          const bg = past ? deviceBgPast(r.device.id) : deviceBg(r.device.id);
+          const bar = deviceColor(r.device.id);
           const userName = r.user.name ?? '（予約者不明）';
           return (
             <li
               key={r.id}
-              className="rounded-2xl border overflow-hidden"
-              style={{
-                background: deviceColorSoft(r.device.id),
-                borderColor: deviceColor(r.device.id),
-              }}
+              className="rounded-xl border leading-tight"
+              style={{ background: bg, borderColor: bar }}
             >
-              <div
-                className="flex items-center justify-between px-3 py-2"
-                style={{ background: deviceColor(r.device.id), color: 'white' }}
-              >
-                <div className="font-semibold">{r.device.name}</div>
-                <div className="text-xs opacity-90">ID: {r.id.slice(0, 8)}…</div>
+              <div className="flex items-center justify-between px-3 py-1.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ background: bar }}
+                  />
+                  <span className="font-medium text-sm truncate">{r.device.name}</span>
+                </div>
+                <div className={`text-xs ${past ? 'opacity-60' : ''}`}>
+                  {formatUtcInAppTz(r.startsAtUTC)} → {formatUtcInAppTz(r.endsAtUTC)}
+                </div>
               </div>
-              <div className={`px-4 py-3 ${past ? 'opacity-50' : ''}`}>
-                <div className="text-lg font-bold leading-tight">
-                  {startDateLabel} {startTimeLabel} → {endLabel}
-                </div>
-                <div className="mt-1 text-base">
-                  予約者：<span className="font-medium">{userName}</span>
-                </div>
+              <div className={`px-3 pb-2 text-sm ${past ? 'opacity-60' : ''}`}>
+                予約者：<span className="font-semibold">{userName}</span>
               </div>
             </li>
           );
