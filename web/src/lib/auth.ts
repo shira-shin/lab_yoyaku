@@ -3,6 +3,8 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { createHash } from 'crypto';
 import { loadUsers } from './db';
+import { normalizeEmail } from './email';
+import { prisma } from '@/lib/prisma';
 import { AUTH_COOKIE } from './auth/cookies';
 
 const secret = new TextEncoder().encode(
@@ -11,6 +13,8 @@ const secret = new TextEncoder().encode(
 export const SESSION_COOKIE = AUTH_COOKIE;
 
 export type User = { id: string; name: string; email: string };
+
+export { normalizeEmail } from './email';
 
 export const hashPassword = (pw: string) =>
   createHash('sha256').update(pw).digest('hex');
@@ -54,6 +58,21 @@ export async function decodeSession(token: string): Promise<User> {
   };
 
   try {
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+    if (dbUser) {
+      if (dbUser.email) {
+        user.email = dbUser.email;
+      }
+      if (dbUser.name) {
+        user.name = dbUser.name;
+      }
+      return user;
+    }
+  } catch {
+    /* ignore */
+  }
+
+  try {
     const users = await loadUsers();
     const found = users.find((candidate) => candidate.id === user.id);
     if (found?.name) {
@@ -68,7 +87,23 @@ export async function decodeSession(token: string): Promise<User> {
 
 /** emailでユーザーを探す（DB） */
 export async function findUserByEmail(email: string) {
-  const users = await loadUsers();
-  return users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+  const normalized = normalizeEmail(email);
+  if (!normalized) return null;
+
+  try {
+    const user = await prisma.user.findUnique({ where: { normalizedEmail: normalized } });
+    if (user) {
+      return user;
+    }
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    const users = await loadUsers();
+    return users.find((u) => normalizeEmail(u.email) === normalized) || null;
+  } catch {
+    return null;
+  }
 }
 

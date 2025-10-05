@@ -8,15 +8,17 @@ datasource db {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  name          String?
-  email         String?       @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  reservations  Reservation[]
-  dutyAssignments DutyAssignment[]
+  id               String        @id @default(cuid())
+  name             String?
+  email            String?       @db.Text
+  normalizedEmail  String        @unique @db.Text
+  passwordHash     String?       @db.Text
+  emailVerified    DateTime?
+  image            String?
+  accounts         Account[]
+  sessions         Session[]
+  reservations     Reservation[]
+  dutyAssignments  DutyAssignment[]
   groupMemberships GroupMember[]
 }
 

@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/src/lib/prisma'
-import { readUserFromCookie } from '@/lib/auth'
+import { normalizeEmail, readUserFromCookie } from '@/lib/auth'
 
 function normalizeSlug(value: string | string[] | undefined) {
   if (!value) return ''
@@ -33,19 +33,20 @@ export async function POST(_req: Request, { params }: { params: { slug: string }
       return NextResponse.json({ error: 'group not found' }, { status: 404 })
     }
 
-    if (group.hostEmail === me.email) {
+    if (normalizeEmail(group.hostEmail ?? '') === normalizeEmail(me.email)) {
       return NextResponse.json({ error: 'owner cannot leave' }, { status: 403 })
     }
 
+    const normalizedEmail = normalizeEmail(me.email)
     const membership = await prisma.groupMember.findUnique({
-      where: { groupId_email: { groupId: group.id, email: me.email } },
+      where: { groupId_email: { groupId: group.id, email: normalizedEmail } },
     })
     if (!membership) {
       return NextResponse.json({ error: 'not a member' }, { status: 400 })
     }
 
     await prisma.groupMember.delete({
-      where: { groupId_email: { groupId: group.id, email: me.email } },
+      where: { groupId_email: { groupId: group.id, email: normalizedEmail } },
     })
 
     return NextResponse.json({ ok: true })

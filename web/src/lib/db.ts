@@ -1,6 +1,7 @@
 import 'server-only';
 import path from 'path';
 import { loadDB, UserRecord } from './mockdb';
+import { normalizeEmail } from './email';
 
 // ``better-sqlite3`` はネイティブモジュールのため環境によっては
 // 読み込みに失敗することがある。その場合はメモリ上のモックDBに
@@ -47,7 +48,8 @@ export async function updateUserNameByEmail(email: string, name: string): Promis
     return;
   }
   const dbData = loadDB();
-  const record = dbData.users.find((user) => user.email.toLowerCase() === email.toLowerCase());
+  const target = normalizeEmail(email);
+  const record = dbData.users.find((user) => normalizeEmail(user.email) === target);
   if (record) {
     record.name = name;
   }

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '@/src/lib/prisma';
 import { getServerSession } from '@/lib/auth';
+import { normalizeEmail } from '@/lib/email';
 
 export default async function GroupHeader({ slug }: { slug: string }) {
   const session = await getServerSession();
@@ -13,7 +14,7 @@ export default async function GroupHeader({ slug }: { slug: string }) {
   const isOwner =
     !!session?.user?.email &&
     !!group?.hostEmail &&
-    session.user.email.toLowerCase() === group.hostEmail.toLowerCase();
+    normalizeEmail(session.user.email) === normalizeEmail(group.hostEmail);
 
   if (!group) {
     return null;

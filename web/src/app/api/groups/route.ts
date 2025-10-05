@@ -5,7 +5,7 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/src/lib/prisma'
-import { readUserFromCookie } from '@/lib/auth'
+import { normalizeEmail, readUserFromCookie } from '@/lib/auth'
 import { makeSlug } from '@/lib/slug'
 import { normalizeJoinInput } from '@/lib/text'
 import type { Prisma } from '@prisma/client'
@@ -31,14 +31,18 @@ export async function GET(req: Request) {
       if (!me?.email) {
         return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
       }
+      const normalizedEmail = normalizeEmail(me.email)
       const memberships = await prisma.groupMember.findMany({
-        where: { email: me.email },
+        where: { email: { equals: me.email, mode: 'insensitive' } },
         select: { groupId: true },
       })
       const groupIds = memberships.map((m) => m.groupId)
       const groups = await prisma.group.findMany({
         where: {
-          OR: [{ hostEmail: me.email }, groupIds.length ? { id: { in: groupIds } } : undefined].filter(
+          OR: [
+            { hostEmail: { equals: me.email, mode: 'insensitive' } },
+            groupIds.length ? { id: { in: groupIds } } : undefined,
+          ].filter(
             Boolean
           ) as Prisma.GroupWhereInput[],
         },
@@ -75,6 +79,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
 
+    const hostEmail = me.email.trim()
+    const normalizedEmail = normalizeEmail(hostEmail)
+
     const body = await req.json().catch(() => null)
     if (!body || typeof body !== 'object') {
       return NextResponse.json({ error: 'invalid body' }, { status: 400 })
@@ -110,11 +117,11 @@ export async function POST(req: Request) {
         slug,
         name,
         passcode,
-        hostEmail: me.email,
+        hostEmail,
         reserveFrom,
         reserveTo,
         memo: memoValue || null,
-        members: { create: { email: me.email, userId: me.id, role: 'OWNER' } },
+        members: { create: { email: normalizedEmail, userId: me.id, role: 'OWNER' } },
       },
       select: { id: true, slug: true, name: true },
     })

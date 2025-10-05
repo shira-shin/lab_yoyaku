@@ -40,7 +40,7 @@ export default function LoginPage() {
       if (!res.ok) throw new Error();
       router.replace(next || '/');
     } catch {
-      setLErr('メールまたはパスワードが違います');
+      setLErr('メールまたはパスワードが違います（大文字小文字は区別しません）');
     } finally {
       setLoadingLogin(false);
     }
@@ -66,8 +66,10 @@ export default function LoginPage() {
         credentials: 'same-origin',
       });
       if (!res.ok) {
-        const t = await res.text();
-        throw new Error(/already/.test(t) ? 'このメールは登録済みです' : '登録に失敗しました');
+        if (res.status === 409) {
+          throw new Error('このメールは既に登録されています。ログインしてください');
+        }
+        throw new Error('登録に失敗しました');
       }
       router.replace('/');
     } catch (e: any) {

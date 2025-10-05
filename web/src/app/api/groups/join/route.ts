@@ -5,7 +5,7 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/src/lib/prisma'
-import { readUserFromCookie } from '@/lib/auth'
+import { normalizeEmail, readUserFromCookie } from '@/lib/auth'
 import { normalizeSlugInput } from '@/lib/slug'
 import { normalizeJoinInput } from '@/lib/text'
 
@@ -80,16 +80,18 @@ export async function POST(req: Request) {
       }
     }
 
+    const normalizedEmail = normalizeEmail(me.email)
     const alreadyMember =
-      group.hostEmail === me.email || group.members.some((member) => member.email === me.email)
+      normalizeEmail(group.hostEmail ?? '') === normalizedEmail ||
+      group.members.some((member) => normalizeEmail(member.email) === normalizedEmail)
 
     if (!alreadyMember) {
       await prisma.groupMember.create({
-        data: { groupId: group.id, email: me.email, userId: me.id, role: 'MEMBER' },
+        data: { groupId: group.id, email: normalizedEmail, userId: me.id, role: 'MEMBER' },
       })
     } else {
       await prisma.groupMember.updateMany({
-        where: { groupId: group.id, email: me.email },
+        where: { groupId: group.id, email: normalizedEmail },
         data: { userId: me.id },
       })
     }

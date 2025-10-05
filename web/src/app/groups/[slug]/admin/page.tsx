@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '@/src/lib/prisma';
 import { getServerSession } from '@/lib/auth';
+import { normalizeEmail } from '@/lib/email';
 import PasswordPanel from './PasswordPanel';
 import CopyButton from './CopyButton';
 
@@ -39,8 +40,8 @@ export default async function AdminPage({ params }: { params: { slug: string } }
     return <div className="p-6">グループが見つかりません。</div>;
   }
 
-  const sessionEmail = session?.user?.email?.toLowerCase() ?? null;
-  if (!sessionEmail || sessionEmail !== group.hostEmail.toLowerCase()) {
+  const sessionEmail = session?.user?.email ? normalizeEmail(session.user.email) : null;
+  if (!sessionEmail || sessionEmail !== normalizeEmail(group.hostEmail ?? '')) {
     return <div className="p-6">権限がありません（ホストのみ）。</div>;
   }
 

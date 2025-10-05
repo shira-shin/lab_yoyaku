@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
-import { getServerSession } from '@/lib/auth';
+import { getServerSession, normalizeEmail } from '@/lib/auth';
 
 function decodeSlug(value: string) {
   try {
@@ -30,7 +30,7 @@ export async function POST(_: Request, { params }: { params: { slug: string } })
     return NextResponse.json({ code: 'group_not_found' }, { status: 404 });
   }
 
-  if (group.hostEmail.toLowerCase() !== email.toLowerCase()) {
+  if (normalizeEmail(group.hostEmail ?? '') !== normalizeEmail(email)) {
     return NextResponse.json({ code: 'forbidden' }, { status: 403 });
   }
 

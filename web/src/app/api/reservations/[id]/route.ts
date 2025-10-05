@@ -3,7 +3,7 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { z } from '@/lib/zod-helpers'
-import { readUserFromCookie } from '@/lib/auth'
+import { normalizeEmail, readUserFromCookie } from '@/lib/auth'
 import { prisma } from '@/src/lib/prisma'
 
 const ParamsSchema = z.object({
@@ -44,7 +44,7 @@ async function loadReservation(id: string) {
 function isOwner(
   reservation: Awaited<ReturnType<typeof loadReservation>>,
   actorId: string | null,
-  email: string
+  email: string,
 ) {
   if (!reservation) return false
   if (actorId && reservation.userId) {
@@ -57,7 +57,7 @@ function isOwner(
       return true
     }
   }
-  return reservation.userEmail.toLowerCase() === email.toLowerCase()
+  return normalizeEmail(reservation.userEmail) === normalizeEmail(email)
 }
 
 function toPayload(reservation: NonNullable<Awaited<ReturnType<typeof loadReservation>>>) {
@@ -114,9 +114,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const { groupSlug, reminderMinutes } = parsedBody.data
   const normalizedGroupSlug = groupSlug?.toLowerCase()
 
+  const normalizedEmail = normalizeEmail(me.email)
   const [reservation, actor] = await Promise.all([
     loadReservation(id),
-    prisma.user.findUnique({ where: { email: me.email }, select: { id: true } }),
+    prisma.user.findUnique({ where: { normalizedEmail }, select: { id: true } }),
   ])
   if (!reservation) {
     return NextResponse.json({ error: 'reservation not found' }, { status: 404 })
@@ -179,9 +180,10 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
   const { id } = parsedParams.data
 
+  const normalizedEmail = normalizeEmail(me.email)
   const [reservation, actor] = await Promise.all([
     loadReservation(id),
-    prisma.user.findUnique({ where: { email: me.email }, select: { id: true } }),
+    prisma.user.findUnique({ where: { normalizedEmail }, select: { id: true } }),
   ])
   if (!reservation) {
     return NextResponse.json({ error: 'reservation not found' }, { status: 404 })
@@ -192,7 +194,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   }
 
   const actorId = actor?.id ?? null
-  const isHost = reservation.device.group.hostEmail.toLowerCase() === me.email.toLowerCase()
+  const isHost = normalizeEmail(reservation.device.group.hostEmail ?? '') === normalizeEmail(me.email)
 
   if (!isOwner(reservation, actorId, me.email) && !isHost) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })

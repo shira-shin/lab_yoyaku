@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/src/lib/prisma'
-import { readUserFromCookie } from '@/lib/auth'
+import { normalizeEmail, readUserFromCookie } from '@/lib/auth'
 import { makeSlug } from '@/lib/slug'
 import { uuid } from '@/lib/uuid'
 
@@ -24,8 +24,10 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
       return NextResponse.json({ error: 'group not found' }, { status: 404 })
     }
 
+    const normalizedEmail = normalizeEmail(me.email)
     const isMember =
-      group.hostEmail === me.email || group.members.some((member) => member.email === me.email)
+      normalizeEmail(group.hostEmail ?? '') === normalizedEmail ||
+      group.members.some((member) => normalizeEmail(member.email) === normalizedEmail)
     if (!isMember) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
@@ -59,10 +61,12 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
       return NextResponse.json({ error: 'group not found' }, { status: 404 })
     }
 
+    const normalizedEmail = normalizeEmail(me.email)
     const canManage =
       group.deviceManagePolicy === 'MEMBERS_ALLOWED'
-        ? group.hostEmail === me.email || group.members.some((member) => member.email === me.email)
-        : group.hostEmail === me.email
+        ? normalizeEmail(group.hostEmail ?? '') === normalizedEmail ||
+          group.members.some((member) => normalizeEmail(member.email) === normalizedEmail)
+        : normalizeEmail(group.hostEmail ?? '') === normalizedEmail
 
     if (!canManage) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
