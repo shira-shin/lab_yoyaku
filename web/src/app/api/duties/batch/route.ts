@@ -3,7 +3,7 @@ export const revalidate = 0;
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { auth, normalizeEmail } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { canManageDuties, getActorByEmail } from '@/lib/perm';
 import { z } from '@/lib/zod-shim';
@@ -97,8 +97,10 @@ async function handleOneOffCreation(
     where: { groupId: group.id, userId: me.id },
     select: { role: true },
   });
-  const normalizedEmail = email?.toLowerCase() ?? '';
-  const role = membership?.role ?? (group.hostEmail?.toLowerCase() === normalizedEmail ? 'OWNER' : null);
+  const normalizedEmail = email ? normalizeEmail(email) : '';
+  const role =
+    membership?.role ??
+    (normalizeEmail(group.hostEmail ?? '') === normalizedEmail ? 'OWNER' : null);
   if (!canManageDuties(group.dutyManagePolicy, role)) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
@@ -283,8 +285,10 @@ export async function POST(req: Request) {
       where: { groupId: group.id, userId: me.id },
       select: { role: true },
     });
-    const normalizedEmail = email?.toLowerCase() ?? '';
-    const role = membership?.role ?? (group.hostEmail?.toLowerCase() === normalizedEmail ? 'OWNER' : null);
+    const normalizedEmail = email ? normalizeEmail(email) : '';
+    const role =
+      membership?.role ??
+      (normalizeEmail(group.hostEmail ?? '') === normalizedEmail ? 'OWNER' : null);
     if (!canManageDuties(group.dutyManagePolicy, role)) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     }

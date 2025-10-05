@@ -3,7 +3,7 @@ export const revalidate = 0
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
-import { readUserFromCookie } from '@/lib/auth'
+import { normalizeEmail, readUserFromCookie } from '@/lib/auth'
 import { prisma } from '@/src/lib/prisma'
 import { updateUserNameByEmail } from '@/lib/db'
 
@@ -24,8 +24,9 @@ export async function GET() {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
+  const normalizedEmail = normalizeEmail(me.email)
   const existing = await prisma.user.findUnique({
-    where: { email: me.email },
+    where: { normalizedEmail },
   })
 
   if (!existing) {
@@ -72,10 +73,11 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: 'name too long' }, { status: 400 })
   }
 
+  const normalizedEmail = normalizeEmail(me.email)
   const updated = await prisma.user.upsert({
-    where: { email: me.email },
-    update: { name },
-    create: { email: me.email, name },
+    where: { normalizedEmail },
+    update: { name, email: me.email },
+    create: { email: me.email, normalizedEmail, name },
     select: { id: true, email: true, name: true },
   })
 

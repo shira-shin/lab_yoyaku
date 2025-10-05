@@ -1,8 +1,14 @@
+import { normalizeEmail } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function getActorByEmail(email?: string | null) {
   if (!email) return null;
-  return prisma.user.findUnique({ where: { email }, select: { id: true, email: true, name: true } });
+  const normalized = normalizeEmail(email);
+  if (!normalized) return null;
+  return prisma.user.findUnique({
+    where: { normalizedEmail: normalized },
+    select: { id: true, email: true, name: true },
+  });
 }
 
 export async function getGroupAndRole(slug: string, userId: string) {

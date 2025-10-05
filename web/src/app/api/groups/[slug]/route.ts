@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/src/lib/prisma'
-import { readUserFromCookie } from '@/lib/auth'
+import { normalizeEmail, readUserFromCookie } from '@/lib/auth'
 
 function toISO(value: Date | null | undefined) {
   return value ? value.toISOString() : null
@@ -131,7 +131,8 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
     }
 
     const { group, reservations, members, devices } = payload
-    const isMember = members.includes(me.email)
+    const normalizedEmail = normalizeEmail(me.email)
+    const isMember = members.some((memberEmail) => normalizeEmail(memberEmail) === normalizedEmail)
     if (!isMember) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
@@ -176,7 +177,7 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
       return NextResponse.json({ error: 'group not found' }, { status: 404 })
     }
 
-    if (group.hostEmail !== me.email) {
+    if (normalizeEmail(group.hostEmail ?? '') !== normalizeEmail(me.email)) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
 
@@ -204,8 +205,10 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
     if (hostRaw !== undefined) {
       const nextHost = String(hostRaw || '').trim()
       if (nextHost) {
+        const nextHostNormalized = normalizeEmail(nextHost)
         const allowed =
-          nextHost === group.hostEmail || group.members.some((member) => member.email === nextHost)
+          nextHostNormalized === normalizeEmail(group.hostEmail ?? '') ||
+          group.members.some((member) => normalizeEmail(member.email) === nextHostNormalized)
         if (!allowed) {
           return NextResponse.json({ error: 'host not member' }, { status: 400 })
         }

@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { z } from '@/lib/zod-helpers'
-import { readUserFromCookie } from '@/lib/auth'
+import { normalizeEmail, readUserFromCookie } from '@/lib/auth'
 import { prisma } from '@/src/lib/prisma'
 
 const QuerySchema = z.object({
@@ -38,9 +38,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'group not found' }, { status: 404 })
     }
 
+    const normalizedEmail = normalizeEmail(me.email)
     const isMember =
-      group.hostEmail === me.email ||
-      group.members.some((member) => member.email === me.email)
+      normalizeEmail(group.hostEmail ?? '') === normalizedEmail ||
+      group.members.some((member) => normalizeEmail(member.email) === normalizedEmail)
 
     if (!isMember) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })

@@ -3,7 +3,7 @@ export const revalidate = 0;
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { auth, normalizeEmail } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getActorByEmail } from '@/lib/perm';
 
@@ -36,11 +36,11 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
       return NextResponse.json({ error: 'group not found' }, { status: 404 });
     }
 
-    const normalizedEmail = email?.toLowerCase() ?? '';
+    const normalizedEmail = email ? normalizeEmail(email) : '';
     const isMember =
-      group.hostEmail?.toLowerCase() === normalizedEmail ||
+      normalizeEmail(group.hostEmail ?? '') === normalizedEmail ||
       group.members.some(
-        (member) => member.userId === me.id || member.email.toLowerCase() === normalizedEmail
+        (member) => member.userId === me.id || normalizeEmail(member.email) === normalizedEmail
       );
 
     if (!isMember) {
@@ -63,11 +63,11 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
     });
 
     if (group.hostEmail) {
-      const hostEmail = group.hostEmail.toLowerCase();
-      const existing = items.some((item) => item.email.toLowerCase() === hostEmail);
+      const hostEmail = normalizeEmail(group.hostEmail);
+      const existing = items.some((item) => normalizeEmail(item.email) === hostEmail);
       if (!existing) {
         const host = await prisma.user.findUnique({
-          where: { email: group.hostEmail },
+          where: { normalizedEmail: hostEmail },
           select: { id: true, name: true, email: true },
         });
         if (host) {

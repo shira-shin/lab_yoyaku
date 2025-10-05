@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/src/lib/prisma'
-import { readUserFromCookie } from '@/lib/auth'
+import { normalizeEmail, readUserFromCookie } from '@/lib/auth'
 
 export async function GET(_req: Request, { params }: { params: { slug: string } }) {
   try {
@@ -23,9 +23,10 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
       return NextResponse.json({ error: 'device not found' }, { status: 404 })
     }
 
+    const normalizedEmail = normalizeEmail(me.email)
     const isMember =
-      device.group.hostEmail === me.email ||
-      device.group.members.some((member) => member.email === me.email)
+      normalizeEmail(device.group.hostEmail ?? '') === normalizedEmail ||
+      device.group.members.some((member) => normalizeEmail(member.email) === normalizedEmail)
     if (!isMember) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }

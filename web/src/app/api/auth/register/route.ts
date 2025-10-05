@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
+import { normalizeEmail } from '@/lib/auth';
 import { setSessionCookie } from '@/lib/auth/cookies';
-import { loadUsers, saveUser } from '@/lib/db';
-import { isEmail, uid, UserRecord } from '@/lib/mockdb';
+import { prisma } from '@/lib/prisma';
+import { isEmail } from '@/lib/mockdb';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.AUTH_SECRET || process.env.JWT_SECRET || 'dev-secret',
@@ -15,7 +16,8 @@ export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   const { email, password, name } = await req.json().catch(() => ({}));
-  const normalizedEmail = String(email ?? '').trim().toLowerCase();
+  const rawEmail = typeof email === 'string' ? email.trim() : '';
+  const normalizedEmail = normalizeEmail(rawEmail);
   const normalizedPassword = String(password ?? '').trim();
 
   if (!normalizedEmail || !normalizedPassword) {
@@ -27,27 +29,28 @@ export async function POST(req: Request) {
   if (normalizedPassword.length < 6) {
     return NextResponse.json({ ok:false, error:'password too short' }, { status:400 });
   }
-  const users = await loadUsers();
-  if (users.some(u => u.email.toLowerCase() === normalizedEmail)) {
-    return NextResponse.json({ ok:false, error:'email already registered' }, { status:409 });
+  const existing = await prisma.user.findUnique({ where: { normalizedEmail } });
+  if (existing) {
+    return NextResponse.json({ ok:false, error:'EMAIL_EXISTS' }, { status:409 });
   }
 
-  const passwordHash = await bcrypt.hash(
-    normalizedPassword,
-    await bcrypt.genSalt(parseInt(process.env.BCRYPT_ROUNDS ?? '10', 10) || 10),
-  );
+  const roundsRaw = parseInt(process.env.BCRYPT_ROUNDS ?? '12', 10);
+  const rounds = Number.isNaN(roundsRaw) ? 12 : roundsRaw;
+  const passwordHash = await bcrypt.hash(normalizedPassword, rounds);
 
-  let user: UserRecord;
-  user = {
-    id: uid(),
-    email: normalizedEmail,
-    name: name ? String(name) : normalizedEmail.split('@')[0],
-    passwordHash,
-  };
-  await saveUser(user);
+  const trimmedName = typeof name === 'string' ? name.trim() : '';
+  const fallbackName = rawEmail.split('@')[0] || rawEmail;
+  const user = await prisma.user.create({
+    data: {
+      email: rawEmail,
+      normalizedEmail,
+      name: trimmedName || fallbackName,
+      passwordHash,
+    },
+  });
 
   // 自動ログイン
-  const token = await new SignJWT({ id: user.id, name: user.name || '', email: user.email })
+  const token = await new SignJWT({ id: user.id, name: user.name || '', email: user.email || rawEmail })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('30d')

@@ -23,6 +23,7 @@ import CalendarReservationSection from './CalendarReservationSection';
 import Image from 'next/image';
 import { AUTH_COOKIE } from '@/lib/auth/cookies';
 import { decodeSession } from '@/lib/auth';
+import { normalizeEmail } from '@/lib/email';
 import { unstable_noStore as noStore } from 'next/cache';
 import GroupHeader from './_components/GroupHeader';
 
@@ -77,15 +78,17 @@ export default async function GroupPage({
     redirect('/groups');
   }
 
+  const normalizedUserEmail = normalizeEmail(user.email);
   const isMember =
-    groupRecord.hostEmail === user.email ||
-    groupRecord.members.some((member) => member.email === user.email);
+    normalizeEmail(groupRecord.hostEmail ?? '') === normalizedUserEmail ||
+    groupRecord.members.some((member) => normalizeEmail(member.email) === normalizedUserEmail);
 
   if (!isMember) {
     redirect(`/groups/join?slug=${encodeURIComponent(paramSlug)}`);
   }
 
-  const canLeave = isMember && groupRecord.hostEmail !== user.email;
+  const canLeave =
+    isMember && normalizeEmail(groupRecord.hostEmail ?? '') !== normalizedUserEmail;
 
   const res = await serverFetch(`/api/groups/${encodeURIComponent(paramSlug)}`);
   if (res.status === 401) redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
