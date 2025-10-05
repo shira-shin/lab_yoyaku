@@ -133,14 +133,7 @@ export function formatUtcInAppTz(
     hour: '2-digit',
     minute: '2-digit',
   };
-  const options: Intl.DateTimeFormatOptions = { ...base, ...opt };
-  if (Object.keys(opt).length > 0) {
-    if (!('month' in opt)) delete options.month;
-    if (!('day' in opt)) delete options.day;
-    if (!('hour' in opt)) delete options.hour;
-    if (!('minute' in opt)) delete options.minute;
-  }
-  return new Intl.DateTimeFormat(locale, options).format(date);
+  return new Intl.DateTimeFormat(locale, { ...base, ...opt }).format(date);
 }
 
 export function isPastUtc(isoZ: string) {

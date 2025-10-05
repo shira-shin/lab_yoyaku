@@ -54,6 +54,7 @@ export default function CalendarReservationSection({
         onSelectDate={handleSelect}
         showModal
         selectedDate={selectedDate}
+        groupSlug={groupSlug}
       />
       <div className="mt-4">
         <h2 className="text-xl font-semibold mb-2">予約一覧</h2>

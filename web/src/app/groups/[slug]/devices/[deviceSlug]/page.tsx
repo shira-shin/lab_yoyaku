@@ -194,7 +194,7 @@ export default async function DeviceDetail({
             <CopyableCode value={deviceCode} />
           </div>
         ) : null}
-        <CalendarWithBars weeks={weeks} month={month} spans={spans} />
+        <CalendarWithBars weeks={weeks} month={month} spans={spans} groupSlug={group} />
         <div className="mt-4">
           <h2 className="text-xl font-semibold mb-2">予約一覧</h2>
           <ReservationPanel items={listItems} />

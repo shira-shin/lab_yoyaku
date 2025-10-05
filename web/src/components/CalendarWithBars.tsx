@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import Link from 'next/link';
 import clsx from 'clsx';
-import { deviceColor, deviceColorSoft } from '@/lib/color';
+import { deviceBg, deviceBgPast, deviceColor } from '@/lib/color';
 
 export type Span = {
   id: string;
@@ -78,6 +79,7 @@ export default function CalendarWithBars({
   onSelectDate,
   showModal = true,
   selectedDate,
+  groupSlug,
 }: {
   weeks: Date[][];
   month: number;
@@ -85,6 +87,7 @@ export default function CalendarWithBars({
   onSelectDate?: (d: Date) => void;
   showModal?: boolean;
   selectedDate?: Date | null;
+  groupSlug?: string;
 }) {
   const [modalDate, setModalDate] = useState<Date | null>(null);
   const [highlightDeviceId, setHighlightDeviceId] = useState<string | null>(null);
@@ -141,7 +144,7 @@ export default function CalendarWithBars({
                     active ? 'shadow-sm' : 'opacity-90 hover:opacity-100'
                   )}
                   style={{
-                    background: active ? color : deviceColorSoft(device.id),
+                    background: active ? color : deviceBg(device.id),
                     color: active ? '#fff' : '#1f2937',
                     borderColor: color,
                   }}
@@ -234,11 +237,13 @@ export default function CalendarWithBars({
                     : event.color ?? '#7c3aed';
                   const muted =
                     highlightDeviceId !== null && event.device?.id !== highlightDeviceId;
+                  const past = event.end.getTime() < Date.now();
                   const label = `${event.device?.name ?? event.name}（${labelForDay(
                     day,
                     event.start,
                     event.end,
                   )}）`;
+                  const eventOpacityClass = muted ? 'opacity-30' : past ? 'opacity-55' : undefined;
                   return (
                     <div
                       key={event.id}
@@ -246,7 +251,7 @@ export default function CalendarWithBars({
                         'rounded px-1 text-white truncate',
                         eventPaddingClass,
                         eventTextClass,
-                        muted && 'opacity-40'
+                        eventOpacityClass,
                       )}
                       style={{ background: color }}
                       title={`${event.name} / ${event.by}`}
@@ -284,24 +289,51 @@ export default function CalendarWithBars({
             (a, b) => a.start.getTime() - b.start.getTime()
           )}
           onClose={() => setModalDate(null)}
+          groupSlug={groupSlug}
         />
       )}
     </div>
   );
 }
 
-function DayModal({ date, items, onClose }: { date: Date; items: Span[]; onClose: () => void }) {
+function DayModal({
+  date,
+  items,
+  onClose,
+  groupSlug,
+}: {
+  date: Date;
+  items: Span[];
+  onClose: () => void;
+  groupSlug?: string;
+}) {
+  const ymd = toYmd(date);
+  const slugForCreate = groupSlug ?? items[0]?.groupSlug;
+  const createHref = slugForCreate
+    ? `/groups/${encodeURIComponent(slugForCreate)}/day/${ymd}`
+    : null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 sm:items-center">
       <div className="w-full max-w-lg rounded-t-2xl bg-white p-5 shadow-lg sm:rounded-2xl">
         <div className="mb-3 flex items-center justify-between">
           <div className="font-semibold">{date.getMonth() + 1}月{date.getDate()}日の予定</div>
-          <button
-            onClick={onClose}
-            className="text-sm text-gray-500 hover:text-gray-700 hover:underline"
-          >
-            閉じる
-          </button>
+          <div className="flex items-center gap-2">
+            {createHref ? (
+              <Link
+                href={createHref}
+                className="text-xs rounded-md bg-blue-600 px-2 py-1 font-medium text-white hover:bg-blue-500"
+              >
+                この日に予約を追加
+              </Link>
+            ) : null}
+            <button
+              onClick={onClose}
+              className="text-xs text-gray-500 hover:text-gray-700 hover:underline"
+            >
+              閉じる
+            </button>
+          </div>
         </div>
         {!items.length && (
           <div className="text-sm text-gray-500">この日の予約はありません。</div>
@@ -311,7 +343,13 @@ function DayModal({ date, items, onClose }: { date: Date; items: Span[]; onClose
             const color = event.device
               ? deviceColor(event.device.id)
               : event.color ?? '#7c3aed';
-            const background = event.device ? deviceColorSoft(event.device.id) : '#f5f3ff';
+            const past = event.end.getTime() < Date.now();
+            const background = event.device
+              ? past
+                ? deviceBgPast(event.device.id)
+                : deviceBg(event.device.id)
+              : '#f5f3ff';
+            const contentOpacity = past ? 'opacity-60' : undefined;
             return (
               <li
                 key={event.id}
@@ -321,7 +359,7 @@ function DayModal({ date, items, onClose }: { date: Date; items: Span[]; onClose
                 <div className="px-3 py-2 text-sm font-semibold text-white" style={{ background: color }}>
                   {event.device?.name ?? event.name}
                 </div>
-                <div className="space-y-1 px-4 py-3 text-sm text-gray-700">
+                <div className={clsx('space-y-1 px-4 py-3 text-sm text-gray-700', contentOpacity)}>
                   <div className="text-base font-semibold text-gray-900">
                     {hhmm(event.start)} → {hhmm(event.end)}
                   </div>
