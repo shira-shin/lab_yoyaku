@@ -9,6 +9,7 @@ import DashboardClient from './page.client';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { utcIsoToLocalDate } from '@/lib/time';
 
 type Mine = {
   id:string; deviceId:string; deviceName?:string; userEmail:string; userName?:string;
@@ -46,11 +47,15 @@ export default async function DashboardPage() {
   };
   spans = mineAll.map((r: any) => {
     const deviceName = r.deviceName ?? r.deviceId;
+    const startIso = new Date(r.startsAtUTC ?? r.start).toISOString();
+    const endIso = new Date(r.endsAtUTC ?? r.end).toISOString();
     return {
       id: r.id,
       name: deviceName,
-      start: new Date(r.startsAtUTC ?? r.start),
-      end: new Date(r.endsAtUTC ?? r.end),
+      startsAtUTC: startIso,
+      endsAtUTC: endIso,
+      start: utcIsoToLocalDate(startIso),
+      end: utcIsoToLocalDate(endIso),
       groupSlug: r.groupSlug,
       by: nameOf(r),
       participants: r.participants ?? [],

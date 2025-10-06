@@ -18,5 +18,5 @@ export function deviceBg(deviceId: string) {
 
 export function deviceBgPast(deviceId: string) {
   const h = hueFromDevice(deviceId);
-  return `hsl(${h} 30% 97%)`;
+  return `hsl(${h} 22% 98%)`;
 }

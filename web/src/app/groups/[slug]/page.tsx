@@ -184,6 +184,8 @@ export default async function GroupPage({
     return {
       id: r.id,
       name: deviceName,
+      startsAtUTC: r.startsAtUTC,
+      endsAtUTC: r.endsAtUTC,
       start: r.start,
       end: r.end,
       groupSlug: group.slug,
@@ -230,6 +232,8 @@ export default async function GroupPage({
     return {
       id: `duty-${d.id}`,
       name: `[当番] ${type.name ?? '当番'}`,
+      startsAtUTC: start.toISOString(),
+      endsAtUTC: end.toISOString(),
       start,
       end,
       groupSlug: group.slug,

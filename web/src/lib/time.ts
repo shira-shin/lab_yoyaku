@@ -120,6 +120,7 @@ export function dayRangeInUtc(yyyyMmDd: string, tz: string = APP_TZ) {
   return { dayStartUtc, dayEndUtc };
 }
 
+// UTC ISO(Z) → APP_TZ でフォーマット（全表示はこれだけ）
 export function formatUtcInAppTz(
   isoZ: string,
   opt: Intl.DateTimeFormatOptions = {},
@@ -133,10 +134,57 @@ export function formatUtcInAppTz(
     hour: '2-digit',
     minute: '2-digit',
   };
-  return new Intl.DateTimeFormat(locale, { ...base, ...opt }).format(date);
+  const merged: Intl.DateTimeFormatOptions = { ...base, ...opt };
+  (['month', 'day', 'hour', 'minute', 'year'] as const).forEach((key) => {
+    if (key in opt && opt[key] === undefined) {
+      delete merged[key];
+    }
+  });
+  return new Intl.DateTimeFormat(locale, merged).format(date);
 }
 
+// UTC ISO(Z) → APP_TZ の“壁時計”Date（比較や交差判定用）
+export function utcIsoToLocalDate(isoZ: string) {
+  const date = ensureUtcDate(isoZ);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TZ,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)?.value);
+  return new Date(
+    get('year'),
+    get('month') - 1,
+    get('day'),
+    get('hour'),
+    get('minute'),
+    get('second'),
+  );
+}
+
+// APP_TZ の当日範囲（開始/終了のローカルDate）を返す
+export function localDayRange(yyyyMmDd: string) {
+  const [y, m, d] = yyyyMmDd.split('-').map(Number);
+  const start = new Date(y, m - 1, d, 0, 0, 0);
+  const end = new Date(y, m - 1, d, 23, 59, 59, 999);
+  return { start, end };
+}
+
+// 予約が APP_TZ の当日と交差しているか
+export function overlapsLocalDay(startsIsoZ: string, endsIsoZ: string, yyyyMmDd: string) {
+  const aStart = utcIsoToLocalDate(startsIsoZ);
+  const aEnd = utcIsoToLocalDate(endsIsoZ);
+  const { start: dayStart, end: dayEnd } = localDayRange(yyyyMmDd);
+  return aEnd >= dayStart && aStart <= dayEnd;
+}
+
+// すでに終了しているか（現在時刻はUTCのまま比較でOK）
 export function isPastUtc(isoZ: string) {
   const target = ensureUtcDate(isoZ);
-  return target.getTime() < new Date().getTime();
+  return target.getTime() < Date.now();
 }
