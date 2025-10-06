@@ -1,4 +1,4 @@
-import { APP_TZ, toUtcIsoZ, utcToLocal } from '@/lib/time';
+import { APP_TZ, toUtcIsoZ, utcIsoToLocalDate } from '@/lib/time';
 
 type Maybe<T> = T | null | undefined;
 
@@ -101,8 +101,8 @@ export function normalizeReservation(
     return null;
   }
 
-  const start = utcToLocal(startUtc, tz);
-  const end = utcToLocal(endUtc, tz);
+  const start = utcIsoToLocalDate(startIso);
+  const end = utcIsoToLocalDate(endIso);
 
   const device = raw.device ?? {};
   const user = raw.user ?? null;

@@ -4,10 +4,19 @@ import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } fro
 import Link from 'next/link';
 import clsx from 'clsx';
 import { deviceBg, deviceBgPast, deviceColor } from '@/lib/color';
+import {
+  formatUtcInAppTz,
+  isPastUtc,
+  localDayRange,
+  overlapsLocalDay,
+  utcIsoToLocalDate,
+} from '@/lib/time';
 
 export type Span = {
   id: string;
   name: string; // 表示用名称（機器名など）
+  startsAtUTC: string;
+  endsAtUTC: string;
   start: Date;
   end: Date;
   groupSlug: string;
@@ -21,27 +30,22 @@ const MAX_PER_CELL = 3;
 const pad = (n: number) => n.toString().padStart(2, '0');
 const short = (s: string, len = 16) => (s.length <= len ? s : `${s.slice(0, len - 1)}…`);
 const toYmd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const hhmm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
-const dayRange = (date: Date) => {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setHours(24, 0, 0, 0);
-  return { start, end };
-};
+const formatTimeOnly = (iso: string) =>
+  formatUtcInAppTz(iso, {
+    month: undefined,
+    day: undefined,
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
-function overlaps(day: Date, s: Date, e: Date) {
-  const { start, end } = dayRange(day);
-  return e.getTime() >= start.getTime() && s.getTime() <= end.getTime();
-}
-
-function labelForDay(cell: Date, s: Date, e: Date) {
-  const { start, end } = dayRange(cell);
-  const startStr = hhmm(s);
-  const endStr = hhmm(e);
-  const from = s.getTime() <= start.getTime() ? '00:00' : startStr;
-  const to = e.getTime() >= end.getTime() ? '24:00' : endStr;
+function labelForDay(cell: Date, startIso: string, endIso: string) {
+  const key = toYmd(cell);
+  const { start, end } = localDayRange(key);
+  const startLocal = utcIsoToLocalDate(startIso);
+  const endLocal = utcIsoToLocalDate(endIso);
+  const from = startLocal.getTime() <= start.getTime() ? '00:00' : formatTimeOnly(startIso);
+  const to = endLocal.getTime() >= end.getTime() ? '24:00' : formatTimeOnly(endIso);
   return `${from}→${to}`;
 }
 
@@ -100,8 +104,12 @@ export default function CalendarWithBars({
     weeks.flat().forEach((day) => {
       const key = toYmd(day);
       const items = spans
-        .filter((span) => overlaps(day, span.start, span.end))
-        .sort((a, b) => a.start.getTime() - b.start.getTime());
+        .filter((span) => overlapsLocalDay(span.startsAtUTC, span.endsAtUTC, key))
+        .sort(
+          (a, b) =>
+            utcIsoToLocalDate(a.startsAtUTC).getTime() -
+            utcIsoToLocalDate(b.startsAtUTC).getTime(),
+        );
       map.set(key, items);
     });
     return map;
@@ -237,13 +245,19 @@ export default function CalendarWithBars({
                     : event.color ?? '#7c3aed';
                   const muted =
                     highlightDeviceId !== null && event.device?.id !== highlightDeviceId;
-                  const past = event.end.getTime() < Date.now();
+                  const past = isPastUtc(event.endsAtUTC);
                   const label = `${event.device?.name ?? event.name}（${labelForDay(
                     day,
-                    event.start,
-                    event.end,
+                    event.startsAtUTC,
+                    event.endsAtUTC,
                   )}）`;
-                  const eventOpacityClass = muted ? 'opacity-30' : past ? 'opacity-55' : undefined;
+                  console.info('[tz-check]', {
+                    src: 'MonthGrid',
+                    itemId: event.id,
+                    startUTC: event.startsAtUTC,
+                    startLocal: utcIsoToLocalDate(event.startsAtUTC),
+                    label: formatUtcInAppTz(event.startsAtUTC),
+                  });
                   return (
                     <div
                       key={event.id}
@@ -251,10 +265,12 @@ export default function CalendarWithBars({
                         'rounded px-1 text-white truncate',
                         eventPaddingClass,
                         eventTextClass,
-                        eventOpacityClass,
+                        {
+                          'opacity-30': muted || past,
+                        },
                       )}
                       style={{ background: color }}
-                      title={`${event.name} / ${event.by}`}
+                      title={`${formatUtcInAppTz(event.startsAtUTC)} → ${formatUtcInAppTz(event.endsAtUTC)}`}
                     >
                       {short(label, density === 'compact' ? 26 : 36)}
                     </div>
@@ -286,7 +302,9 @@ export default function CalendarWithBars({
         <DayModal
           date={modalDate}
           items={(eventsByDay.get(toYmd(modalDate)) ?? []).sort(
-            (a, b) => a.start.getTime() - b.start.getTime()
+            (a, b) =>
+              utcIsoToLocalDate(a.startsAtUTC).getTime() -
+              utcIsoToLocalDate(b.startsAtUTC).getTime(),
           )}
           onClose={() => setModalDate(null)}
           groupSlug={groupSlug}
@@ -343,13 +361,20 @@ function DayModal({
             const color = event.device
               ? deviceColor(event.device.id)
               : event.color ?? '#7c3aed';
-            const past = event.end.getTime() < Date.now();
+            const past = isPastUtc(event.endsAtUTC);
             const background = event.device
               ? past
                 ? deviceBgPast(event.device.id)
                 : deviceBg(event.device.id)
               : '#f5f3ff';
-            const contentOpacity = past ? 'opacity-60' : undefined;
+            const contentOpacity = past ? 'opacity-30' : undefined;
+            console.info('[tz-check]', {
+              src: 'DayModal',
+              itemId: event.id,
+              startUTC: event.startsAtUTC,
+              startLocal: utcIsoToLocalDate(event.startsAtUTC),
+              label: formatUtcInAppTz(event.startsAtUTC),
+            });
             return (
               <li
                 key={event.id}
@@ -361,7 +386,7 @@ function DayModal({
                 </div>
                 <div className={clsx('space-y-1 px-4 py-3 text-sm text-gray-700', contentOpacity)}>
                   <div className="text-base font-semibold text-gray-900">
-                    {hhmm(event.start)} → {hhmm(event.end)}
+                    {formatTimeOnly(event.startsAtUTC)} → {formatTimeOnly(event.endsAtUTC)}
                   </div>
                   <div>
                     予約者：<span className="font-medium text-gray-900">{event.by}</span>

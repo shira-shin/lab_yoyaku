@@ -130,6 +130,8 @@ export default async function DeviceDetail({
     return {
       id: r.id,
       name: deviceName,
+      startsAtUTC: r.startsAtUTC,
+      endsAtUTC: r.endsAtUTC,
       start: r.start,
       end: r.end,
       groupSlug: group,

@@ -8,7 +8,14 @@ import { notFound, redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { absUrl } from '@/lib/url';
-import { dayRangeInUtc, utcToLocal } from '@/lib/time';
+import {
+  dayRangeInUtc,
+  formatUtcInAppTz,
+  isPastUtc,
+  overlapsLocalDay,
+  utcIsoToLocalDate,
+  utcToLocal,
+} from '@/lib/time';
 import {
   extractReservationItems,
   normalizeReservation,
@@ -21,12 +28,6 @@ import InlineReservationForm from './InlineReservationForm';
 
 function isValidDateFormat(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
-}
-
-const pad = (value: number) => value.toString().padStart(2, '0');
-
-function formatTime(value: Date) {
-  return `${pad(value.getHours())}:${pad(value.getMinutes())}`;
 }
 
 async function fetchDuties(slug: string, date: string) {
@@ -86,9 +87,18 @@ export default async function DayPage({
     .filter((item): item is NormalizedReservation => Boolean(item))
     .sort((a, b) => a.startUtc.getTime() - b.startUtc.getTime());
 
-  const list = reservations.map((item) => {
-    console.info('[render]', { raw: item.startsAtUTC, local: utcToLocal(item.startsAtUTC) });
-    console.info('[render]', { raw: item.endsAtUTC, local: utcToLocal(item.endsAtUTC) });
+  const itemsForThatDay = reservations.filter((item) =>
+    overlapsLocalDay(item.startsAtUTC, item.endsAtUTC, date),
+  );
+
+  const list = itemsForThatDay.map((item) => {
+    console.info('[tz-check]', {
+      src: 'DayPage',
+      itemId: item.id,
+      startUTC: item.startsAtUTC,
+      startLocal: utcIsoToLocalDate(item.startsAtUTC),
+      label: formatUtcInAppTz(item.startsAtUTC),
+    });
     return {
       id: item.id,
       startUtc: item.startUtc,
@@ -193,15 +203,27 @@ export default async function DayPage({
         ) : (
           <ul className="grid md:grid-cols-2 gap-3">
             {list.map((r) => {
-              const isPast = r.endUtc.getTime() < Date.now();
+              const isPast = isPastUtc(r.endsAtUTC);
               return (
                 <li
                   key={r.id}
-                  className={`rounded-xl border p-3 ${isPast ? 'text-gray-400 opacity-60' : ''}`}
+                  className={`rounded-xl border p-3 ${isPast ? 'text-gray-400 opacity-30' : ''}`}
                 >
                   <div className="font-medium">{r.device.name}</div>
                   <div className="text-sm text-gray-600">
-                    {formatTime(r.startLocal)} 〜 {formatTime(r.endLocal)}
+                    {formatUtcInAppTz(r.startsAtUTC, {
+                      month: undefined,
+                      day: undefined,
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}{' '}
+                    〜{' '}
+                    {formatUtcInAppTz(r.endsAtUTC, {
+                      month: undefined,
+                      day: undefined,
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </div>
                 </li>
               );

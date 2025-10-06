@@ -2,22 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { deviceBg, deviceBgPast, deviceColor } from '@/lib/color';
-import { APP_TZ, formatUtcInAppTz, isPastUtc } from '@/lib/time';
+import { formatUtcInAppTz, isPastUtc, overlapsLocalDay, utcIsoToLocalDate } from '@/lib/time';
 import type { ReservationListItem } from './ReservationList';
 
 export type { ReservationListItem } from './ReservationList';
 
-const ymdFormatter = new Intl.DateTimeFormat('en-CA', {
-  timeZone: APP_TZ,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
-
 function reservationMatchesDate(reservation: ReservationListItem, selectedYmd: string | null) {
   if (!selectedYmd) return true;
-  const itemYmd = ymdFormatter.format(new Date(reservation.startsAtUTC));
-  return itemYmd === selectedYmd;
+  return overlapsLocalDay(reservation.startsAtUTC, reservation.endsAtUTC, selectedYmd);
 }
 
 export default function ReservationPanel({
@@ -38,7 +30,9 @@ export default function ReservationPanel({
     return Array.from(map, ([id, name]) => ({ id, name }));
   }, [items]);
 
-  const selectedYmd = selectedDate ? ymdFormatter.format(selectedDate) : null;
+  const selectedYmd = selectedDate
+    ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
+    : null;
 
   const filtered = items.filter((i) => {
     if (!reservationMatchesDate(i, selectedYmd)) return false;
@@ -80,6 +74,13 @@ export default function ReservationPanel({
           const bg = past ? deviceBgPast(r.device.id) : deviceBg(r.device.id);
           const bar = deviceColor(r.device.id);
           const userName = r.user.name ?? '（予約者不明）';
+          console.info('[tz-check]', {
+            src: 'ReservationPanel',
+            itemId: r.id,
+            startUTC: r.startsAtUTC,
+            startLocal: utcIsoToLocalDate(r.startsAtUTC),
+            label: formatUtcInAppTz(r.startsAtUTC),
+          });
           return (
             <li
               key={r.id}
@@ -94,11 +95,23 @@ export default function ReservationPanel({
                   />
                   <span className="font-medium text-sm truncate">{r.device.name}</span>
                 </div>
-                <div className={`text-xs ${past ? 'opacity-60' : ''}`}>
-                  {formatUtcInAppTz(r.startsAtUTC)} → {formatUtcInAppTz(r.endsAtUTC)}
+                <div className={`text-xs ${past ? 'opacity-30' : ''}`}>
+                  {formatUtcInAppTz(r.startsAtUTC, {
+                    month: undefined,
+                    day: undefined,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}{' '}
+                  →{' '}
+                  {formatUtcInAppTz(r.endsAtUTC, {
+                    month: undefined,
+                    day: undefined,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                 </div>
               </div>
-              <div className={`px-3 pb-2 text-sm ${past ? 'opacity-60' : ''}`}>
+              <div className={`px-3 pb-2 text-sm ${past ? 'opacity-30' : ''}`}>
                 予約者：<span className="font-semibold">{userName}</span>
               </div>
             </li>

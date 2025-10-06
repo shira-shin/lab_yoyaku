@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import UpcomingReservations, { Item } from '../_parts/UpcomingReservations';
 import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 import { addMonths, buildWeeks, firstOfMonth } from '@/lib/date-cal';
+import { utcIsoToLocalDate } from '@/lib/time';
 
 export default function DashboardClient({ initialItems, initialSpans, isLoggedIn }: { initialItems: Item[]; initialSpans: Span[]; isLoggedIn: boolean }) {
   const [spans, setSpans] = useState<Span[]>(initialSpans);
@@ -31,11 +32,16 @@ export default function DashboardClient({ initialItems, initialSpans, isLoggedIn
           (typeof r.user === 'string' ? r.user.split('@')[0] : undefined) ||
           (userEmail ? userEmail.split('@')[0] : '');
 
+        const startIso = new Date(r.startsAtUTC ?? r.start).toISOString();
+        const endIso = new Date(r.endsAtUTC ?? r.end).toISOString();
+
         return {
           id: r.id,
           name: r.deviceName ?? r.deviceId,
-          start: new Date(r.startsAtUTC ?? r.start),
-          end: new Date(r.endsAtUTC ?? r.end),
+          startsAtUTC: startIso,
+          endsAtUTC: endIso,
+          start: utcIsoToLocalDate(startIso),
+          end: utcIsoToLocalDate(endIso),
           groupSlug: r.groupSlug,
           by: displayName,
           participants: r.participants ?? [],
