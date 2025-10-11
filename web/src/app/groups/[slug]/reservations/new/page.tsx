@@ -12,18 +12,20 @@ import NewReservationClient from './Client';
 export default async function NewReservationPage({ params }: { params: { slug: string } }) {
   noStore();
   const user = await getUserFromCookies();
-  if (!user) redirect(`/login?next=/groups/${params.slug}/reservations/new`);
+  const destination = `/groups/${params.slug}/reservations/new`;
+  const signInUrl = `/signin?callbackUrl=${encodeURIComponent(destination)}`;
+  if (!user) redirect(signInUrl);
   const res = await serverFetch(
     `/api/devices?groupSlug=${encodeURIComponent(params.slug)}`
   );
   if (res.status === 401) {
-    redirect(`/login?next=/groups/${params.slug}/reservations/new`);
+    redirect(signInUrl);
   }
   if (res.status === 403 || res.status === 404) {
     redirect(`/groups/join?slug=${encodeURIComponent(params.slug)}`);
   }
   if (!res.ok) {
-    redirect(`/login?next=/groups/${params.slug}/reservations/new`);
+    redirect(signInUrl);
   }
   const { devices } = await res.json();
   return <NewReservationClient params={params} devices={devices} />;

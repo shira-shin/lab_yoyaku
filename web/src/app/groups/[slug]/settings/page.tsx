@@ -13,17 +13,19 @@ export default async function GroupSettingsPage({ params }: { params: { slug: st
   noStore();
   const slug = params.slug.toLowerCase();
   const user = await getUserFromCookies();
-  if (!user) redirect(`/login?next=/groups/${slug}/settings`);
+  const destination = `/groups/${slug}/settings`;
+  const signInUrl = `/signin?callbackUrl=${encodeURIComponent(destination)}`;
+  if (!user) redirect(signInUrl);
   const res = await serverFetch(`/api/groups/${encodeURIComponent(slug)}`);
   if (res.status === 401) {
-    redirect(`/login?next=/groups/${slug}/settings`);
+    redirect(signInUrl);
   }
   if (res.status === 403) {
     redirect(`/groups/join?slug=${encodeURIComponent(slug)}`);
   }
   if (res.status === 404) return notFound();
   if (!res.ok) {
-    redirect(`/login?next=/groups/${slug}/settings`);
+    redirect(signInUrl);
   }
   const data = await res.json();
   const group = data?.group ?? data;

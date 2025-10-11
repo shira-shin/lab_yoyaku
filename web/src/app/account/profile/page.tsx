@@ -12,13 +12,13 @@ import ProfileClient from './ProfileClient';
 export default async function ProfilePage() {
   noStore();
   const user = await getUserFromCookies();
-  if (!user) redirect('/login?next=/account/profile');
+  if (!user) redirect('/signin?callbackUrl=/account/profile');
   const res = await serverFetch('/api/me/profile');
   if (res.status === 401) {
-    redirect('/login?next=/account/profile');
+    redirect('/signin?callbackUrl=/account/profile');
   }
   if (!res.ok) {
-    redirect('/login?next=/account/profile');
+    redirect('/signin?callbackUrl=/account/profile');
   }
   const json = await res.json();
   const data = json?.data ?? null;

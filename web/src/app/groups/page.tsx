@@ -13,10 +13,10 @@ import Empty from '@/components/Empty';
 export default async function GroupsPage() {
   noStore();
   const user = await getUserFromCookies();
-  if (!user) redirect('/login?next=/groups');
+  if (!user) redirect('/signin?callbackUrl=/groups');
   const res = await serverFetch('/api/groups?mine=1');
-  if (res.status === 401) redirect('/login?next=/groups');
-  if (!res.ok) redirect('/login?next=/groups');
+  if (res.status === 401) redirect('/signin?callbackUrl=/groups');
+  if (!res.ok) redirect('/signin?callbackUrl=/groups');
   const data = await res.json();
   const groups: any[] = Array.isArray(data) ? data : data?.groups ?? [];
   if (groups.length === 0)

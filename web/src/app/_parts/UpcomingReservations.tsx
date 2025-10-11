@@ -85,7 +85,7 @@ export default function UpcomingReservations({
 
       {err === 'unauth' && (
         <p className="text-sm">
-          ログインが必要です。<a className="underline" href="/login">ログイン</a>
+          ログインが必要です。<a className="underline" href="/signin">サインイン</a>
         </p>
       )}
       {items.length === 0 && err !== 'unauth' ? (

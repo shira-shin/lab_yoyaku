@@ -2,6 +2,7 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { signOut } from 'next-auth/react';
 
 export default function NavLinks({ me, displayName }: { me: any; displayName?: string | null }) {
   const pathname = usePathname();
@@ -82,34 +83,27 @@ export default function NavLinks({ me, displayName }: { me: any; displayName?: s
                 >
                   所属グループ
                 </a>
-                <form action="/api/auth/logout" method="post">
-                  <button
-                    type="submit"
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    ログアウト
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    void signOut({ callbackUrl: '/' });
+                  }}
+                >
+                  サインアウト
+                </button>
               </div>
             )}
           </div>
         </>
       ) : (
-        <>
-          <a
-            className="rounded-md bg-white/10 px-3 py-1 hover:bg-white/20"
-            href="/login?tab=login"
-          >
-            ログイン
-          </a>
-          <a
-            className="rounded-md bg-accent px-3 py-1 text-white hover:bg-accent/90"
-            href="/login?tab=register"
-          >
-            新規作成
-          </a>
-        </>
+        <a
+          className="rounded-md bg-white/10 px-3 py-1 hover:bg-white/20"
+          href="/signin"
+        >
+          サインイン
+        </a>
       )}
     </nav>
   );

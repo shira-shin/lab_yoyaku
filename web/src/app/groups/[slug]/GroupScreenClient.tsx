@@ -136,7 +136,7 @@ export default function GroupScreenClient({
           <h2 className="text-xl font-semibold">機器</h2>
           {canManageDevices && (
             <Link
-              href={`/groups/${encodeURIComponent(group.slug.toLowerCase())}/devices/new?next=${encodeURIComponent(`/groups/${group.slug.toLowerCase()}`)}`}
+              href={`/groups/${encodeURIComponent(group.slug.toLowerCase())}/devices/new?callbackUrl=${encodeURIComponent(`/groups/${group.slug.toLowerCase()}`)}`}
               className="btn btn-primary"
             >
               機器を追加
