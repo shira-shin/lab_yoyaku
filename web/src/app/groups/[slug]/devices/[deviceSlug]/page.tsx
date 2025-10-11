@@ -49,15 +49,17 @@ export default async function DeviceDetail({
   noStore();
   const { slug, deviceSlug } = params;
   const group = slug;
+  const destination = `/groups/${group}/devices/${deviceSlug}`;
+  const signInUrl = `/signin?callbackUrl=${encodeURIComponent(destination)}`;
   const user = await getUserFromCookies();
-  if (!user) redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
+  if (!user) redirect(signInUrl);
   const res = await serverFetch(
     `/api/groups/${encodeURIComponent(group)}/devices/${encodeURIComponent(deviceSlug)}`
   );
-  if (res.status === 401) redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
+  if (res.status === 401) redirect(signInUrl);
   if (res.status === 403) redirect(`/groups/join?slug=${encodeURIComponent(group)}`);
   if (res.status === 404) return notFound();
-  if (!res.ok) redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
+  if (!res.ok) redirect(signInUrl);
   const json = await res.json();
   const dev = json?.device;
   const deviceCode: string | null = dev?.code ?? null;
@@ -100,7 +102,7 @@ export default async function DeviceDetail({
     { cache: 'no-store', next: { revalidate: 0 } },
   );
   if (reservationsRes.status === 401) {
-    redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
+    redirect(signInUrl);
   }
   if (reservationsRes.status === 403) {
     redirect(`/groups/join?slug=${encodeURIComponent(group)}`);
@@ -109,7 +111,7 @@ export default async function DeviceDetail({
     return notFound();
   }
   if (!reservationsRes.ok) {
-    redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
+    redirect(signInUrl);
   }
   const reservationsJson = await reservationsRes.json();
   const reservationItems = extractReservationItems(reservationsJson);

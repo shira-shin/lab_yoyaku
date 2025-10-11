@@ -32,7 +32,7 @@ export default function ProfilePage() {
       try {
         const profileRes = await fetch("/api/me/profile", { cache: "no-store" });
         if (profileRes.status === 401) {
-          window.location.href = "/login?next=/profile";
+          window.location.href = "/signin?callbackUrl=/profile";
           return;
         }
         if (profileRes.ok) {
@@ -47,7 +47,7 @@ export default function ProfilePage() {
       try {
         const groupsRes = await fetch("/api/groups?mine=1", { cache: "no-store" });
         if (groupsRes.status === 401) {
-          window.location.href = "/login?next=/profile";
+          window.location.href = "/signin?callbackUrl=/profile";
           return;
         }
         if (groupsRes.ok) {

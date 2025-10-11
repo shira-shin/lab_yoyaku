@@ -1,5 +1,12 @@
 "use client";
-import LoginPage from '../login/page'
+
+import { AuthButtons } from "@/components/AuthButtons";
+
 export default function LoginEmbed() {
-  return <LoginPage />
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-gray-600">Google アカウントでサインインしてください。</p>
+      <AuthButtons showSignOut={false} />
+    </div>
+  );
 }

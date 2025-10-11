@@ -11,7 +11,7 @@ import { unstable_noStore as noStore } from 'next/cache';
 export default async function NewGroupPage() {
   noStore();
   const user = await getUserFromCookies();
-  if (!user) redirect('/login?next=/groups/new');
+  if (!user) redirect('/signin?callbackUrl=/groups/new');
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">

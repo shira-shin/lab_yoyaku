@@ -22,15 +22,15 @@ type Mine = {
 export default async function DashboardPage() {
   noStore();
   const me = await readUserFromCookie();
-  if (!me) redirect('/login?next=/dashboard');
+  if (!me) redirect('/signin?callbackUrl=/dashboard');
 
   let upcoming: Mine[] = [];
   let spans: Span[] = [];
   let myGroups: { slug: string; name: string }[] = [];
 
   const res = await serverFetch('/api/me/reservations?take=50', { cache: 'no-store' });
-  if (res.status === 401) redirect('/login?next=/dashboard');
-  if (!res.ok) redirect('/login?next=/dashboard');
+  if (res.status === 401) redirect('/signin?callbackUrl=/dashboard');
+  if (!res.ok) redirect('/signin?callbackUrl=/dashboard');
 
   const json = await res.json();
   const upcomingRaw: Mine[] = json?.data ?? [];
@@ -64,7 +64,7 @@ export default async function DashboardPage() {
   });
 
   const gRes = await serverFetch('/api/groups?mine=1');
-  if (gRes.status === 401) redirect('/login?next=/dashboard');
+  if (gRes.status === 401) redirect('/signin?callbackUrl=/dashboard');
   if (gRes.ok) {
     const gJson = await gRes.json();
     myGroups = Array.isArray(gJson) ? gJson : gJson?.groups ?? [];

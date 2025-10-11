@@ -68,7 +68,8 @@ export default async function DayPage({
     );
 
   if (reservationsRes.status === 401 || devicesRes.status === 401) {
-    redirect(`/login?next=/groups/${encodeURIComponent(normalizedSlug)}/day/${date}`);
+    const destination = `/groups/${encodeURIComponent(normalizedSlug)}/day/${date}`;
+    redirect(`/signin?callbackUrl=${encodeURIComponent(destination)}`);
   }
   if (devicesRes.status === 403 || devicesRes.status === 404) {
     redirect(`/groups/join?slug=${encodeURIComponent(normalizedSlug)}`);

@@ -8,6 +8,8 @@ import DeviceNewClient from './DeviceNewClient';
 
 export default async function DeviceNewPage({ params }: { params: { slug: string } }) {
   const user = await getUserFromCookies();
-  if (!user) redirect(`/login?next=/groups/${params.slug}/devices/new`);
+  const destination = `/groups/${params.slug}/devices/new`;
+  const signInUrl = `/signin?callbackUrl=${encodeURIComponent(destination)}`;
+  if (!user) redirect(signInUrl);
   return <DeviceNewClient slug={params.slug} />;
 }

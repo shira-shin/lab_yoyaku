@@ -4,7 +4,6 @@ export const runtime = 'nodejs';
 export const fetchCache = 'force-no-store';
 
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { dayRangeInUtc, utcToLocal } from '@/lib/time';
 import {
@@ -21,8 +20,7 @@ import PrintButton from '@/components/PrintButton';
 import type { ReservationListItem } from '@/components/reservations/ReservationList';
 import CalendarReservationSection from './CalendarReservationSection';
 import Image from 'next/image';
-import { AUTH_COOKIE } from '@/lib/auth/cookies';
-import { decodeSession } from '@/lib/auth';
+import { auth } from '@/auth';
 import { normalizeEmail } from '@/lib/email';
 import { unstable_noStore as noStore } from 'next/cache';
 import GroupHeader from './_components/GroupHeader';
@@ -52,17 +50,12 @@ export default async function GroupPage({
 }) {
   noStore();
   const paramSlug = params.slug.toLowerCase();
-  const token = cookies().get(AUTH_COOKIE)?.value;
-  let user: Awaited<ReturnType<typeof decodeSession>> | null = null;
-  if (token) {
-    try {
-      user = await decodeSession(token);
-    } catch {
-      user = null;
-    }
-  }
+  const destination = `/groups/${paramSlug}`;
+  const signInUrl = `/signin?callbackUrl=${encodeURIComponent(destination)}`;
+  const session = await auth();
+  const user = session?.user ?? null;
 
-  if (!user) redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
+  if (!user) redirect(signInUrl);
 
   const groupRecord = await prisma.group.findUnique({
     where: { slug: paramSlug },
@@ -91,12 +84,12 @@ export default async function GroupPage({
     isMember && normalizeEmail(groupRecord.hostEmail ?? '') !== normalizedUserEmail;
 
   const res = await serverFetch(`/api/groups/${encodeURIComponent(paramSlug)}`);
-  if (res.status === 401) redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
+  if (res.status === 401) redirect(signInUrl);
   if (res.status === 403 || res.status === 404) {
     redirect(`/groups/join?slug=${encodeURIComponent(paramSlug)}`);
   }
   if (!res.ok) {
-    redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
+    redirect(signInUrl);
   }
   const data = await res.json();
   const raw = data?.group ?? {};
@@ -155,13 +148,13 @@ export default async function GroupPage({
     { cache: 'no-store', next: { revalidate: 0 } },
   );
   if (reservationsRes.status === 401) {
-    redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
+    redirect(signInUrl);
   }
   if (reservationsRes.status === 403 || reservationsRes.status === 404) {
     redirect(`/groups/join?slug=${encodeURIComponent(paramSlug)}`);
   }
   if (!reservationsRes.ok) {
-    redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
+    redirect(signInUrl);
   }
   const reservationsJson = await reservationsRes.json();
   const reservationItems = extractReservationItems(reservationsJson);
@@ -202,7 +195,7 @@ export default async function GroupPage({
   });
   const dutiesRes = await serverFetch(`/api/duties?${dutyParams.toString()}`);
   if (dutiesRes.status === 401) {
-    redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
+    redirect(signInUrl);
   }
   if (dutiesRes.status === 403 || dutiesRes.status === 404) {
     redirect(`/groups/join?slug=${encodeURIComponent(paramSlug)}`);
