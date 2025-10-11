@@ -2,6 +2,7 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { UserMenu } from './UserMenu';
 
 export default function NavLinks({ me, displayName }: { me: any; displayName?: string | null }) {
   const pathname = usePathname();
@@ -65,40 +66,7 @@ export default function NavLinks({ me, displayName }: { me: any; displayName?: s
             </button>
             {menuOpen && (
               <div className="absolute right-0 mt-2 w-48 rounded-xl bg-white text-gray-900 shadow-lg ring-1 ring-black/10 z-10">
-                <div className="px-4 py-2 text-sm text-gray-500 border-b border-gray-100">
-                  {userLabel}
-                </div>
-                <a
-                  href="/profile"
-                  className="block px-4 py-2 hover:bg-gray-50"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  プロフィール
-                </a>
-                <a
-                  href="/groups"
-                  className="block px-4 py-2 hover:bg-gray-50"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  所属グループ
-                </a>
-                <form action="/api/auth/logout" method="post">
-                  <input type="hidden" name="callbackUrl" value="/signin" />
-                  <button
-                    type="submit"
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    ログアウト
-                  </button>
-                </form>
-                <a
-                  href="/signout"
-                  className="block px-4 py-2 text-xs text-gray-500 hover:bg-gray-50"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  サインアウトできないときはこちら
-                </a>
+                <UserMenu userLabel={userLabel} onNavigate={() => setMenuOpen(false)} />
               </div>
             )}
           </div>

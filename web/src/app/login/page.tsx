@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { PASSWORD_HINT, passwordRegex } from '@/utils/password';
+import { GoogleSignButtons } from '@/components/GoogleSignButtons';
 
 type Tab = 'login' | 'register';
 
@@ -145,73 +146,79 @@ export default function LoginPage() {
           </div>
 
           {tab === 'login' && (
-            <form onSubmit={submitLogin} className="space-y-3">
-              <input
-                className={input}
-                placeholder="メールアドレス"
-                value={lemail}
-                onChange={e => setLEmail(e.target.value)}
-                required
-              />
-              <input
-                className={input}
-                type="password"
-                placeholder="パスワード"
-                value={lpass}
-                onChange={e => setLPass(e.target.value)}
-                required
-              />
-              {lerr && <div className="text-sm text-red-600">{lerr}</div>}
-              <button
-                className="w-full rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2 disabled:opacity-60"
-                disabled={loadingLogin}
-              >
-                {loadingLogin ? 'ログイン中…' : 'ログイン'}
-              </button>
-              <p className="text-xs text-muted text-center">デモ: <b>demo / demo</b> でもログインできます。</p>
-            </form>
+            <div className="space-y-3">
+              <form onSubmit={submitLogin} className="space-y-3">
+                <input
+                  className={input}
+                  placeholder="メールアドレス"
+                  value={lemail}
+                  onChange={e => setLEmail(e.target.value)}
+                  required
+                />
+                <input
+                  className={input}
+                  type="password"
+                  placeholder="パスワード"
+                  value={lpass}
+                  onChange={e => setLPass(e.target.value)}
+                  required
+                />
+                {lerr && <div className="text-sm text-red-600">{lerr}</div>}
+                <button
+                  className="w-full rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2 disabled:opacity-60"
+                  disabled={loadingLogin}
+                >
+                  {loadingLogin ? 'ログイン中…' : 'ログイン'}
+                </button>
+                <p className="text-xs text-muted text-center">デモ: <b>demo / demo</b> でもログインできます。</p>
+              </form>
+              <GoogleSignButtons callbackUrl={next || '/'} label="Googleでログイン" />
+            </div>
           )}
 
           {tab === 'register' && (
-            <form onSubmit={submitRegister} className="space-y-3">
-              <input
-                className={input}
-                placeholder="表示名（任意）"
-                value={rname}
-                onChange={e => setRName(e.target.value)}
-              />
-              <input
-                className={input}
-                placeholder="メールアドレス"
-                value={remail}
-                onChange={e => setREmail(e.target.value)}
-                required
-              />
-              <input
-              className={input}
-                type="password"
-                placeholder="パスワード"
-                value={rpass}
-                onChange={e => setRPass(e.target.value)}
-                required
-              />
-              <input
-                className={input}
-                type="password"
-                placeholder="パスワード（確認）"
-                value={rpass2}
-                onChange={e => setRPass2(e.target.value)}
-                required
-              />
-              <p className="text-sm text-muted mt-1">{PASSWORD_HINT}</p>
-              {rerr && <div className="text-sm text-red-600">{rerr}</div>}
-              <button
-                className="w-full rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2 disabled:opacity-60"
-                disabled={loadingReg}
-              >
-                {loadingReg ? '作成中…' : 'アカウントを作成'}
-              </button>
-            </form>
+            <div className="space-y-3">
+              <form onSubmit={submitRegister} className="space-y-3">
+                <input
+                  className={input}
+                  placeholder="表示名（任意）"
+                  value={rname}
+                  onChange={e => setRName(e.target.value)}
+                />
+                <input
+                  className={input}
+                  placeholder="メールアドレス"
+                  value={remail}
+                  onChange={e => setREmail(e.target.value)}
+                  required
+                />
+                <input
+                  className={input}
+                  type="password"
+                  placeholder="パスワード"
+                  value={rpass}
+                  onChange={e => setRPass(e.target.value)}
+                  required
+                />
+                <input
+                  className={input}
+                  type="password"
+                  placeholder="パスワード（確認）"
+                  value={rpass2}
+                  onChange={e => setRPass2(e.target.value)}
+                  required
+                />
+                <p className="text-sm text-muted mt-1">{PASSWORD_HINT}</p>
+                {rerr && <div className="text-sm text-red-600">{rerr}</div>}
+                <button
+                  className="w-full rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2 disabled:opacity-60"
+                  disabled={loadingReg}
+                >
+                  {loadingReg ? '作成中…' : 'アカウントを作成'}
+                </button>
+              </form>
+              <GoogleSignButtons callbackUrl={next || '/'} label="Googleで新規作成" />
+            </div>
           )}
         </section>
       </div>

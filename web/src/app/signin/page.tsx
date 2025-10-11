@@ -1,5 +1,14 @@
 import LoginEmbed from '@/app/_parts/LoginEmbed'
+import { readUserFromCookie } from '@/lib/auth'
+import { redirect } from 'next/navigation'
 
-export default function SignInPage() {
+export const dynamic = 'force-dynamic'
+
+export default async function SignInPage() {
+  const sessionUser = await readUserFromCookie()
+  if (sessionUser) {
+    redirect('/')
+  }
+
   return <LoginEmbed />
 }
