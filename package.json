@@ -6,7 +6,10 @@
       "@prisma/client",
       "@prisma/engines",
       "prisma"
-    ]
+    ],
+    "overrides": {
+      "@auth/prisma-adapter": "^2.11.0"
+    }
   }
 }
 
