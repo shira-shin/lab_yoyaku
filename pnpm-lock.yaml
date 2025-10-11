@@ -10,6 +10,12 @@ importers:
 
   web:
     dependencies:
+      '@auth/prisma-adapter':
+        specifier: ^2.5.4
+        version: 2.5.4
+      next-auth:
+        specifier: ^5.0.0
+        version: 5.0.0
       '@prisma/client':
         specifier: 5.22.0
         version: 5.22.0(prisma@5.22.0)
@@ -79,6 +85,48 @@ importers:
         version: 5.9.2
 
 packages:
+
+  '@auth/core@0.37.2':
+    resolution: {tarball: https://registry.npmjs.org/@auth/core/-/core-0.37.2.tgz}
+
+  '@auth/prisma-adapter@2.5.4':
+    resolution: {tarball: https://registry.npmjs.org/@auth/prisma-adapter/-/prisma-adapter-2.5.4.tgz}
+    peerDependencies:
+      '@auth/core': ^0.37.0
+      '@prisma/client': '>=4'
+
+  next-auth@5.0.0:
+    resolution: {tarball: https://registry.npmjs.org/next-auth/-/next-auth-5.0.0.tgz}
+    peerDependencies:
+      next: ^13.0.0 || ^14.0.0
+      react: ^18.0.0
+      react-dom: ^18.0.0
+
+  '@panva/hkdf@1.0.4':
+    resolution: {tarball: https://registry.npmjs.org/@panva/hkdf/-/hkdf-1.0.4.tgz}
+
+  cookie@0.6.0:
+    resolution: {tarball: https://registry.npmjs.org/cookie/-/cookie-0.6.0.tgz}
+
+  cookie-signature@1.2.1:
+    resolution: {tarball: https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.2.1.tgz}
+
+  oauth4webapi@2.10.6:
+    resolution: {tarball: https://registry.npmjs.org/oauth4webapi/-/oauth4webapi-2.10.6.tgz}
+
+  preact@10.19.3:
+    resolution: {tarball: https://registry.npmjs.org/preact/-/preact-10.19.3.tgz}
+
+  preact-render-to-string@6.5.6:
+    resolution: {tarball: https://registry.npmjs.org/preact-render-to-string/-/preact-render-to-string-6.5.6.tgz}
+    peerDependencies:
+      preact: '>=10'
+
+  set-cookie-parser@2.6.0:
+    resolution: {tarball: https://registry.npmjs.org/set-cookie-parser/-/set-cookie-parser-2.6.0.tgz}
+
+  uuid@9.0.1:
+    resolution: {tarball: https://registry.npmjs.org/uuid/-/uuid-9.0.1.tgz}
 
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
@@ -1942,6 +1990,51 @@ packages:
     resolution: {tarball: https://registry.npmjs.org/zod/-/zod-3.23.8.tgz}
 
 snapshots:
+
+  '@auth/core@0.37.2':
+    dependencies:
+      '@panva/hkdf': 1.0.4
+      cookie: 0.6.0
+      cookie-signature: 1.2.1
+      oauth4webapi: 2.10.6
+      preact: 10.19.3
+      preact-render-to-string: 6.5.6
+      set-cookie-parser: 2.6.0
+      uuid: 9.0.1
+      zod: 3.23.8
+
+  '@auth/prisma-adapter@2.5.4':
+    dependencies:
+      '@auth/core': 0.37.2
+    peerDependencies:
+      '@auth/core': ^0.37.0
+      '@prisma/client': '>=4'
+
+  next-auth@5.0.0:
+    dependencies:
+      '@auth/core': 0.37.2
+    peerDependencies:
+      next: ^13.0.0 || ^14.0.0
+      react: ^18.0.0
+      react-dom: ^18.0.0
+
+  '@panva/hkdf@1.0.4': {}
+
+  cookie@0.6.0: {}
+
+  cookie-signature@1.2.1: {}
+
+  oauth4webapi@2.10.6: {}
+
+  preact@10.19.3: {}
+
+  preact-render-to-string@6.5.6:
+    dependencies:
+      preact: 10.19.3
+
+  set-cookie-parser@2.6.0: {}
+
+  uuid@9.0.1: {}
 
   '@alloc/quick-lru@5.2.0': {}
 
