@@ -83,6 +83,7 @@ export default function NavLinks({ me, displayName }: { me: any; displayName?: s
                   所属グループ
                 </a>
                 <form action="/api/auth/logout" method="post">
+                  <input type="hidden" name="callbackUrl" value="/signin" />
                   <button
                     type="submit"
                     className="w-full text-left px-4 py-2 hover:bg-gray-50"
@@ -91,6 +92,13 @@ export default function NavLinks({ me, displayName }: { me: any; displayName?: s
                     ログアウト
                   </button>
                 </form>
+                <a
+                  href="/signout"
+                  className="block px-4 py-2 text-xs text-gray-500 hover:bg-gray-50"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  サインアウトできないときはこちら
+                </a>
               </div>
             )}
           </div>
