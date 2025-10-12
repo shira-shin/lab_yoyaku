@@ -25,9 +25,6 @@
       ],
       "@/src/*": [
         "src/*"
-      ],
-      "next-auth/react": [
-        "src/lib/auth/next-auth-react"
       ]
     },
     "plugins": [
