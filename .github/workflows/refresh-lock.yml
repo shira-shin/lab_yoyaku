@@ -1,0 +1,23 @@
+name: Refresh pnpm lockfile
+on:
+  push:
+    paths:
+      - "web/package.json"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: corepack enable
+      - run: pnpm set version 10.18.2
+      - run: pnpm -v
+      - run: pnpm -w install --lockfile-only
+      - run: git config user.name "lock-bot"
+      - run: git config user.email "lock-bot@users.noreply.github.com"
+      - run: git add pnpm-lock.yaml || true
+      - run: git commit -m "chore: refresh lockfile" || echo "no changes"
+      - run: git push || true
