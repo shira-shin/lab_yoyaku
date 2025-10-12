@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 
-import { signOutCurrentUser } from "@/server/actions/auth";
-
 type UserMenuProps = {
   onNavigate?: () => void;
   userLabel?: string | null;
@@ -35,16 +33,13 @@ export function UserMenu({ onNavigate, userLabel }: UserMenuProps) {
       >
         所属グループ
       </Link>
-      <form action={signOutCurrentUser}>
-        <input type="hidden" name="redirectTo" value="/signin" />
-        <button
-          type="submit"
-          onClick={handleNavigate}
-          className="w-full text-left px-4 py-2 hover:bg-gray-50"
-        >
-          ログアウト
-        </button>
-      </form>
+      <a
+        href="/api/auth/signout?callbackUrl=/signin"
+        onClick={handleNavigate}
+        className="block w-full text-left px-4 py-2 hover:bg-gray-50"
+      >
+        ログアウト
+      </a>
       <Link
         href="/api/auth/signout?callbackUrl=/signin"
         className="block px-4 py-2 text-xs text-gray-500 hover:bg-gray-50"
