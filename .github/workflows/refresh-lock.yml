@@ -36,6 +36,10 @@ jobs:
       # 依存を lock に反映（インストール込みで確実性を高める）
       - run: pnpm -w install
 
+      # コミット対象から除外するため、書き換えたワークスペース定義を戻す
+      - name: Restore workspace definition
+        run: git checkout -- pnpm-workspace.yaml
+
       # 必須依存が lock に入ったか軽く検査（ログに出すだけ）
       - run: |
           echo "== grep lock =="
