@@ -1,6 +1,6 @@
 "use client";
 
-import { signInWithGoogle } from "@/server/actions/auth";
+import { useSearchParams } from "next/navigation";
 
 type GoogleSignButtonsProps = {
   callbackUrl?: string;
@@ -8,18 +8,20 @@ type GoogleSignButtonsProps = {
 };
 
 export function GoogleSignButtons({
-  callbackUrl = "/dashboard",
+  callbackUrl,
   label = "Googleで続ける",
 }: GoogleSignButtonsProps) {
+  const searchParams = useSearchParams();
+  const callbackFromParams = searchParams.get("callbackUrl");
+  const redirectTo = callbackUrl ?? callbackFromParams ?? "/dashboard";
+  const signInUrl = `/api/auth/signin/google?callbackUrl=${encodeURIComponent(redirectTo)}`;
+
   return (
-    <form action={signInWithGoogle} className="w-full">
-      <input type="hidden" name="callbackUrl" value={callbackUrl} />
-      <button
-        type="submit"
-        className="w-full px-3 py-2 rounded border border-gray-300 hover:bg-gray-50"
-      >
-        {label}
-      </button>
-    </form>
+    <a
+      href={signInUrl}
+      className="block w-full px-3 py-2 rounded border border-gray-300 text-center hover:bg-gray-50"
+    >
+      {label}
+    </a>
   );
 }
