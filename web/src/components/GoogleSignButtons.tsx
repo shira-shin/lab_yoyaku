@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { signInWithGoogle } from "@/server/actions/auth";
 
 type GoogleSignButtonsProps = {
   callbackUrl?: string;
@@ -11,17 +11,15 @@ export function GoogleSignButtons({
   callbackUrl = "/dashboard",
   label = "Googleで続ける",
 }: GoogleSignButtonsProps) {
-  const handleClick = () => {
-    void signIn("google", { callbackUrl });
-  };
-
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      className="w-full px-3 py-2 rounded border border-gray-300 hover:bg-gray-50"
-    >
-      {label}
-    </button>
+    <form action={signInWithGoogle} className="w-full">
+      <input type="hidden" name="callbackUrl" value={callbackUrl} />
+      <button
+        type="submit"
+        className="w-full px-3 py-2 rounded border border-gray-300 hover:bg-gray-50"
+      >
+        {label}
+      </button>
+    </form>
   );
 }

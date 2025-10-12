@@ -172,7 +172,17 @@ export default function LoginPage() {
                 </button>
                 <p className="text-xs text-muted text-center">デモ: <b>demo / demo</b> でもログインできます。</p>
               </form>
-              <GoogleSignButtons callbackUrl={next || '/'} label="Googleでログイン" />
+              <div className="space-y-2">
+                <GoogleSignButtons callbackUrl={next || '/'} label="Googleでログイン" />
+                <p className="text-xs text-center text-gray-500">
+                  <a
+                    href="/api/auth/signin?debug=true"
+                    className="underline hover:text-gray-700"
+                  >
+                    Google ログインのトラブルシューティング
+                  </a>
+                </p>
+              </div>
             </div>
           )}
 
