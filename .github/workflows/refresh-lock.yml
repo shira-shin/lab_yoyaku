@@ -1,5 +1,4 @@
 name: Refresh pnpm lockfile for Vercel
-
 on:
   workflow_dispatch: {}
   push:
@@ -7,48 +6,50 @@ on:
       - "web/package.json"
       - "pnpm-workspace.yaml"
       - "package.json"
-
+      - ".github/workflows/refresh-lock.yml"  # ← このファイル変更でも起動
 permissions:
-  contents: write   # これが無いと push できません
+  contents: write
+  pull-requests: write
 
 jobs:
   refresh:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
 
-      # Vercel と同じ pnpm に合わせる
       - run: corepack enable
       - run: pnpm set version 10.18.2
       - run: pnpm -v
-
-      # 公開 npm を明示（私設レジストリの誤設定を避ける）
       - run: pnpm config set registry https://registry.npmjs.org/
 
-      # モノレポ前提のクリーンセット
-      - name: Clean workspace
+      - name: Ensure workspace files
+        run: |
+          test -f pnpm-workspace.yaml || echo -e "packages:\n  - 'web'" > pnpm-workspace.yaml
+          if [ ! -f package.json ]; then
+            echo '{"name":"lab_yoyaku-monorepo","private":true,"packageManager":"pnpm@10.18.2"}' > package.json
+          else
+            node -e "let p=require('./package.json');p.packageManager='pnpm@10.18.2';require('fs').writeFileSync('package.json',JSON.stringify(p,null,2))"
+          fi
+
+      - name: Remove extra lockfiles & clean
         run: |
           git ls-files "**/pnpm-lock.yaml" | grep -v "^pnpm-lock.yaml$" | xargs -r git rm -f
           rm -f pnpm-lock.yaml
           rm -rf node_modules web/node_modules
-          echo "packages:\n  - 'web'" > pnpm-workspace.yaml
 
-      # 依存を lock に反映（インストール込みで確実性を高める）
-      - run: pnpm -w install
+      - name: Install and generate lockfile (workspace)
+        run: pnpm -w install
 
-      # コミット対象から除外するため、書き換えたワークスペース定義を戻す
-      - name: Restore workspace definition
-        run: git checkout -- pnpm-workspace.yaml
+      - name: Sanity check
+        run: |
+          grep -E "@prisma/client@| prisma@| next-auth@| @auth/prisma-adapter@| @auth/core@" pnpm-lock.yaml | head -n 60 || true
 
-      # 必須依存が lock に入ったか軽く検査（ログに出すだけ）
-      - run: |
-          echo "== grep lock =="
-          grep -E "@prisma/client@| prisma@| next-auth@| @auth/prisma-adapter@" pnpm-lock.yaml | head -n 40 || true
-
-      # 変更をコミット＆プッシュ
-      - run: |
-          git config user.name "lock-bot"
-          git config user.email "lock-bot@users.noreply.github.com"
-          git add -A
-          git commit -m "chore(pnpm): refresh root pnpm-lock.yaml for next-auth v5 & @auth/prisma-adapter & @prisma/client" || echo "no changes"
-          git push
+      - name: Create Pull Request with refreshed lockfile
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore(pnpm): refresh root pnpm-lock.yaml for next-auth v5 & @auth/prisma-adapter & prisma"
+          title: "chore(pnpm): refresh lockfile"
+          body: "Auto-generated lockfile so Vercel --frozen-lockfile passes."
+          branch: chore/refresh-pnpm-lock
+          delete-branch: true
