@@ -3,10 +3,7 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { PrismaClient } from "@prisma/client";
 
-declare global {
-  // eslint-disable-next-line no-var
-  var __prisma: PrismaClient | undefined;
-}
+declare global { var __prisma: PrismaClient | undefined }
 
 const prisma = global.__prisma ?? new PrismaClient();
 if (!global.__prisma) global.__prisma = prisma;
