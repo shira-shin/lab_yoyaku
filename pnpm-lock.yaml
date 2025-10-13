@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  '@auth/core': 0.41.0
   next-auth: 5.0.0-beta.29
   '@auth/prisma-adapter': ^2.11.0
   '@auth/core': 0.41.0
