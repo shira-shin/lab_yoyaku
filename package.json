@@ -1,15 +1,6 @@
 {
-  "name": "lab_yoyaku-monorepo",
-  "private": true,
   "packageManager": "pnpm@10.18.2",
   "pnpm": {
-    "onlyBuiltDependencies": [
-      "@tailwindcss/oxide",
-      "unrs-resolver",
-      "@prisma/client",
-      "@prisma/engines",
-      "prisma"
-    ],
     "overrides": {
       "next-auth": "5.0.0-beta.29",
       "@auth/core": "0.41.0",
