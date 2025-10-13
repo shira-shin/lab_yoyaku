@@ -3,6 +3,12 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { PrismaClient } from "@prisma/client";
 
+console.log("[AUTH_WIREUP]", {
+  file: __filename,
+  providerType: typeof Google,
+  nextAuthType: typeof NextAuth,
+});
+
 declare global { var __prisma: PrismaClient | undefined }
 const prisma = global.__prisma ?? new PrismaClient();
 if (!global.__prisma) global.__prisma = prisma;

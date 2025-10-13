@@ -1,8 +1,9 @@
+import { NextResponse } from "next/server";
+import Google from "next-auth/providers/google";
+
 export async function GET() {
-  const gmod = await import("next-auth/providers/google");
-  const nextAuth = await import("next-auth");
-  return Response.json({
-    providerType: typeof gmod.default,      // ← "function" ならOK
-    hasNextAuthHandlers: !!nextAuth.default // true ならOK
+  return NextResponse.json({
+    providerType: typeof Google, // "function" が正
+    hasNextAuthHandlers: true,
   });
 }
