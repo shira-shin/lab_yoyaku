@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 import { NextResponse } from 'next/server'
 import { z } from '@/lib/zod-helpers'
 import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
-import { prisma } from '@/src/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 const ParamsSchema = z.object({
   id: z.string().min(1),
