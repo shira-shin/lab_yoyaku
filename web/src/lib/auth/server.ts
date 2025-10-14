@@ -1,6 +1,11 @@
-import 'server-only';
-import { readUserFromCookie } from '../auth';
+import "server-only";
+
+export { auth } from "@/auth";
+export { auth as getServerSession } from "@/auth";
+
+import { readUserFromCookie as _readUserFromCookie } from "../auth-legacy";
+export { readUserFromCookie } from "../auth-legacy";
 
 export async function getUserFromCookies() {
-  return readUserFromCookie();
+  return _readUserFromCookie();
 }

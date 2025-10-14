@@ -54,6 +54,18 @@ If dependency installation fails with a `403` status, follow this order of opera
 Set `DATABASE_URL` in `web/.env.local` to point to your Neon (Postgres) instance.
 Prisma migrations are applied automatically during `pnpm build`.
 
+#### Vercel deployment checklist
+
+- **Runtime**: Project Settings → General → Node.js Version → `20.x` (mirrors the repo `engines.node`).
+- **Environment variables** (set for Production and Preview):
+  - `AUTH_GOOGLE_ID`
+  - `AUTH_GOOGLE_SECRET`
+  - `AUTH_SECRET`
+  - `AUTH_TRUST_HOST=true`
+  - `AUTH_URL=https://<your-domain>` (also set `NEXTAUTH_URL` to the same origin if required)
+- **Google OAuth**: ensure `https://<your-domain>/api/auth/callback/google` is an authorized redirect URI and `https://<your-domain>` is an authorized JavaScript origin in Google Cloud Console.
+- Disable "Use existing Build Cache" when troubleshooting so that Prisma migrations run from a clean state.
+
 ### DB health check
 
 Run the health endpoint to verify connectivity:

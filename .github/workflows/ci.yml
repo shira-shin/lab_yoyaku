@@ -20,6 +20,8 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile
           pip install fastapi uvicorn pytest
+      - name: Check auth imports
+        run: pnpm run check:imports
       - name: Lint web
         run: pnpm --filter ./web lint
       - name: Test api
