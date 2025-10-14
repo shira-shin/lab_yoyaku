@@ -22,7 +22,7 @@ import type { ReservationListItem } from '@/components/reservations/ReservationL
 import CalendarReservationSection from './CalendarReservationSection';
 import Image from 'next/image';
 import { AUTH_COOKIE } from '@/lib/auth/cookies';
-import { decodeSession } from '@/lib/auth';
+import { decodeSession } from '@/lib/auth-legacy';
 import { normalizeEmail } from '@/lib/email';
 import { unstable_noStore as noStore } from 'next/cache';
 import GroupHeader from './_components/GroupHeader';

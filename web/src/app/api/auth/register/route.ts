@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
-import { normalizeEmail } from '@/lib/auth';
+import { normalizeEmail } from '@/lib/auth-legacy';
 import { setSessionCookie } from '@/lib/auth/cookies';
 import { prisma } from '@/lib/prisma';
 import { isEmail } from '@/lib/mockdb';

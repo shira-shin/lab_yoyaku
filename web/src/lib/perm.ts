@@ -1,4 +1,4 @@
-import { normalizeEmail } from '@/lib/auth';
+import { normalizeEmail } from '@/lib/auth-legacy';
 import { prisma } from '@/lib/prisma';
 
 export async function getActorByEmail(email?: string | null) {

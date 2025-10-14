@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { store } from '../../../_store';
-import { readUserFromCookie } from '@/lib/auth';
+import { readUserFromCookie } from '@/lib/auth-legacy';
 import { loadDB } from '@/lib/mockdb';
 import { APP_TZ, localInputToUTC } from '@/lib/time';
 

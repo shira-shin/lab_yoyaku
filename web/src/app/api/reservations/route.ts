@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth-legacy";
 import { prisma } from "@/lib/prisma";
 import { toUtcIsoZ } from "@/lib/time";
 

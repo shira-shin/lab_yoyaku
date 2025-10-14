@@ -3,7 +3,7 @@ export const revalidate = 0;
 
 import { NextResponse } from 'next/server';
 import { loadDB, saveDB } from '@/lib/mockdb';
-import { readUserFromCookie } from '@/lib/auth';
+import { readUserFromCookie } from '@/lib/auth-legacy';
 
 export const runtime = 'nodejs';
 

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { prisma } from '@/src/lib/prisma';
-import { getServerSession } from '@/lib/auth';
+import { getServerSession } from '@/lib/auth-legacy';
 import { normalizeEmail } from '@/lib/email';
 
 export default async function GroupHeader({ slug }: { slug: string }) {

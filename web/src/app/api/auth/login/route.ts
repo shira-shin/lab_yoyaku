@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
-import { findUserByEmail, normalizeEmail } from '@/lib/auth';
+import { findUserByEmail, normalizeEmail } from '@/lib/auth-legacy';
 import { setSessionCookie } from '@/lib/auth/cookies';
 import { needsRehash, verifyPassword } from '@/lib/password';
 import { prisma } from '@/lib/prisma';
