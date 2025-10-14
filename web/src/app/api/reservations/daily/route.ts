@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/src/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { dayRangeInUtc } from '@/lib/time';
 
 export const dynamic = 'force-dynamic';

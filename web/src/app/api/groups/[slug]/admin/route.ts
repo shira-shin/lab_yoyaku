@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 import { NextResponse } from 'next/server';
-import { prisma } from '@/src/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getServerSession, normalizeEmail } from '@/lib/auth-legacy';
 
 function decodeSlug(value: string) {

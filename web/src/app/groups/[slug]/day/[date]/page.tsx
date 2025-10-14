@@ -21,7 +21,7 @@ import {
   normalizeReservation,
   type NormalizedReservation,
 } from '@/lib/reservations';
-import { prisma } from '@/src/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import DutyInlineEditor from './DutyInlineEditor';
 import DutyInlineCreate from './DutyInlineCreate';
 import InlineReservationForm from './InlineReservationForm';

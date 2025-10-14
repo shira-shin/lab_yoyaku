@@ -7,7 +7,7 @@ settings:
 overrides:
   '@auth/core': 0.41.0
   next-auth: 5.0.0-beta.29
-  '@auth/prisma-adapter': ^2.11.0
+  '@auth/prisma-adapter': 2.11.0
 
 importers:
 
@@ -19,7 +19,7 @@ importers:
         specifier: 0.41.0
         version: 0.41.0
       '@auth/prisma-adapter':
-        specifier: ^2.11.0
+        specifier: 2.11.0
         version: 2.11.0(@prisma/client@5.22.0(prisma@5.22.0))
       '@prisma/client':
         specifier: 5.22.0
@@ -91,6 +91,11 @@ importers:
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
+      tsx:
+        specifier: workspace:*
+        version: link:../tools/tsx-shim
+
+  tools/tsx-shim: {}
 
 packages:
 
