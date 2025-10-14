@@ -51,7 +51,13 @@ If dependency installation fails with a `403` status, follow this order of opera
 403 responses typically indicate that traffic is being routed to a private registry requiring authentication or is being blocked by a corporate proxy. Ensure requests are sent to the public npm registry before attempting other workarounds.
 
 ### Environment
-Set `DATABASE_URL` in `web/.env.local` to point to your Neon (Postgres) instance.
+Set `DATABASE_URL` in `web/.env.local` to the **Neon connection pooling URL** (hosted at `*-pooler.neon.tech`) so that Prisma
+talks to PgBouncer with SSL enabled, for example:
+
+```
+postgresql://USER:PASS@ep-xxxxxx-pooler.neon.tech/neondb?sslmode=require&pgbouncer=true&connect_timeout=15
+```
+
 Prisma migrations are applied automatically during `pnpm build`.
 
 #### Vercel deployment checklist
@@ -63,6 +69,9 @@ Prisma migrations are applied automatically during `pnpm build`.
   - `AUTH_SECRET`
   - `AUTH_TRUST_HOST=true`
   - `AUTH_URL=https://<your-domain>` (also set `NEXTAUTH_URL` to the same origin if required)
+  - `DATABASE_URL=postgresql://...-pooler.neon.tech/...?...` (Neon connection pooling URL with `sslmode=require` and
+    `pgbouncer=true`)
+  - Preview deployments only: `USE_MOCK=true` to bypass live database traffic when troubleshooting
 - **Google OAuth**: ensure `https://<your-domain>/api/auth/callback/google` is an authorized redirect URI and `https://<your-domain>` is an authorized JavaScript origin in Google Cloud Console.
 - Disable "Use existing Build Cache" when troubleshooting so that Prisma migrations run from a clean state.
 
