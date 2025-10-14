@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/src/lib/prisma'
-import { normalizeEmail, readUserFromCookie } from '@/lib/auth'
+import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
 
 function normalizeSlug(value: string | string[] | undefined) {
   if (!value) return ''

@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { hashPassword } from '@/lib/auth';
+import { hashPassword } from '@/lib/auth-legacy';
 
 const BCRYPT_TARGET_COST = (() => {
   const env = parseInt(process.env.BCRYPT_ROUNDS ?? '12', 10);

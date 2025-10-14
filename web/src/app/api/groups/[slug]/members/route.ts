@@ -3,7 +3,7 @@ export const revalidate = 0;
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { auth, normalizeEmail } from '@/lib/auth';
+import { auth, normalizeEmail } from '@/lib/auth-legacy';
 import { prisma } from '@/lib/prisma';
 import { getActorByEmail } from '@/lib/perm';
 

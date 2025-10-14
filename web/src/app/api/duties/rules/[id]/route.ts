@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/prisma';
-import { auth } from '@/lib/auth';
+import { auth } from '@/lib/auth-legacy';
 import { getActorByEmail, getGroupAndRole, isAdmin } from '@/lib/perm';
 
 function parseDate(input: unknown) {

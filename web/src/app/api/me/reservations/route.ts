@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import { NextResponse } from 'next/server'
-import { readUserFromCookie } from '@/lib/auth'
+import { readUserFromCookie } from '@/lib/auth-legacy'
 import { prisma } from '@/src/lib/prisma'
 import type { Prisma } from '@prisma/client'
 

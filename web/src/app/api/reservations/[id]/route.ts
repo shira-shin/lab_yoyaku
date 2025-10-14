@@ -3,7 +3,7 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { z } from '@/lib/zod-helpers'
-import { normalizeEmail, readUserFromCookie } from '@/lib/auth'
+import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
 import { prisma } from '@/src/lib/prisma'
 
 const ParamsSchema = z.object({
