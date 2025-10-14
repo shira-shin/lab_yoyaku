@@ -24,3 +24,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   trustHost: true,
 });
+
+export { readUserFromCookie } from '@/lib/auth-legacy';
