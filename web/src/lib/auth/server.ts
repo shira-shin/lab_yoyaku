@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getServerSession as nextGetServerSession } from "next-auth/next";
+import { getServerSession as nextGetServerSession } from "next-auth";
 
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
 

@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { getServerSession as nextGetServerSession } from "next-auth/next";
+import { getServerSession as nextGetServerSession } from "next-auth";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import { SESSION_COOKIE } from "./auth-legacy";
 
