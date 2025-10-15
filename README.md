@@ -9,6 +9,11 @@ Lab equipment reservation system monorepo.
 
 ## Development
 
+> **Node / pnpm versions**
+>
+> The monorepo is pinned to **Node 20.x** and **pnpm 10.18.2**. Use `nvm use` (the repo ships with a `.nvmrc`) followed by
+> `corepack enable` / `corepack prepare pnpm@10.18.2 --activate` before running any installs to avoid lockfile drift.
+
 1. Start services
    ```bash
    docker compose -f infra/docker-compose.yml up -d
