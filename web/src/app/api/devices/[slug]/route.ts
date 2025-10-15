@@ -3,7 +3,7 @@ export const revalidate = 0
 export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/server/db/prisma'
 import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
 
 export async function GET(_req: Request, { params }: { params: { slug: string } }) {

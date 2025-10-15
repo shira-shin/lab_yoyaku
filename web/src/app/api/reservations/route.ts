@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth-legacy";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/server/db/prisma";
 import { toUtcIsoZ } from "@/lib/time";
 
 function mustUtcIsoZ(value: unknown): string {

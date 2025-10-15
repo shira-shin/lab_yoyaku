@@ -15,7 +15,7 @@ import {
 } from '@/lib/reservations';
 import GroupScreenClient from './GroupScreenClient';
 import Link from 'next/link';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/server/db/prisma';
 import type { Span } from '@/components/CalendarWithBars';
 import PrintButton from '@/components/PrintButton';
 import type { ReservationListItem } from '@/components/reservations/ReservationList';

@@ -4,7 +4,7 @@ import { SignJWT } from 'jose';
 import { findUserByEmail, normalizeEmail } from '@/lib/auth-legacy';
 import { setSessionCookie } from '@/lib/auth/cookies';
 import { needsRehash, verifyPassword } from '@/lib/password';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/server/db/prisma';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.AUTH_SECRET || process.env.JWT_SECRET || 'dev-secret',

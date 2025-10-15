@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 export const runtime = 'nodejs'  // ← 重要：Edge回避（Prisma不可）
 
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/server/db/prisma'
 
 export async function GET() {
   try {

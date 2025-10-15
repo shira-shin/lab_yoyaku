@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-legacy';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/server/db/prisma';
 import { getActorByEmail, getGroupAndRole, isAdmin } from '@/lib/perm';
 import { assignMembersToSlots } from '@/utils/duty/assign';
 import { z } from '@/lib/zod-shim';
