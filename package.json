@@ -8,11 +8,7 @@
   "scripts": {
     "check:imports": "node ./scripts/check-auth-imports.mjs"
   },
-  "pnpm": {
-    "overrides": {
-      "next-auth": "5.0.0-beta.29",
-      "@auth/core": "0.41.0",
-      "@auth/prisma-adapter": "2.11.0"
-    }
+  "dependencies": {
+    "next-auth": "5.0.0"
   }
 }
