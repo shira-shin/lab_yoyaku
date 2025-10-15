@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/server/db/prisma';
 import { getServerSession, normalizeEmail } from '@/lib/auth-legacy';
 
 function decodeSlug(value: string) {

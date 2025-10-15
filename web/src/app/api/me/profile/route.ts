@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/server/db/prisma'
 import { updateUserNameByEmail } from '@/lib/db'
 
 const NAME_MAX_LENGTH = 80

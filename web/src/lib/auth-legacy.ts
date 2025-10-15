@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { createHash } from 'crypto';
 import { loadUsers } from './db';
 import { normalizeEmail } from './email';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/server/db/prisma';
 import { AUTH_COOKIE } from './auth/cookies';
 
 const secret = new TextEncoder().encode(

@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/server/db/prisma'
 import { getServerSession, normalizeEmail } from '@/lib/auth-legacy'
 import { normalizeSlugInput } from '@/lib/slug'
 import { normalizeJoinInput } from '@/lib/text'

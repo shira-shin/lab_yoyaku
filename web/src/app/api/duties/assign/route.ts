@@ -3,7 +3,7 @@ export const revalidate = 0;
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/server/db/prisma';
 import { auth } from '@/lib/auth-legacy';
 import { getActorByEmail, getGroupAndRole, canManageDuties } from '@/lib/perm';
 
