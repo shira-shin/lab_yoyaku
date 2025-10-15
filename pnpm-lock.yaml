@@ -15,9 +15,6 @@ importers:
 
   web:
     dependencies:
-      '@auth/core':
-        specifier: 0.41.0
-        version: 0.41.0
       '@auth/prisma-adapter':
         specifier: 2.11.0
         version: 2.11.0(@prisma/client@5.22.0(prisma@5.22.0))

@@ -12,7 +12,6 @@
     "prisma:push": "prisma db push"
   },
   "dependencies": {
-    "@auth/core": "0.41.0",
     "@auth/prisma-adapter": "2.11.0",
     "bcryptjs": "^2.4.3",
     "@prisma/client": "5.22.0",
