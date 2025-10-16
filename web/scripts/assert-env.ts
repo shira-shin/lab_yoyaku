@@ -23,8 +23,8 @@ warnIfMissing(
   "AUTH_URL is recommended. On Vercel it will fallback to https://${VERCEL_URL}",
 );
 if (isVercel && process.env.AUTH_TRUST_HOST !== "true") {
-  warns.push(
-    "On Vercel set AUTH_TRUST_HOST=true (we'll force trustHost at runtime as a fallback).",
+  console.warn(
+    "[assert-env] AUTH_TRUST_HOST should be 'true' on Vercel. Continuing build.",
   );
 }
 
