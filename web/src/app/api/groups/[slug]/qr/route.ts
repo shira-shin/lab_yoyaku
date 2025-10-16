@@ -5,7 +5,6 @@ import QRCode from 'qrcode'
 import { prisma } from '@/server/db/prisma'
 import { getBaseUrl } from '@/lib/http/base-url'
 
-export const runtime = 'nodejs'
 
 export async function GET(_req: Request, { params }: { params: { slug: string } }) {
   const group = await prisma.group.findUnique({ where: { slug: params.slug.toLowerCase() } })

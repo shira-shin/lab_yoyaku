@@ -6,7 +6,6 @@ import { readUserFromCookie } from '@/lib/auth-legacy'
 import { prisma } from '@/server/db/prisma'
 import type { Prisma } from '@prisma/client'
 
-export const runtime = 'nodejs'
 
 function parseDate(value: string | null): Date | null {
   if (!value) return null

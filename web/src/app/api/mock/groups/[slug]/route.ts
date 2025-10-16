@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server';
 import { loadDB, saveDB } from '@/lib/mockdb';
 import { readUserFromCookie } from '@/lib/auth-legacy';
 
-export const runtime = 'nodejs';
 
 export async function GET(_req: Request, { params }: { params: { slug: string } }) {
   const db = loadDB();

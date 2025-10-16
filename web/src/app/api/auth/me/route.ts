@@ -4,7 +4,6 @@ export const revalidate = 0;
 import { NextResponse } from 'next/server';
 import { readUserFromCookie } from '@/lib/auth-legacy';
 
-export const runtime = 'nodejs';
 
 export async function GET() {
   const me = await readUserFromCookie();
