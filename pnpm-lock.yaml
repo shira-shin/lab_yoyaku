@@ -9,6 +9,9 @@ importers:
   .: {}
 
   web:
+    specifiers:
+      '@babel/runtime': ^7.24.0
+      next-auth: ^4.24.8
     dependencies:
       '@prisma/client':
         specifier: 5.22.0
@@ -31,9 +34,12 @@ importers:
       next:
         specifier: 14.1.0
         version: 14.1.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      '@babel/runtime':
+        specifier: ^7.24.0
+        version: 7.24.0
       next-auth:
-        specifier: 5.0.0-beta.29
-        version: 5.0.0-beta.29(next@14.1.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)
+        specifier: ^4.24.8
+        version: 4.24.8(next@14.1.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react@18.2.0)
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -105,11 +111,6 @@ packages:
         optional: true
       nodemailer:
         optional: true
-
-  '@auth/prisma-adapter@2.11.0':
-    resolution: {integrity: sha512-gp1vpO7R7HxqQIDVFG4FXpjd9WsXg+vZsaqXOYyNCWugcx0scU2XNfhEiw3FnGyIaqRD4fexBf40LMJH8HmZ8A==}
-    peerDependencies:
-      '@prisma/client': '>=2.26.0 || >=3 || >=4 || >=5 || >=6'
 
   '@emnapi/core@1.5.0':
     resolution: {integrity: sha512-sbP8GzB1WDzacS8fgNPpHlp6C9VZe+SJP3F90W9rLemaQj2PzIuTEl1qDOYQf58YIpyjViI24y9aPWCjEzY2cg==}
@@ -2015,15 +2016,6 @@ snapshots:
       oauth4webapi: 3.8.2
       preact: 10.24.3
       preact-render-to-string: 6.5.11(preact@10.24.3)
-
-  '@auth/prisma-adapter@2.11.0(@prisma/client@5.22.0(prisma@5.22.0))':
-    dependencies:
-      '@auth/core': 0.41.0
-      '@prisma/client': 5.22.0(prisma@5.22.0)
-    transitivePeerDependencies:
-      - '@simplewebauthn/browser'
-      - '@simplewebauthn/server'
-      - nodemailer
 
   '@emnapi/core@1.5.0':
     dependencies:
