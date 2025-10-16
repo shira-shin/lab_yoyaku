@@ -1,67 +1,40 @@
-const requiredVars = ["AUTH_GOOGLE_ID", "AUTH_GOOGLE_SECRET", "AUTH_SECRET", "AUTH_URL"] as const;
+import process from "node:process";
 
-type RequiredVar = (typeof requiredVars)[number];
+const isVercel = process.env.VERCEL === "1";
+const errs: string[] = [];
+const warns: string[] = [];
 
-const summarize = (label: string, raw: string | undefined) => {
-  if (!raw) return `${label}=<missing>`;
-  try {
-    const url = new URL(raw);
-    const pathname = url.pathname === "/" ? "" : url.pathname;
-    return `${label}=${url.protocol}//${url.host}${pathname}`;
-  } catch {
-    return `${label}=<non-url>${raw.length ? ` (${raw.length} chars)` : ""}`.trim();
-  }
-};
-
-function warn(message: string) {
-  console.warn(`[assert-env] ${message}`);
+function required(name: string) {
+  if (!process.env[name]) errs.push(`${name} is required`);
 }
 
-function info(message: string) {
-  console.log(`[assert-env] ${message}`);
+function warnIfMissing(name: string, msg?: string) {
+  if (!process.env[name]) warns.push(msg ?? `${name} is suggested`);
 }
 
-const missing: RequiredVar[] = requiredVars.filter((name) => {
-  const value = process.env[name];
-  return !value || value.trim().length === 0;
-});
+// 必須（これだけは fail）
+required("AUTH_SECRET");
+required("AUTH_GOOGLE_ID");
+required("AUTH_GOOGLE_SECRET");
 
-if (missing.length > 0) {
-  warn(`Missing required env vars: ${missing.join(", ")}`);
-} else {
-  info("All required auth env vars are present.");
-}
-
-const authUrl = process.env.AUTH_URL;
-const nextAuthUrl = process.env.NEXTAUTH_URL;
-
-if (authUrl) {
-  info(summarize("AUTH_URL", authUrl));
-}
-if (nextAuthUrl) {
-  info(summarize("NEXTAUTH_URL", nextAuthUrl));
-}
-
-if (authUrl && nextAuthUrl && authUrl !== nextAuthUrl) {
-  warn("AUTH_URL and NEXTAUTH_URL differ. Ensure preview deployments set both to the same origin.");
-}
-
-const requireTrustedHost =
-  process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
-
-if (requireTrustedHost && process.env.AUTH_TRUST_HOST !== "true") {
-  console.error(
-    [
-      "[assert-env] AUTH_TRUST_HOST must be 'true' on Vercel/production.",
-      "Update the Vercel project environment variables (Settings → Environment Variables)",
-      "to include AUTH_TRUST_HOST=true for both Production and Preview.",
-    ].join("\n"),
+// 推奨（警告）
+warnIfMissing(
+  "AUTH_URL",
+  "AUTH_URL is recommended. On Vercel it will fallback to https://${VERCEL_URL}",
+);
+if (isVercel && process.env.AUTH_TRUST_HOST !== "true") {
+  warns.push(
+    "On Vercel set AUTH_TRUST_HOST=true (we'll force trustHost at runtime as a fallback).",
   );
+}
+
+if (errs.length) {
+  console.error("[assert-env] Missing required env:", errs);
   process.exit(1);
 }
 
-if (!requireTrustedHost && process.env.AUTH_TRUST_HOST !== "true") {
-  warn("AUTH_TRUST_HOST should be set to 'true' when running on Vercel.");
+if (warns.length) {
+  console.warn("[assert-env] Warnings:", warns);
+} else {
+  console.log("[assert-env] All required auth env vars are present.");
 }
-
-info("Environment assertion complete.");
