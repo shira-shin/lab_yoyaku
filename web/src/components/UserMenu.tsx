@@ -33,13 +33,13 @@ export function UserMenu({ onNavigate, userLabel }: UserMenuProps) {
       >
         所属グループ
       </Link>
-      <a
+      <Link
         href="/api/auth/signout?callbackUrl=/signin"
         onClick={handleNavigate}
         className="block w-full text-left px-4 py-2 hover:bg-gray-50"
       >
         ログアウト
-      </a>
+      </Link>
       <Link
         href="/api/auth/signout?callbackUrl=/signin"
         className="block px-4 py-2 text-xs text-gray-500 hover:bg-gray-50"

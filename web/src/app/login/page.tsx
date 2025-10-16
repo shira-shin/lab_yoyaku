@@ -1,5 +1,6 @@
 'use client';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { PASSWORD_HINT, passwordRegex } from '@/utils/password';
@@ -175,12 +176,12 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <GoogleSignButtons callbackUrl={next || '/'} label="Googleでログイン" />
                 <p className="text-xs text-center text-gray-500">
-                  <a
+                  <Link
                     href="/api/auth/signin?debug=true"
                     className="underline hover:text-gray-700"
                   >
                     Google ログインのトラブルシューティング
-                  </a>
+                  </Link>
                 </p>
               </div>
             </div>
