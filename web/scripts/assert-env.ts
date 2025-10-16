@@ -46,7 +46,17 @@ if (authUrl && nextAuthUrl && authUrl !== nextAuthUrl) {
   warn("AUTH_URL and NEXTAUTH_URL differ. Ensure preview deployments set both to the same origin.");
 }
 
-if (process.env.VERCEL === "1" && process.env.AUTH_TRUST_HOST !== "true") {
+const requireTrustedHost =
+  process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
+
+if (requireTrustedHost && process.env.AUTH_TRUST_HOST !== "true") {
+  console.error(
+    "[assert-env] AUTH_TRUST_HOST must be 'true' on Vercel/production.",
+  );
+  process.exit(1);
+}
+
+if (!requireTrustedHost && process.env.AUTH_TRUST_HOST !== "true") {
   warn("AUTH_TRUST_HOST should be set to 'true' when running on Vercel.");
 }
 

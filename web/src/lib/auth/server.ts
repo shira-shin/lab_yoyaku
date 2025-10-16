@@ -1,7 +1,6 @@
 import "server-only";
 
-export { auth, signIn, signOut } from "@/lib/nextauth";
-export { auth as getServerSession } from "@/lib/nextauth";
+export { auth, signIn, signOut, getServerSession } from "@/lib/auth";
 
 import { readUserFromCookie as _readUserFromCookie } from "../auth-legacy";
 export { readUserFromCookie } from "../auth-legacy";
