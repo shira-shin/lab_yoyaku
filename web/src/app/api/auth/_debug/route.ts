@@ -15,7 +15,7 @@ export async function GET() {
   let resolved = "unresolved";
   if (typeof maybeResolve === "function") {
     try {
-      resolved = maybeResolve("@auth/core/providers/google");
+      resolved = maybeResolve("next-auth/providers/google");
     } catch {
       resolved = "unresolved";
     }

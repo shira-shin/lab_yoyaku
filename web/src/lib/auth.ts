@@ -1,8 +1,11 @@
 import { cookies } from "next/headers";
+import NextAuth from "next-auth";
+
+import { authConfig } from "@/app/api/auth/[...nextauth]/route";
 import { SESSION_COOKIE } from "./auth-legacy";
 
-export { auth, signIn, signOut } from "@/lib/nextauth";
-export { auth as getServerSession } from "@/lib/nextauth";
+export const { auth, signIn, signOut } = NextAuth(authConfig);
+export const getServerSession = auth;
 
 export {
   readUserFromCookie,
@@ -11,6 +14,9 @@ export {
   signToken,
   SESSION_COOKIE,
 } from "./auth-legacy";
+
+export { normalizeEmail } from "./email";
+export { verifyPassword, needsRehash, hashPassword } from "./password";
 
 export function setSessionCookie(value: string) {
   cookies().set(SESSION_COOKIE, value, {
@@ -31,6 +37,3 @@ export function clearSessionCookie() {
     maxAge: 0,
   });
 }
-
-export { normalizeEmail } from "./email";
-export { verifyPassword, needsRehash, hashPassword } from "./password";
