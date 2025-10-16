@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import Google from "@auth/core/providers/google";
 
 export const runtime = "nodejs";
 
@@ -26,8 +25,8 @@ export async function GET() {
 
   return NextResponse.json({
     nextAuthVersion,
-    googleTypeof: typeof Google,
-    googleName: (Google as any)?.name ?? null,
+    googleTypeof: "not-checked",
+    googleName: null,
     resolved,
   });
 }
