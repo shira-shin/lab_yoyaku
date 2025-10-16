@@ -4,23 +4,30 @@ import Google from "@auth/core/providers/google";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const info = {
-    nextAuthVersion: (() => {
-      try {
-        return require("next-auth/package.json").version;
-      } catch {
-        return "unknown";
-      }
-    })(),
+  let nextAuthVersion = "unknown";
+  try {
+    const pkg = await import("next-auth/package.json");
+    nextAuthVersion = (pkg as { version?: string })?.version ?? "unknown";
+  } catch {
+    nextAuthVersion = "unknown";
+  }
+
+  const maybeResolve = (import.meta as { resolve?: (specifier: string) => string }).resolve;
+  let resolved = "unresolved";
+  if (typeof maybeResolve === "function") {
+    try {
+      resolved = maybeResolve("@auth/core/providers/google");
+    } catch {
+      resolved = "unresolved";
+    }
+  } else {
+    resolved = "unsupported";
+  }
+
+  return NextResponse.json({
+    nextAuthVersion,
     googleTypeof: typeof Google,
     googleName: (Google as any)?.name ?? null,
-    resolved: (() => {
-      try {
-        return require.resolve("@auth/core/providers/google");
-      } catch {
-        return "unresolved";
-      }
-    })(),
-  };
-  return NextResponse.json(info);
+    resolved,
+  });
 }
