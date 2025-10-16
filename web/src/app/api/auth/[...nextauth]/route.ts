@@ -3,30 +3,21 @@ import Google from "next-auth/providers/google";
 
 export const runtime = "nodejs";
 
-const googleClientId =
-  process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID;
-const googleClientSecret =
-  process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET;
+const isVercel = process.env.VERCEL === "1";
+const resolvedUrl =
+  process.env.AUTH_URL ??
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
 
-if (!googleClientId) {
-  throw new Error("AUTH_GOOGLE_ID (or GOOGLE_CLIENT_ID) is required");
-}
-
-if (!googleClientSecret) {
-  throw new Error("AUTH_GOOGLE_SECRET (or GOOGLE_CLIENT_SECRET) is required");
-}
-
-export const authConfig = {
-  basePath: "/api/auth",
-  trustHost: true,
+const handler = NextAuth({
   providers: [
     Google({
-      clientId: googleClientId,
-      clientSecret: googleClientSecret,
+      clientId: process.env.AUTH_GOOGLE_ID!,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
     }),
   ],
-} satisfies Parameters<typeof NextAuth>[0];
+  secret: process.env.AUTH_SECRET,
+  trustHost: isVercel ? true : process.env.AUTH_TRUST_HOST === "true",
+  url: resolvedUrl,
+});
 
-const handler = NextAuth(authConfig);
-
-export { handler as GET, handler as POST };
+export const { GET, POST } = handler;
