@@ -1,8 +1,13 @@
 import { cookies } from "next/headers";
+import { getServerSession as nextAuthGetServerSession } from "next-auth/next";
+import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import { SESSION_COOKIE } from "./auth-legacy";
 
-export { auth } from "@/auth";
-export { auth as getServerSession } from "@/auth";
+export async function auth() {
+  return nextAuthGetServerSession(authOptions);
+}
+
+export { auth as getServerSession };
 
 export {
   readUserFromCookie,
