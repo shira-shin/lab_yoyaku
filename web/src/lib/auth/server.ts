@@ -1,7 +1,13 @@
 import "server-only";
 
-export { auth } from "@/auth";
-export { auth as getServerSession } from "@/auth";
+import { getServerSession as nextAuthGetServerSession } from "next-auth/next";
+import { authOptions } from "@/pages/api/auth/[...nextauth]";
+
+export async function auth() {
+  return nextAuthGetServerSession(authOptions);
+}
+
+export { auth as getServerSession };
 
 import { readUserFromCookie as _readUserFromCookie } from "../auth-legacy";
 export { readUserFromCookie } from "../auth-legacy";
