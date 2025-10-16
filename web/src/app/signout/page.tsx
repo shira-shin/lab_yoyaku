@@ -21,12 +21,12 @@ export default function SignOutPage() {
       </form>
 
       <div className="space-y-2">
-        <a
+        <Link
           href="/api/auth/logout?callbackUrl=/signin"
           className="inline-block w-full rounded bg-black px-3 py-2 text-center text-white"
         >
           サインアウト（直接リンク）
-        </a>
+        </Link>
         <p className="text-xs text-gray-500">
           サインアウト後にもう一度ログインする場合は{' '}
           <Link href="/signin" className="text-blue-600 hover:underline">
