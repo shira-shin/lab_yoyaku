@@ -1,7 +1,6 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
-export const runtime = "nodejs";
 
 const isVercel = process.env.VERCEL === "1";
 const resolvedUrl =

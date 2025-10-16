@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server'
 import { readUserFromCookie } from '@/lib/auth-legacy'
 import { prisma } from '@/server/db/prisma'
 
-export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   try {

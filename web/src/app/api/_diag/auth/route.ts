@@ -1,5 +1,3 @@
-export const runtime = "nodejs";
-
 export async function GET() {
   const body = {
     vercel: process.env.VERCEL === "1",

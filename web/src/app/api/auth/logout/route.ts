@@ -3,7 +3,6 @@ import { clearSessionCookie } from '@/lib/auth/cookies'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-export const runtime = 'nodejs'
 
 function getBaseUrl(request: Request) {
   const requestUrl = new URL(request.url)

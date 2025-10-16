@@ -3,7 +3,6 @@ import { prisma } from '@/server/db/prisma';
 import { dayRangeInUtc } from '@/lib/time';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

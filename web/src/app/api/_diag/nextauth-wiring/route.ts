@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "nodejs";
 
 export async function GET() {
   const mNA = await import("next-auth");
