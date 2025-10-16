@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const mNA = await import("next-auth");
-  const mGP = await import("next-auth/providers/google");
+  const mGP = await import("@auth/core/providers/google");
   const NextAuth = mNA?.default;
   const Google = mGP?.default;
   let callOk = false;

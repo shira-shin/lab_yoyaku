@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import Google from "next-auth/providers/google";
+import Google from "@auth/core/providers/google";
 
 export const runtime = "nodejs";
 
@@ -16,7 +16,7 @@ export async function GET() {
     googleName: (Google as any)?.name ?? null,
     resolved: (() => {
       try {
-        return require.resolve("next-auth/providers/google");
+        return require.resolve("@auth/core/providers/google");
       } catch {
         return "unresolved";
       }
