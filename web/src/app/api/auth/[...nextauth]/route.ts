@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "@auth/core/providers/google";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: process.env.VERCEL === "1" || process.env.AUTH_TRUST_HOST === "true",
   providers: [
     Google({
@@ -19,5 +19,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
 export const GET = handlers.GET;
 export const POST = handlers.POST;
+
+export { auth, signIn, signOut };
 
 export const runtime = "nodejs";
