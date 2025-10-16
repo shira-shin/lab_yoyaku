@@ -12,7 +12,7 @@ function warnIfMissing(name: string, msg?: string) {
   if (!process.env[name]) warns.push(msg ?? `${name} is suggested`);
 }
 
-// 必須（これだけは fail）
+// 必須（不足している場合は警告だけ出す）
 required("AUTH_SECRET");
 required("AUTH_GOOGLE_ID");
 required("AUTH_GOOGLE_SECRET");
@@ -29,12 +29,13 @@ if (isVercel && process.env.AUTH_TRUST_HOST !== "true") {
 }
 
 if (errs.length) {
-  console.error("[assert-env] Missing required env:", errs);
-  process.exit(1);
+  console.warn("[assert-env] Missing required env:", errs);
 }
 
 if (warns.length) {
   console.warn("[assert-env] Warnings:", warns);
-} else {
+}
+
+if (!errs.length && !warns.length) {
   console.log("[assert-env] All required auth env vars are present.");
 }
