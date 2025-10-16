@@ -51,7 +51,11 @@ const requireTrustedHost =
 
 if (requireTrustedHost && process.env.AUTH_TRUST_HOST !== "true") {
   console.error(
-    "[assert-env] AUTH_TRUST_HOST must be 'true' on Vercel/production.",
+    [
+      "[assert-env] AUTH_TRUST_HOST must be 'true' on Vercel/production.",
+      "Update the Vercel project environment variables (Settings → Environment Variables)",
+      "to include AUTH_TRUST_HOST=true for both Production and Preview.",
+    ].join("\n"),
   );
   process.exit(1);
 }

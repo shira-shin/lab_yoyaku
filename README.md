@@ -79,6 +79,11 @@ Prisma migrations are applied automatically during `pnpm build`.
   - Preview deployments only: `USE_MOCK=true` to bypass live database traffic when troubleshooting
 - **Google OAuth**: ensure `https://<your-domain>/api/auth/callback/google` is an authorized redirect URI and `https://<your-domain>` is an authorized JavaScript origin in Google Cloud Console.
 - Disable "Use existing Build Cache" when troubleshooting so that Prisma migrations run from a clean state.
+- **Post-deploy verification**: confirm the deployment is wired correctly by querying the diagnostic endpoints:
+  - `GET /api/_diag/auth` → `{ "hasGoogleId": true, "hasGoogleSecret": true, "authUrl": "https://<your-domain>", "trustHost": "true" }`
+  - `GET /api/auth/providers` → response includes `google`
+  - `GET /api/auth/session` → `{}` when logged out, populated session when signed in
+  - `/api/auth/signin/google?callbackUrl=%2Fdashboard` → redirects to the Google consent screen
 
 ### DB health check
 
