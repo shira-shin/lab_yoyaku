@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
 import { SESSION_COOKIE } from "./auth-legacy";
 
-export { auth, signIn, signOut } from "@/app/api/auth/[...nextauth]/route";
-export { auth as getServerSession } from "@/app/api/auth/[...nextauth]/route";
+export { auth, signIn, signOut } from "@/lib/nextauth";
+export { auth as getServerSession } from "@/lib/nextauth";
 
 export {
   readUserFromCookie,
