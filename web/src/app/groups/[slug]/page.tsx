@@ -20,7 +20,7 @@ import PrintButton from '@/components/PrintButton';
 import type { ReservationListItem } from '@/components/reservations/ReservationList';
 import CalendarReservationSection from './CalendarReservationSection';
 import Image from 'next/image';
-import { AUTH_COOKIE } from '@/lib/auth/cookies';
+import { SESSION_COOKIE_NAME } from '@/lib/auth/cookies';
 import { decodeSession } from '@/lib/auth-legacy';
 import { normalizeEmail } from '@/lib/email';
 import { unstable_noStore as noStore } from 'next/cache';
@@ -51,7 +51,7 @@ export default async function GroupPage({
 }) {
   noStore();
   const paramSlug = params.slug.toLowerCase();
-  const token = cookies().get(AUTH_COOKIE)?.value;
+  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
   let user: Awaited<ReturnType<typeof decodeSession>> | null = null;
   if (token) {
     try {
