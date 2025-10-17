@@ -12,11 +12,9 @@ const config: NextAuthConfig = {
   ],
 };
 
-export const {
+const {
   handlers: { GET, POST },
-  auth,
-  signIn,
-  signOut,
 } = NextAuth(config);
 
+export { GET, POST };
 export const runtime = "nodejs";
