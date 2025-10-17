@@ -1,6 +1,8 @@
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 
+export const runtime = "nodejs"; // do NOT use 'edge'
+
 const config: NextAuthConfig = {
   trustHost: true,
   secret: process.env.APP_AUTH_SECRET,
@@ -10,11 +12,21 @@ const config: NextAuthConfig = {
       clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
     }),
   ],
+  // temporary logs to verify what is being imported at runtime
+  events: {
+    signIn: async () => console.log("[auth] signIn event"),
+  },
 };
 
-const {
-  handlers: { GET, POST },
-} = NextAuth(config);
+// Debug: prove the provider is a function and invocation returns an object
+console.log("[auth] typeof Google =", typeof Google);
+try {
+  const probe = Google({ clientId: "x", clientSecret: "y" } as any);
+  console.log("[auth] typeof Google(...) =", typeof probe);
+} catch (e) {
+  console.log("[auth] probe threw as expected (using dummy creds)");
+}
 
-export { GET, POST };
-export const runtime = "nodejs";
+const { handlers } = NextAuth(config);
+export const GET = handlers.GET;
+export const POST = handlers.POST;
