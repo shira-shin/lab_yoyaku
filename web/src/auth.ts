@@ -1,13 +1,1 @@
-import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
-
-export const { auth, signIn, signOut } = NextAuth({
-  providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID!,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
-    }),
-  ],
-  secret: process.env.AUTH_SECRET,
-  trustHost: true,
-});
+export { auth, signIn, signOut } from "./lib/auth/server";
