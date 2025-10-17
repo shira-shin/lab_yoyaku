@@ -1,19 +1,22 @@
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 
-export const runtime = "nodejs";
-
-const authConfig = NextAuth({
-  secret: process.env.AUTH_SECRET,
+const config: NextAuthConfig = {
   trustHost: true,
+  secret: process.env.APP_AUTH_SECRET,
   providers: [
     Google({
-      clientId: process.env.AUTH_GOOGLE_ID!,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
     }),
   ],
-});
+};
 
 export const {
   handlers: { GET, POST },
-} = authConfig;
+  auth,
+  signIn,
+  signOut,
+} = NextAuth(config);
+
+export const runtime = "nodejs";

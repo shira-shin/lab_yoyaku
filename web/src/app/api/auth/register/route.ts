@@ -7,7 +7,7 @@ import { prisma } from '@/server/db/prisma';
 import { isEmail } from '@/lib/mockdb';
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.AUTH_SECRET || process.env.JWT_SECRET || 'dev-secret',
+  process.env.APP_AUTH_SECRET || process.env.JWT_SECRET || 'dev-secret',
 );
 
 export const dynamic = 'force-dynamic';

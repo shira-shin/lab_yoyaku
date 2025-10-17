@@ -51,19 +51,18 @@ const summarizeDatabaseUrl = (value?: string | null): DatabaseSummary => {
 };
 
 export async function GET() {
-  const authUrl = summarizeUrl(process.env.AUTH_URL);
+  const appBaseUrl = summarizeUrl(process.env.APP_BASE_URL);
   const nextAuthUrl = summarizeUrl(process.env.NEXTAUTH_URL);
 
   return NextResponse.json({
-    AUTH_GOOGLE_ID: mask(process.env.AUTH_GOOGLE_ID),
-    AUTH_GOOGLE_SECRET: mask(process.env.AUTH_GOOGLE_SECRET),
-    AUTH_SECRET: mask(process.env.AUTH_SECRET),
-    AUTH_TRUST_HOST: process.env.AUTH_TRUST_HOST ?? null,
-    AUTH_URL: authUrl,
+    GOOGLE_OAUTH_CLIENT_ID: mask(process.env.GOOGLE_OAUTH_CLIENT_ID),
+    GOOGLE_OAUTH_CLIENT_SECRET: mask(process.env.GOOGLE_OAUTH_CLIENT_SECRET),
+    APP_AUTH_SECRET: mask(process.env.APP_AUTH_SECRET),
+    APP_BASE_URL: appBaseUrl,
     NEXTAUTH_URL: nextAuthUrl,
-    AUTH_URL_MATCHES_NEXTAUTH_URL:
-      authUrl.present && nextAuthUrl.present && "summary" in authUrl && "summary" in nextAuthUrl
-        ? authUrl.summary === nextAuthUrl.summary
+    APP_BASE_URL_MATCHES_NEXTAUTH_URL:
+      appBaseUrl.present && nextAuthUrl.present && "summary" in appBaseUrl && "summary" in nextAuthUrl
+        ? appBaseUrl.summary === nextAuthUrl.summary
         : null,
     DATABASE_URL: summarizeDatabaseUrl(process.env.DATABASE_URL),
     NODE_ENV: process.env.NODE_ENV ?? null,
