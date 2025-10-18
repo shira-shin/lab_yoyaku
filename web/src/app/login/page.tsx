@@ -32,20 +32,8 @@ export default function LoginPage() {
     e.preventDefault();
     setLErr('');
     setLoadingLogin(true);
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: lemail, password: lpass }),
-        credentials: 'same-origin',
-      });
-      if (!res.ok) throw new Error();
-      router.replace(next || '/');
-    } catch {
-      setLErr('メールまたはパスワードが違います（大文字小文字は区別しません）');
-    } finally {
-      setLoadingLogin(false);
-    }
+    setLErr('現在は Google ログインのみ対応しています。');
+    setLoadingLogin(false);
   }
 
   async function submitRegister(e: React.FormEvent) {

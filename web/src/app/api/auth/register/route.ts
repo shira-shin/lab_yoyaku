@@ -6,9 +6,7 @@ import { setSessionCookie } from '@/lib/auth/cookies';
 import { prisma } from '@/server/db/prisma';
 import { isEmail } from '@/lib/mockdb';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.APP_AUTH_SECRET || process.env.JWT_SECRET || 'dev-secret',
-);
+const JWT_SECRET = new TextEncoder().encode(process.env.APP_AUTH_SECRET || 'dev-secret');
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
