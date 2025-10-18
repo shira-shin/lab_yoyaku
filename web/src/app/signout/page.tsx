@@ -10,7 +10,7 @@ export default function SignOutPage() {
         </p>
       </div>
 
-      <form action="/api/auth/logout" method="post" className="space-y-3">
+      <form action="/api/auth/signout" method="post" className="space-y-3">
         <input type="hidden" name="callbackUrl" value="/signin" />
         <button
           type="submit"
@@ -22,7 +22,7 @@ export default function SignOutPage() {
 
       <div className="space-y-2">
         <Link
-          href="/api/auth/logout?callbackUrl=/signin"
+          href="/api/auth/signout?callbackUrl=/signin"
           className="inline-block w-full rounded bg-black px-3 py-2 text-center text-white"
         >
           サインアウト（直接リンク）
