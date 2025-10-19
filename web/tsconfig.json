@@ -43,8 +43,6 @@ codex/fix-constructor-issues-with-nextauth
     "exclude":  [
                     "node_modules"
                 ]
-=======
-{
   "compilerOptions": {
     "target": "es2020",
     "lib": [
@@ -85,4 +83,3 @@ codex/fix-constructor-issues-with-nextauth
     "node_modules"
   ]
 main
-}
