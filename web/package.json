@@ -1,49 +1,3 @@
-
-    "name":  "lab_yoyaku-web",
-    "private":  true,
-    "scripts":  {
-                    "dev":  "next dev",
-                    "build":  "node -e \"const {execSync}=require(\u0027node:child_process\u0027); const run=c=\u003eexecSync(c,{stdio:\u0027inherit\u0027,shell:true}); run(\u0027prisma generate\u0027); if (process.env.USE_MOCK !== \u0027true\u0027) { run(\u0027prisma migrate deploy\u0027); } else { console.log(\u0027Skipping prisma migrate deploy in mock mode\u0027); } run(\u0027next build\u0027);\"",
-                    "typecheck":  "tsc -p tsconfig.json --noEmit",
-                    "start":  "next start",
-                    "lint":  "next lint",
-                    "postinstall":  "echo skip prisma generate on postinstall",
-                    "prisma:deploy":  "prisma migrate deploy",
-                    "prisma:push":  "prisma db push"
-                },
-    "dependencies":  {
-                         "@auth/prisma-adapter":  "^2.11.0",
-                         "bcryptjs":  "^2.4.3",
-                         "@prisma/client":  "5.22.0",
-                         "clsx":  "^2.1.0",
-                         "date-fns":  "^3.6.0",
-                         "date-fns-tz":  "^3.2.0",
-                         "jose":  "^5.2.2",
-                         "next":  "14.1.0",
-                         "next-auth":  "5.0.0-beta.29",
-                         "qrcode":  "^1.5.4",
-                         "react":  "18.2.0",
-                         "react-dom":  "18.2.0",
-                         "zod":  "3.23.8",
-                         "@auth/core":  "0.41.0"
-                     },
-    "devDependencies":  {
-                            "@tailwindcss/postcss":  "^4.1.13",
-                            "@types/node":  "^20.19.13",
-                            "@types/react":  "^18.3.24",
-                            "@types/react-dom":  "^18.3.7",
-                            "autoprefixer":  "^10.4.16",
-                            "eslint":  "^8.56.0",
-                            "eslint-config-next":  "14.1.0",
-                            "postcss":  "^8.4.31",
-                            "prisma":  "5.22.0",
-                            "tailwindcss":  "^4.0.0",
-                            "typescript":  "^5.5.4"
-                        },
-    "engines":  {
-                    "node":  "\u003e=18.18 \u003c23"
-                }
-
 {
   "name": "lab_yoyaku-web",
   "private": true,
@@ -58,8 +12,10 @@
     "prisma:push": "prisma db push"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
+    "@auth/core": "0.41.0",
+    "@auth/prisma-adapter": "2.11.0",
     "@prisma/client": "5.22.0",
+    "bcryptjs": "^2.4.3",
     "clsx": "^2.1.0",
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.2.0",
@@ -70,9 +26,6 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "zod": "3.23.8"
-  },
-  "engines": {
-    "node": "20.x"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.13",
@@ -87,5 +40,8 @@
     "tailwindcss": "^4.0.0",
     "tsx": "workspace:*",
     "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
