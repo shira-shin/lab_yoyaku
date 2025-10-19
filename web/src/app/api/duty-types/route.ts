@@ -71,9 +71,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
-    const raw = await req
-      .json()
-      .catch(async () => Object.fromEntries((await req.formData()).entries()));
+    const raw = await req.json().catch(async () => {
+      const formData = await req.formData();
+      const data: Record<string, FormDataEntryValue | FormDataEntryValue[]> = {};
+
+      formData.forEach((value, key) => {
+        const existing = data[key];
+        if (existing === undefined) {
+          data[key] = value;
+          return;
+        }
+
+        if (Array.isArray(existing)) {
+          existing.push(value);
+        } else {
+          data[key] = [existing, value];
+        }
+      });
+
+      return data;
+    });
     const body = Body.parse(raw);
     const slug = body.groupSlug.toLowerCase();
     const name = body.name.trim();
