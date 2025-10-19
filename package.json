@@ -1,4 +1,4 @@
-﻿{
+{
     "name":  "lab_yoyaku-monorepo",
     "private":  true,
     "packageManager":  "pnpm@10.18.2",
