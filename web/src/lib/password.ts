@@ -1,33 +1,33 @@
-import bcrypt from 'bcryptjs';
-import { hashPassword } from '@/lib/auth';
+﻿import bcrypt from "bcryptjs";
+import { createHash } from "crypto";
 
-const BCRYPT_TARGET_COST = (() => {
-  const env = parseInt(process.env.BCRYPT_ROUNDS ?? '12', 10);
-  return Number.isNaN(env) ? 12 : env;
-})();
+const BCRYPT_REGEX = /^\$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}$/;
+const LEGACY_SHA_REGEX = /^[a-f0-9]{40}$/i;
 
-const LEGACY_SHA_REGEX = /^[0-9a-f]{64}$/i;
+// 標準ハッシュ（新規作成時は bcrypt）
+export async function hashPassword(plain: string) {
+  return bcrypt.hash(plain, 10);
+}
 
-export async function verifyPassword(plain: string, hash: string | null | undefined) {
-  if (!hash) return false;
-  if (hash.startsWith('$2a$') || hash.startsWith('$2b$') || hash.startsWith('$2y$')) {
+// 既存ハッシュとの照合（bcrypt とレガシー SHA1 の両対応）
+export async function verifyPassword(plain: string, hash: string) {
+  if (BCRYPT_REGEX.test(hash)) {
     return bcrypt.compare(plain, hash);
   }
   if (LEGACY_SHA_REGEX.test(hash)) {
-    return hashPassword(plain) === hash.toLowerCase();
+    // レガシーは同期 SHA1 で比較（非同期は不要）
+    const legacy = createHash("sha1").update(plain).digest("hex");
+    return legacy === hash.toLowerCase();
   }
-  throw new Error('Unsupported hash format');
+  throw new Error("Unsupported hash format");
 }
 
-export async function needsRehash(hash: string | null | undefined) {
-  if (!hash) return true;
-  if (hash.startsWith('$2a$') || hash.startsWith('$2b$') || hash.startsWith('$2y$')) {
-    const cost = parseInt(hash.slice(4, 6), 10);
-    if (Number.isNaN(cost)) return true;
-    return cost < BCRYPT_TARGET_COST;
+// 再ハッシュが必要か（コストが低い bcrypt またはレガシーは true）
+export function needsRehash(hash: string, desiredCost = 10) {
+  if (BCRYPT_REGEX.test(hash)) {
+    const cost = parseInt(hash.split("$")[2], 10);
+    return Number.isFinite(cost) && cost < desiredCost;
   }
-  if (LEGACY_SHA_REGEX.test(hash)) {
-    return true;
-  }
+  // レガシーは常に再ハッシュ推奨
   return true;
 }
