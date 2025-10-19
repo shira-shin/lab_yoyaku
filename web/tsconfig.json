@@ -1,3 +1,49 @@
+codex/fix-constructor-issues-with-nextauth
+
+    "compilerOptions":  {
+                            "target":  "es5",
+                            "lib":  [
+                                        "dom",
+                                        "dom.iterable",
+                                        "esnext"
+                                    ],
+                            "allowJs":  true,
+                            "skipLibCheck":  true,
+                            "strict":  false,
+                            "forceConsistentCasingInFileNames":  true,
+                            "noEmit":  true,
+                            "esModuleInterop":  true,
+                            "module":  "esnext",
+                            "moduleResolution":  "node",
+                            "resolveJsonModule":  true,
+                            "isolatedModules":  true,
+                            "jsx":  "preserve",
+                            "incremental":  true,
+                            "baseUrl":  ".",
+                            "paths":  {
+                                          "@/*":  [
+                                                      "./src/*"
+                                                  ],
+                                          "@/src/*":  [
+                                                          "src/*"
+                                                      ]
+                                      },
+                            "plugins":  [
+                                            {
+                                                "name":  "next"
+                                            }
+                                        ]
+                        },
+    "include":  [
+                    "next-env.d.ts",
+                    "**/*.ts",
+                    "**/*.tsx",
+                    ".next/types/**/*.ts"
+                ],
+    "exclude":  [
+                    "node_modules"
+                ]
+=======
 {
   "compilerOptions": {
     "target": "es2020",
@@ -38,4 +84,5 @@
   "exclude": [
     "node_modules"
   ]
+main
 }

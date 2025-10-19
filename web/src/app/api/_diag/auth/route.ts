@@ -1,4 +1,9 @@
+﻿import { NextResponse } from "next/server";
+import Google from "next-auth/providers/google";
 export async function GET() {
+
+  return NextResponse.json({ providerType: typeof Google, hasNextAuthHandlers: true });
+
   const body = {
     vercel: process.env.VERCEL === "1",
     vercelUrl: process.env.VERCEL_URL,
