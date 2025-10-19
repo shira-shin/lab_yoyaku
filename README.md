@@ -9,6 +9,11 @@ Lab equipment reservation system monorepo.
 
 ## Development
 
+> **Node / pnpm versions**
+>
+> The monorepo is pinned to **Node 20.x** and **pnpm 10.18.2**. Use `nvm use` (the repo ships with a `.nvmrc`) followed by
+> `corepack enable` / `corepack prepare pnpm@10.18.2 --activate` before running any installs to avoid lockfile drift.
+
 1. Start services
    ```bash
    docker compose -f infra/docker-compose.yml up -d
@@ -51,8 +56,33 @@ If dependency installation fails with a `403` status, follow this order of opera
 403 responses typically indicate that traffic is being routed to a private registry requiring authentication or is being blocked by a corporate proxy. Ensure requests are sent to the public npm registry before attempting other workarounds.
 
 ### Environment
-Set `DATABASE_URL` in `web/.env.local` to point to your Neon (Postgres) instance.
+Set `DATABASE_URL` in `web/.env.local` to the **Neon connection pooling URL** (hosted at `*-pooler.neon.tech`) so that Prisma
+talks to PgBouncer with SSL enabled, for example:
+
+```
+postgresql://USER:PASS@ep-xxxxxx-pooler.neon.tech/neondb?sslmode=require&pgbouncer=true&connect_timeout=15
+```
+
 Prisma migrations are applied automatically during `pnpm build`.
+
+#### Vercel deployment checklist
+
+- **Runtime**: Project Settings → General → Node.js Version → `20.x` (mirrors the repo `engines.node`).
+- **Environment variables** (set for Production and Preview):
+  - `GOOGLE_OAUTH_CLIENT_ID`
+  - `GOOGLE_OAUTH_CLIENT_SECRET`
+  - `APP_AUTH_SECRET`
+  - `APP_BASE_URL=https://<your-domain>` (also set `NEXTAUTH_URL` to the same origin if required)
+  - `DATABASE_URL=postgresql://...-pooler.neon.tech/...?...` (Neon connection pooling URL with `sslmode=require` and
+    `pgbouncer=true`)
+  - Preview deployments only: `USE_MOCK=true` to bypass live database traffic when troubleshooting
+- **Google OAuth**: ensure `https://<your-domain>/api/auth/callback/google` is an authorized redirect URI and `https://<your-domain>` is an authorized JavaScript origin in Google Cloud Console.
+- Disable "Use existing Build Cache" when troubleshooting so that Prisma migrations run from a clean state.
+- **Post-deploy verification**: confirm the deployment is wired correctly by querying the diagnostic endpoints:
+  - `GET /api/_diag/auth` → `{ "hasGoogleId": true, "hasGoogleSecret": true, "appBaseUrl": "https://<your-domain>", "trustHost": true }`
+  - `GET /api/auth/providers` → response includes `google`
+  - `GET /api/auth/session` → `{}` when logged out, populated session when signed in
+  - `/api/auth/signin/google?callbackUrl=%2Fdashboard` → redirects to the Google consent screen
 
 ### DB health check
 

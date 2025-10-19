@@ -5,7 +5,6 @@ import { loadDB } from '@/lib/mockdb';
 import QRCode from 'qrcode';
 import { getBaseUrl } from '@/lib/http/base-url';
 
-export const runtime = 'nodejs';
 
 export async function GET(_req: Request, { params }: { params: { slug: string } }) {
   const db = loadDB();

@@ -2,10 +2,9 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import { NextResponse } from 'next/server'
-import { readUserFromCookie } from '@/lib/auth'
-import { prisma } from '@/src/lib/prisma'
+import { readUserFromCookie } from '@/lib/auth-legacy'
+import { prisma } from '@/server/db/prisma'
 
-export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   try {

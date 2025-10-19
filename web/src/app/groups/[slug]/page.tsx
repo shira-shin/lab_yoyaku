@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-export const runtime = 'nodejs';
 export const fetchCache = 'force-no-store';
 
 import { redirect } from 'next/navigation';
@@ -15,14 +14,14 @@ import {
 } from '@/lib/reservations';
 import GroupScreenClient from './GroupScreenClient';
 import Link from 'next/link';
-import { prisma } from '@/src/lib/prisma';
+import { prisma } from '@/server/db/prisma';
 import type { Span } from '@/components/CalendarWithBars';
 import PrintButton from '@/components/PrintButton';
 import type { ReservationListItem } from '@/components/reservations/ReservationList';
 import CalendarReservationSection from './CalendarReservationSection';
 import Image from 'next/image';
-import { AUTH_COOKIE } from '@/lib/auth/cookies';
-import { decodeSession } from '@/lib/auth';
+import { SESSION_COOKIE_NAME } from '@/lib/auth/cookies';
+import { decodeSession } from '@/lib/auth-legacy';
 import { normalizeEmail } from '@/lib/email';
 import { unstable_noStore as noStore } from 'next/cache';
 import GroupHeader from './_components/GroupHeader';
@@ -52,7 +51,7 @@ export default async function GroupPage({
 }) {
   noStore();
   const paramSlug = params.slug.toLowerCase();
-  const token = cookies().get(AUTH_COOKIE)?.value;
+  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
   let user: Awaited<ReturnType<typeof decodeSession>> | null = null;
   if (token) {
     try {

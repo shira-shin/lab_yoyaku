@@ -1,10 +1,9 @@
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { auth, normalizeEmail } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { auth, normalizeEmail } from '@/lib/auth-legacy';
+import { prisma } from '@/server/db/prisma';
 import { getActorByEmail } from '@/lib/perm';
 
 export async function GET(_req: Request, { params }: { params: { slug: string } }) {

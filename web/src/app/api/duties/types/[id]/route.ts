@@ -1,10 +1,9 @@
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { prisma } from '@/src/lib/prisma';
-import { auth } from '@/lib/auth';
+import { prisma } from '@/server/db/prisma';
+import { auth } from '@/lib/auth-legacy';
 import { getActorByEmail, getGroupAndRole, isAdmin } from '@/lib/perm';
 
 type DutyVisibility = 'PUBLIC' | 'MEMBERS_ONLY';

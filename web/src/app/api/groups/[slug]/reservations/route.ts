@@ -3,7 +3,7 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/server/db/prisma";
 import { APP_TZ, dayRangeInUtc } from "@/lib/time";
 
 function parseDate(value: string | null) {

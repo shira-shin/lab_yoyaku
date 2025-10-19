@@ -1,5 +1,5 @@
-import { normalizeEmail } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { normalizeEmail } from '@/lib/auth-legacy';
+import { prisma } from '@/server/db/prisma';
 
 export async function getActorByEmail(email?: string | null) {
   if (!email) return null;

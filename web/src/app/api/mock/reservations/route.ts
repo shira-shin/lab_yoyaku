@@ -2,10 +2,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 import { NextResponse } from 'next/server';
-import { readUserFromCookie } from '@/lib/auth';
+import { readUserFromCookie } from '@/lib/auth-legacy';
 import { loadDB, saveDB } from '@/lib/mockdb';
 
-export const runtime = 'nodejs';
 
 /* 共通: 時間重複判定 ([s1,e1) と [s2,e2)) */
 const overlap = (s1: Date, e1: Date, s2: Date, e2: Date) => !(e1 <= s2 || e2 <= s1);

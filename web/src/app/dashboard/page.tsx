@@ -1,9 +1,8 @@
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-export const runtime = 'nodejs';
 export const fetchCache = 'force-no-store';
 
-import { readUserFromCookie } from '@/lib/auth';
+import { readUserFromCookie } from '@/lib/auth-legacy';
 import type { Span } from '@/components/CalendarWithBars';
 import DashboardClient from './page.client';
 import { serverFetch } from '@/lib/http/serverFetch';

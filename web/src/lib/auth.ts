@@ -1,4 +1,4 @@
-﻿/**
+
  * Compatibility shim so existing imports from "@/lib/auth" keep working.
  * - Re-exports NextAuth v5 helpers
  * - Re-exports legacy cookie/session helpers that still exist
@@ -56,3 +56,4 @@ export async function hashPassword(plain: string) {
 // ---- Re-export helpers other modules expect from here ----
 export { normalizeEmail } from "./email";
 export { verifyPassword, needsRehash } from "./password";
+export {};

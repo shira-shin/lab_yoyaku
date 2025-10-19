@@ -1,7 +1,7 @@
 import type { NextResponse } from 'next/server';
 
-const COOKIE_NAME = process.env.AUTH_COOKIE_NAME ?? 'lab_session';
-export const AUTH_COOKIE = COOKIE_NAME;
+const COOKIE_NAME = process.env.APP_SESSION_COOKIE_NAME ?? 'lab_session';
+export const SESSION_COOKIE_NAME = COOKIE_NAME;
 
 export function setSessionCookie(
   res: NextResponse,

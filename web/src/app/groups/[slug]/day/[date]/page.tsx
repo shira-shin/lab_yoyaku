@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-export const runtime = 'nodejs';
 export const fetchCache = 'force-no-store';
 
 import Link from 'next/link';
@@ -21,7 +20,7 @@ import {
   normalizeReservation,
   type NormalizedReservation,
 } from '@/lib/reservations';
-import { prisma } from '@/src/lib/prisma';
+import { prisma } from '@/server/db/prisma';
 import DutyInlineEditor from './DutyInlineEditor';
 import DutyInlineCreate from './DutyInlineCreate';
 import InlineReservationForm from './InlineReservationForm';

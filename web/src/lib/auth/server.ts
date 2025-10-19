@@ -1,4 +1,10 @@
+
 ﻿import "server-only";
+import "server-only";
+
+import { readUserFromCookie as _readUserFromCookie } from "../auth-legacy";
+
+export { readUserFromCookie } from "../auth-legacy";
 
 // NextAuth v5 helpers
 export { auth } from "@/auth";

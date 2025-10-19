@@ -1,4 +1,4 @@
-import { readUserFromCookie } from '@/lib/auth';
+import { readUserFromCookie } from '@/lib/auth-legacy';
 import NavLinks from './NavLinks';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { unstable_noStore as noStore } from 'next/cache';

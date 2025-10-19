@@ -2,10 +2,9 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import QRCode from 'qrcode'
-import { prisma } from '@/src/lib/prisma'
+import { prisma } from '@/server/db/prisma'
 import { getBaseUrl } from '@/lib/http/base-url'
 
-export const runtime = 'nodejs'
 
 export async function GET(_req: Request, { params }: { params: { slug: string } }) {
   const device = await prisma.device.findFirst({

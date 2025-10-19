@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { createHash } from 'crypto';
 import { loadUsers } from './db';
 import { normalizeEmail } from './email';
+
 import { prisma } from '@/lib/prisma';
 import { AUTH_COOKIE } from './auth/cookies';
 
@@ -11,6 +12,13 @@ const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET || process.env.JWT_SECRET || 'dev-secret',
 );
 export const SESSION_COOKIE = AUTH_COOKIE;
+
+import { prisma } from '@/server/db/prisma';
+import { SESSION_COOKIE_NAME } from './auth/cookies';
+
+const secret = new TextEncoder().encode(process.env.APP_AUTH_SECRET || 'dev-secret');
+export const SESSION_COOKIE = SESSION_COOKIE_NAME;
+
 
 export type User = { id: string; name: string; email: string };
 

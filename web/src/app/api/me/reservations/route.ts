@@ -2,11 +2,10 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import { NextResponse } from 'next/server'
-import { readUserFromCookie } from '@/lib/auth'
-import { prisma } from '@/src/lib/prisma'
+import { readUserFromCookie } from '@/lib/auth-legacy'
+import { prisma } from '@/server/db/prisma'
 import type { Prisma } from '@prisma/client'
 
-export const runtime = 'nodejs'
 
 function parseDate(value: string | null): Date | null {
   if (!value) return null

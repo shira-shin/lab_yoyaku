@@ -4,7 +4,6 @@ import { makeSlug } from '@/lib/slug';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import * as jose from 'jose';
 
-const SESSION_COOKIE = process.env.AUTH_COOKIE_NAME ?? 'lab_session';
+const SESSION_COOKIE = process.env.APP_SESSION_COOKIE_NAME ?? 'lab_session';
 const PUBLIC_PATHS = ['/', '/login', '/signup'];
 const PUBLIC_PREFIXES = [
   '/api/auth',
@@ -13,7 +13,7 @@ const PUBLIC_PREFIXES = [
   '/sitemap',
 ];
 const CANONICAL_HOST = 'labyoyaku.vercel.app';
-const secret = new TextEncoder().encode(process.env.AUTH_SECRET || 'dev-secret');
+const secret = new TextEncoder().encode(process.env.APP_AUTH_SECRET || 'dev-secret');
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.includes(pathname)) {

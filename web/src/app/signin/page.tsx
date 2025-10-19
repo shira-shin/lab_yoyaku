@@ -1,5 +1,5 @@
 import LoginEmbed from '@/app/_parts/LoginEmbed'
-import { readUserFromCookie } from '@/lib/auth'
+import { readUserFromCookie } from '@/lib/auth-legacy'
 import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
