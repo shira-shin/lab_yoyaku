@@ -24,7 +24,7 @@ module.exports = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
+        background: "hsl(var(--background))", // <-- bg-background はこれに依存します
         foreground: "hsl(var(--foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
@@ -71,7 +71,12 @@ module.exports = {
         md: "10px",
         sm: "8px",
       },
+      // keyframes と animation が必要であれば、ここに追記してください
+      // keyframes: { ... },
+      // animation: { ... },
     },
   },
-  plugins: [],
+  // tailwindcss-animate が必要であれば、ここに追加してください
+  // plugins: [require("tailwindcss-animate")],
+  plugins: [], // 不要なら空配列のまま
 };
