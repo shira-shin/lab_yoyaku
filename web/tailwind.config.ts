@@ -1,6 +1,47 @@
 import type { Config } from "tailwindcss";
 
-const config: Config = {
+const colors = {
+  border: "#E5E7EB",
+  input: "#E5E7EB",
+  ring: "#4A90E2",
+  background: "#F8F9FA",
+  foreground: "#1F2937",
+  primary: {
+    DEFAULT: "#4A90E2",
+    foreground: "#FFFFFF",
+    dark: "#3F7ACC",
+  },
+  secondary: {
+    DEFAULT: "#F3F4F6",
+    foreground: "#1F2937",
+  },
+  accent: {
+    DEFAULT: "#F5A623",
+    foreground: "#1F2937",
+  },
+  muted: {
+    DEFAULT: "#6C757D",
+    foreground: "#F8F9FA",
+  },
+  destructive: {
+    DEFAULT: "#EF4444",
+    foreground: "#FFFFFF",
+  },
+  success: {
+    DEFAULT: "#7ED321",
+    foreground: "#05400A",
+  },
+  popover: {
+    DEFAULT: "#FFFFFF",
+    foreground: "#1F2937",
+  },
+  card: {
+    DEFAULT: "#FFFFFF",
+    foreground: "#1F2937",
+  },
+} as const;
+
+const config = {
   darkMode: ["class"],
   content: [
     "./src/app/**/*.{ts,tsx,mdx}",
@@ -18,46 +59,7 @@ const config: Config = {
       },
     },
     extend: {
-      colors: {
-        border: "#E5E7EB",
-        input: "#E5E7EB",
-        ring: "#4A90E2",
-        background: "#F8F9FA",
-        foreground: "#1F2937",
-        primary: {
-          DEFAULT: "#4A90E2",
-          foreground: "#FFFFFF",
-          dark: "#3F7ACC",
-        },
-        secondary: {
-          DEFAULT: "#F3F4F6",
-          foreground: "#1F2937",
-        },
-        accent: {
-          DEFAULT: "#F5A623",
-          foreground: "#1F2937",
-        },
-        muted: {
-          DEFAULT: "#6C757D",
-          foreground: "#F8F9FA",
-        },
-        destructive: {
-          DEFAULT: "#EF4444",
-          foreground: "#FFFFFF",
-        },
-        success: {
-          DEFAULT: "#7ED321",
-          foreground: "#05400A",
-        },
-        popover: {
-          DEFAULT: "#FFFFFF",
-          foreground: "#1F2937",
-        },
-        card: {
-          DEFAULT: "#FFFFFF",
-          foreground: "#1F2937",
-        },
-      },
+      colors,
       fontFamily: {
         sans: ["Open Sans", "Noto Sans JP", "sans-serif"],
       },
@@ -72,6 +74,6 @@ const config: Config = {
     },
   },
   plugins: [],
-};
+} satisfies Config;
 
 export default config;
