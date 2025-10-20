@@ -2,10 +2,13 @@
 module.exports = {
   darkMode: ["class"],
   content: [
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/lib/**/*.{js,ts,jsx,tsx}",
+    "./src/server/**/*.{js,ts,jsx,tsx}",
     "./src/utils/**/*.{js,ts,jsx,tsx}",
+    "./src/auth/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
@@ -18,43 +21,43 @@ module.exports = {
     },
     extend: {
       colors: {
-        border: "#E5E7EB",
-        input: "#E5E7EB",
-        ring: "#4A90E2",
-        background: "#F8F9FA",
-        foreground: "#1F2937",
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))", // <-- bg-background はこれに依存します
+        foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#4A90E2",
-          foreground: "#FFFFFF",
-          dark: "#3F7ACC",
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+          dark: "hsl(var(--primary-dark, 215 58% 52%))",
         },
         secondary: {
-          DEFAULT: "#F3F4F6",
-          foreground: "#1F2937",
-        },
-        accent: {
-          DEFAULT: "#F5A623",
-          foreground: "#1F2937",
-        },
-        muted: {
-          DEFAULT: "#6C757D",
-          foreground: "#F8F9FA",
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {
-          DEFAULT: "#EF4444",
-          foreground: "#FFFFFF",
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
-        success: {
-          DEFAULT: "#7ED321",
-          foreground: "#05400A",
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
         },
         popover: {
-          DEFAULT: "#FFFFFF",
-          foreground: "#1F2937",
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
         },
         card: {
-          DEFAULT: "#FFFFFF",
-          foreground: "#1F2937",
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success, 104 64% 45%))",
+          foreground: "hsl(var(--success-foreground, 140 100% 12%))",
         },
       },
       fontFamily: {
@@ -68,7 +71,12 @@ module.exports = {
         md: "10px",
         sm: "8px",
       },
+      // keyframes と animation が必要であれば、ここに追記してください
+      // keyframes: { ... },
+      // animation: { ... },
     },
   },
-  plugins: [],
+  // tailwindcss-animate が必要であれば、ここに追加してください
+  // plugins: [require("tailwindcss-animate")],
+  plugins: [], // 不要なら空配列のまま
 };
