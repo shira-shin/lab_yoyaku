@@ -8,7 +8,7 @@ import { normalizeEmail } from './email';
 import { prisma } from '@/server/db/prisma';
 import { SESSION_COOKIE_NAME } from './auth/cookies';
 
-const secret = new TextEncoder().encode(process.env.APP_AUTH_SECRET || 'dev-secret');
+const secret = new TextEncoder().encode(process.env.AUTH_SECRET || 'dev-secret');
 export const SESSION_COOKIE = SESSION_COOKIE_NAME;
 
 

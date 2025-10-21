@@ -1,9 +1,9 @@
 import process from "node:process";
 
 const required = [
-  "GOOGLE_OAUTH_CLIENT_ID",
-  "GOOGLE_OAUTH_CLIENT_SECRET",
-  "APP_AUTH_SECRET",
+  "AUTH_GOOGLE_ID",
+  "AUTH_GOOGLE_SECRET",
+  "AUTH_SECRET",
   "APP_BASE_URL",
 ];
 

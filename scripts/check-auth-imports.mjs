@@ -4,14 +4,17 @@ import { fileURLToPath } from "node:url";
 import process from "node:process";
 
 const PROJECT_ROOT = fileURLToPath(new URL("../", import.meta.url));
-const WEB_SRC = fileURLToPath(new URL("../web/src", import.meta.url));
 const ALLOWED_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
-const AUTH_IMPORT_PATTERN = new RegExp(String.raw`(?:['"])(?:\.\./)+auth(?:/|['"])`, 'g');
+const IGNORED_DIRS = new Set([".git", "node_modules", ".next", "dist", "build", "coverage", "out", "tmp"]);
+const RELATIVE_AUTH_IMPORT = new RegExp(String.raw`(['"])(?:\.\./)+auth(?:/|['"])`, "g");
+const CORE_IMPORT_PATTERN = /from\s+['"]@auth\/core(?:\/providers)?['"]/g;
+const CORE_REQUIRE_PATTERN = /require\(['"]@auth\/core(?:\/providers)?['"]\)/g;
 
 async function* walk(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
     if (entry.name.startsWith(".")) continue;
+    if (IGNORED_DIRS.has(entry.name)) continue;
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
       yield* walk(fullPath);
@@ -21,29 +24,111 @@ async function* walk(dir) {
   }
 }
 
-async function main() {
-  const offenders = [];
-  for await (const file of walk(WEB_SRC)) {
-    const content = await readFile(file, "utf8");
-    const matches = content.match(AUTH_IMPORT_PATTERN);
-    if (matches) {
-      offenders.push({
-        file,
-        matches: [...new Set(matches)],
-      });
+function extractDefaultProviderNames(spec) {
+  const names = new Set();
+
+  const defaultMatch = spec.match(/^([A-Za-z_$][\w$]*)\s*(?:,|$)/);
+  if (defaultMatch) {
+    const candidate = defaultMatch[1];
+    if (candidate !== "type" && candidate !== "*") {
+      names.add(candidate);
     }
   }
 
-  if (offenders.length > 0) {
-    console.error("Found forbidden auth imports:");
-    for (const { file, matches } of offenders) {
-      const rel = relative(PROJECT_ROOT, file);
-      console.error(' - ' + rel + ': ' + matches.join(', '));
+  for (const braces of spec.matchAll(/\{([^}]*)\}/g)) {
+    const parts = braces[1].split(",");
+    for (const part of parts) {
+      const trimmed = part.trim();
+      if (!trimmed) continue;
+      if (/^default\s+as\s+/i.test(trimmed)) {
+        const alias = trimmed.split(/\s+as\s+/i)[1]?.trim();
+        if (alias) {
+          names.add(alias);
+        }
+      }
+    }
+  }
+
+  return [...names];
+}
+
+async function main() {
+  const issues = [];
+
+  for await (const file of walk(PROJECT_ROOT)) {
+    const relPath = relative(PROJECT_ROOT, file);
+    if (relPath === "scripts/check-auth-imports.mjs") {
+      continue;
+    }
+    const content = await readFile(file, "utf8");
+    const fileIssues = new Set();
+
+    if (RELATIVE_AUTH_IMPORT.test(content)) {
+      fileIssues.add("Do not import auth helpers via relative paths (use '@/auth').");
+    }
+
+    if (CORE_IMPORT_PATTERN.test(content) || CORE_REQUIRE_PATTERN.test(content)) {
+      fileIssues.add("Do not import from '@auth/core'; rely on 'next-auth' exports instead.");
+    }
+
+    const providerNames = new Set();
+    const importRegex = /import\s+([\s\S]+?)\s+from\s+["']([^"']+)["']/g;
+    let match;
+    while ((match = importRegex.exec(content))) {
+      let spec = match[1].trim();
+      const source = match[2];
+
+      const isTypeOnly = spec.startsWith("type ");
+      if (isTypeOnly) {
+        spec = spec.slice(5).trim();
+      }
+
+      if (source === "next-auth/providers") {
+        fileIssues.add('Import providers from "next-auth/providers/<provider>" instead of the root module.');
+        continue;
+      }
+
+      if (!source.startsWith("next-auth/providers/")) {
+        continue;
+      }
+
+      if (isTypeOnly) {
+        continue;
+      }
+
+      const names = extractDefaultProviderNames(spec);
+      for (const name of names) {
+        providerNames.add(name);
+      }
+    }
+
+    for (const name of providerNames) {
+      const callPattern = new RegExp(`\\b${name}\\s*\\(`, "g");
+      if (callPattern.test(content)) {
+        fileIssues.add(`Provider "${name}" must be passed directly without calling it.`);
+      }
+      const newPattern = new RegExp(`new\\s+${name}\\s*\\(`, "g");
+      if (newPattern.test(content)) {
+        fileIssues.add(`Provider "${name}" must not be instantiated with 'new'.`);
+      }
+    }
+
+    if (fileIssues.size > 0) {
+      issues.push({ file: relPath, messages: [...fileIssues] });
+    }
+  }
+
+  if (issues.length > 0) {
+    console.error("Auth import check failed:");
+    for (const { file, messages } of issues) {
+      for (const message of messages) {
+        console.error(` - ${file}: ${message}`);
+      }
     }
     process.exit(1);
   }
 
-  console.log("No relative auth imports detected.");
+  console.log("Auth import patterns look good.");
 }
 
 main().catch((error) => {

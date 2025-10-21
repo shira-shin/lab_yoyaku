@@ -56,10 +56,17 @@ export async function GET() {
   const configuredAppBaseUrl = summarizeUrl(process.env.APP_BASE_URL);
   const nextAuthUrl = summarizeUrl(process.env.NEXTAUTH_URL);
 
+  const trustHostEffective =
+    process.env.AUTH_TRUST_HOST === "true" ||
+    process.env.AUTH_TRUST_HOST === "1" ||
+    process.env.NODE_ENV !== "production";
+
   return NextResponse.json({
-    GOOGLE_OAUTH_CLIENT_ID: mask(process.env.GOOGLE_OAUTH_CLIENT_ID),
-    GOOGLE_OAUTH_CLIENT_SECRET: mask(process.env.GOOGLE_OAUTH_CLIENT_SECRET),
-    APP_AUTH_SECRET: mask(process.env.APP_AUTH_SECRET),
+    AUTH_GOOGLE_ID: mask(process.env.AUTH_GOOGLE_ID),
+    AUTH_GOOGLE_SECRET: mask(process.env.AUTH_GOOGLE_SECRET),
+    AUTH_SECRET: mask(process.env.AUTH_SECRET),
+    AUTH_TRUST_HOST: process.env.AUTH_TRUST_HOST ?? null,
+    AUTH_TRUST_HOST_EFFECTIVE: trustHostEffective,
     APP_BASE_URL: configuredAppBaseUrl,
     RESOLVED_APP_BASE_URL: summarizeUrl(appBaseUrl),
     NEXTAUTH_URL: nextAuthUrl,

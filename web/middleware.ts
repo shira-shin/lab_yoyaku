@@ -13,7 +13,7 @@ const PUBLIC_PREFIXES = [
   '/sitemap',
 ];
 const CANONICAL_HOST = 'labyoyaku.vercel.app';
-const secret = new TextEncoder().encode(process.env.APP_AUTH_SECRET || 'dev-secret');
+const secret = new TextEncoder().encode(process.env.AUTH_SECRET || 'dev-secret');
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.includes(pathname)) {

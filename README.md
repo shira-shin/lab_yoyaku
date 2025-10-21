@@ -69,9 +69,10 @@ Prisma migrations are applied automatically during `pnpm build`.
 
 - **Runtime**: Project Settings → General → Node.js Version → `20.x` (mirrors the repo `engines.node`).
 - **Environment variables** (set for Production and Preview):
-  - `GOOGLE_OAUTH_CLIENT_ID`
-  - `GOOGLE_OAUTH_CLIENT_SECRET`
-  - `APP_AUTH_SECRET`
+  - `AUTH_GOOGLE_ID`
+  - `AUTH_GOOGLE_SECRET`
+  - `AUTH_SECRET`
+  - `AUTH_TRUST_HOST=true` (required when running behind Vercel/production proxies)
   - `APP_BASE_URL=https://<your-domain>` (also set `NEXTAUTH_URL` to the same origin if required)
   - `DATABASE_URL=postgresql://...-pooler.neon.tech/...?...` (Neon connection pooling URL with `sslmode=require` and
     `pgbouncer=true`)
@@ -79,7 +80,7 @@ Prisma migrations are applied automatically during `pnpm build`.
 - **Google OAuth**: ensure `https://<your-domain>/api/auth/callback/google` is an authorized redirect URI and `https://<your-domain>` is an authorized JavaScript origin in Google Cloud Console.
 - Disable "Use existing Build Cache" when troubleshooting so that Prisma migrations run from a clean state.
 - **Post-deploy verification**: confirm the deployment is wired correctly by querying the diagnostic endpoints:
-  - `GET /api/_diag/auth` → `{ "hasGoogleId": true, "hasGoogleSecret": true, "appBaseUrl": "https://<your-domain>", "trustHost": true }`
+  - `GET /api/_diag/auth` → `{ "hasGoogleId": true, "hasGoogleSecret": true, "appBaseUrl": "https://<your-domain>", "authTrustHost": "true", "trustHostEffective": true }`
   - `GET /api/auth/providers` → response includes `google`
   - `GET /api/auth/session` → `{}` when logged out, populated session when signed in
   - `/api/auth/signin/google?callbackUrl=%2Fdashboard` → redirects to the Google consent screen
