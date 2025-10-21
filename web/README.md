@@ -14,10 +14,11 @@ pnpm -C web dev
 - `USE_MOCK` : `true` の場合は `/api/mock` 配下のモック API を有効化。`false`（デフォルト）の場合は Prisma 経由の本番 API のみを許可します。
 - `NEXT_PUBLIC_API_BASE` : クライアント側 fetch が別オリジンの API を叩く場合のベース URL。通常は空で相対パスを使用します。
 - `NEXT_PUBLIC_SITE_URL` : サーバー側 fetch のベース URL。指定がなければ Vercel 環境では `https://$VERCEL_URL`、ローカルでは `http://localhost:3000` を用います。
-- `APP_AUTH_SECRET` : NextAuth.js で暗号化に使用するランダム文字列。
+- `AUTH_SECRET` : NextAuth.js で暗号化に使用するランダム文字列。
 - `APP_BASE_URL` : デプロイ先（例: `https://<domain>`）。`NEXTAUTH_URL` も同値で設定すると古いクライアントとの互換性が保てます。
 - `APP_SESSION_COOKIE_NAME` : セッション Cookie 名（省略時は `lab_session`）。
-- `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` : Google Cloud Console で発行した OAuth 2.0 クライアントのクレデンシャル。
+- `AUTH_TRUST_HOST` : プロキシ配下で稼働させる場合は `true` に設定して `NextAuth.js` にホストヘッダーを信頼させます。
+- `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` : Google Cloud Console で発行した OAuth 2.0 クライアントのクレデンシャル。
 
 ### Google OAuth リダイレクト URI
 
