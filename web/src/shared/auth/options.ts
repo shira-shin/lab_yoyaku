@@ -1,9 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 
-const isProd = process.env.NODE_ENV === "production";
-
-export const authOptions: NextAuthConfig = {
+export const authConfig: NextAuthConfig = {
   providers: [
     Google({
       clientId: process.env.GOOGLE_OAUTH_CLIENT_ID!,
@@ -12,7 +10,5 @@ export const authOptions: NextAuthConfig = {
   ],
   secret: process.env.APP_AUTH_SECRET,
   trustHost: true,
-  debug: !isProd,
+  debug: process.env.NODE_ENV !== "production",
 };
-
-export const authConfig = authOptions;
