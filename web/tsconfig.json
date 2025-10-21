@@ -19,14 +19,11 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@/auth": [
-        "../auth"
-      ],
       "@/*": [
-        "./src/*"
-      ],
-      "@/src/*": [
         "src/*"
+      ],
+      "@/auth": [
+        "auth.ts"
       ]
     },
     "plugins": [
