@@ -1,15 +1,11 @@
+// v5: providers は「呼ばない」= Google({ ... }) としない
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
-const isDebugEnabled = process.env.NODE_ENV !== "production";
-const shouldTrustHost =
-  process.env.AUTH_TRUST_HOST === "true" ||
-  process.env.AUTH_TRUST_HOST === "1" ||
-  process.env.NODE_ENV !== "production";
-
 export const { auth, handlers, signIn, signOut } = NextAuth({
   providers: [Google],
-  secret: process.env.AUTH_SECRET,
-  trustHost: shouldTrustHost,
-  debug: isDebugEnabled,
+  trustHost: true,
+  debug: process.env.NODE_ENV !== "production",
+  // 秘密鍵があるならどちらかに合わせる（存在する方にそろえる）
+  secret: process.env.APP_AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
 });
