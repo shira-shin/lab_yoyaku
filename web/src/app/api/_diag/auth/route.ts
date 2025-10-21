@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import Google from "@/auth/providers/google";
+import Google from "next-auth/providers/google";
 import { appBaseUrl } from "@/lib/http/base-url";
 
 export async function GET() {
