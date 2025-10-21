@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { appBaseUrl } from "@/lib/http/base-url";
+
 type Masked = string | null;
 
 type UrlSummary =
@@ -51,18 +53,20 @@ const summarizeDatabaseUrl = (value?: string | null): DatabaseSummary => {
 };
 
 export async function GET() {
-  const appBaseUrl = summarizeUrl(process.env.APP_BASE_URL);
+  const configuredAppBaseUrl = summarizeUrl(process.env.APP_BASE_URL);
   const nextAuthUrl = summarizeUrl(process.env.NEXTAUTH_URL);
 
   return NextResponse.json({
     GOOGLE_OAUTH_CLIENT_ID: mask(process.env.GOOGLE_OAUTH_CLIENT_ID),
     GOOGLE_OAUTH_CLIENT_SECRET: mask(process.env.GOOGLE_OAUTH_CLIENT_SECRET),
     APP_AUTH_SECRET: mask(process.env.APP_AUTH_SECRET),
-    APP_BASE_URL: appBaseUrl,
+    APP_BASE_URL: configuredAppBaseUrl,
+    RESOLVED_APP_BASE_URL: summarizeUrl(appBaseUrl),
     NEXTAUTH_URL: nextAuthUrl,
     APP_BASE_URL_MATCHES_NEXTAUTH_URL:
-      appBaseUrl.present && nextAuthUrl.present && "summary" in appBaseUrl && "summary" in nextAuthUrl
-        ? appBaseUrl.summary === nextAuthUrl.summary
+      configuredAppBaseUrl.present && nextAuthUrl.present &&
+      "summary" in configuredAppBaseUrl && "summary" in nextAuthUrl
+        ? configuredAppBaseUrl.summary === nextAuthUrl.summary
         : null,
     DATABASE_URL: summarizeDatabaseUrl(process.env.DATABASE_URL),
     NODE_ENV: process.env.NODE_ENV ?? null,

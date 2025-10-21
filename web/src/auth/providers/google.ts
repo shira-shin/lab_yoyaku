@@ -1,3 +1,3 @@
-import GoogleProvider from "next-auth/providers/google";
+import GoogleProvider from "@auth/core/providers/google";
 
 export default GoogleProvider;
