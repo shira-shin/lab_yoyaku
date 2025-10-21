@@ -2,12 +2,17 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 import './globals.css';
+import type { Metadata } from 'next';
 import Header from '@/components/Header';
 import { Toaster } from '@/lib/toast';
 
-export const metadata = {
+export const metadata: Metadata = {
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.png', type: 'image/png' },
+    ],
   },
 };
 
@@ -24,4 +29,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-
