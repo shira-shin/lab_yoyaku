@@ -1,7 +1,19 @@
 import NextAuth from "next-auth";
+import Google from "next-auth/providers/google";
 
-import { authOptions } from "@/auth/config";
+const auth = NextAuth({
+  providers: [
+    Google({
+      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
+    }),
+  ],
+  secret: process.env.APP_AUTH_SECRET,
+  trustHost: true,
+  debug: process.env.NODE_ENV !== "production",
+});
 
-const handler = NextAuth(authOptions);
+export const GET = auth;
+export const POST = auth;
 
-export { handler as GET, handler as POST };
+export const runtime = "nodejs";

@@ -1,5 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
-import Google from "@/auth/providers/google";
+import Google from "next-auth/providers/google";
 
 const isProd = process.env.NODE_ENV === "production";
 
