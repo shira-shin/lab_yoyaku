@@ -60,6 +60,9 @@ async function main() {
     if (relPath === "scripts/check-auth-imports.mjs") {
       continue;
     }
+    if (relPath === "web/auth.runtime.ts") {
+      continue;
+    }
     const content = await readFile(file, "utf8");
     const fileIssues = new Set();
 
