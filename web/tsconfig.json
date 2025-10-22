@@ -23,7 +23,7 @@
         "src/*"
       ],
       "@/auth": [
-        "auth.runtime.ts"
+        "auth.ts"
       ]
     },
     "plugins": [
