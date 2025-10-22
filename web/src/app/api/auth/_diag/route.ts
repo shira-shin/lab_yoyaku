@@ -22,6 +22,7 @@ export async function GET() {
     authCoreResolved: r("@auth/core"),
     nextAuthVersion: r("next-auth/package.json"),
     authCoreVersion: r("@auth/core/package.json"),
+    authUrl: process.env.AUTH_URL,
     nextAuthUrl: process.env.NEXTAUTH_URL,
   });
 }

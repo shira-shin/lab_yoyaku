@@ -1,10 +1,10 @@
 import process from "node:process";
 
 const required = [
-  "AUTH_GOOGLE_ID",
-  "AUTH_GOOGLE_SECRET",
+  "GOOGLE_OAUTH_CLIENT_ID",
+  "GOOGLE_OAUTH_CLIENT_SECRET",
   "AUTH_SECRET",
-  "APP_BASE_URL",
+  "AUTH_URL",
 ];
 
 const missing = required.filter((key) => !process.env[key]);

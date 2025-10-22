@@ -1,11 +1,21 @@
-// v5: providers は「呼ばない」= Google({ ... }) としない
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { PrismaClient } from "@prisma/client";
 
-export const { auth, handlers, signIn, signOut } = NextAuth({
-  providers: [Google],
+const prisma = new PrismaClient();
+
+export const authConfig = {
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    Google({
+      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: false,
+    }),
+  ],
+  session: { strategy: "jwt" },
   trustHost: true,
-  debug: process.env.NODE_ENV !== "production",
-  // 秘密鍵があるならどちらかに合わせる（存在する方にそろえる）
-  secret: process.env.APP_AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
-});
+} satisfies NextAuthConfig;
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);

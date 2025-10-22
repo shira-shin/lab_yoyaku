@@ -53,7 +53,11 @@ const summarizeDatabaseUrl = (value?: string | null): DatabaseSummary => {
 };
 
 export async function GET() {
+  const configuredAuthUrl = summarizeUrl(process.env.AUTH_URL);
   const configuredAppBaseUrl = summarizeUrl(process.env.APP_BASE_URL);
+  const effectiveConfiguredUrl = summarizeUrl(
+    process.env.AUTH_URL ?? process.env.APP_BASE_URL,
+  );
   const nextAuthUrl = summarizeUrl(process.env.NEXTAUTH_URL);
 
   const trustHostEffective =
@@ -62,18 +66,19 @@ export async function GET() {
     process.env.NODE_ENV !== "production";
 
   return NextResponse.json({
-    AUTH_GOOGLE_ID: mask(process.env.AUTH_GOOGLE_ID),
-    AUTH_GOOGLE_SECRET: mask(process.env.AUTH_GOOGLE_SECRET),
+    GOOGLE_OAUTH_CLIENT_ID: mask(process.env.GOOGLE_OAUTH_CLIENT_ID),
+    GOOGLE_OAUTH_CLIENT_SECRET: mask(process.env.GOOGLE_OAUTH_CLIENT_SECRET),
     AUTH_SECRET: mask(process.env.AUTH_SECRET),
     AUTH_TRUST_HOST: process.env.AUTH_TRUST_HOST ?? null,
     AUTH_TRUST_HOST_EFFECTIVE: trustHostEffective,
+    AUTH_URL: configuredAuthUrl,
     APP_BASE_URL: configuredAppBaseUrl,
     RESOLVED_APP_BASE_URL: summarizeUrl(appBaseUrl),
     NEXTAUTH_URL: nextAuthUrl,
-    APP_BASE_URL_MATCHES_NEXTAUTH_URL:
-      configuredAppBaseUrl.present && nextAuthUrl.present &&
-      "summary" in configuredAppBaseUrl && "summary" in nextAuthUrl
-        ? configuredAppBaseUrl.summary === nextAuthUrl.summary
+    AUTH_URL_MATCHES_NEXTAUTH_URL:
+      effectiveConfiguredUrl.present && nextAuthUrl.present &&
+      "summary" in effectiveConfiguredUrl && "summary" in nextAuthUrl
+        ? effectiveConfiguredUrl.summary === nextAuthUrl.summary
         : null,
     DATABASE_URL: summarizeDatabaseUrl(process.env.DATABASE_URL),
     NODE_ENV: process.env.NODE_ENV ?? null,
