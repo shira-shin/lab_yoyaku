@@ -78,7 +78,8 @@ Prisma migrations are applied automatically during `pnpm build`.
     `pgbouncer=true`)
   - Preview deployments only: `USE_MOCK=true` to bypass live database traffic when troubleshooting
 - **Google OAuth**: ensure `https://<your-domain>/api/auth/callback/google` is an authorized redirect URI and `https://<your-domain>` is an authorized JavaScript origin in Google Cloud Console.
-- Disable "Use existing Build Cache" when troubleshooting so that Prisma migrations run from a clean state.
+- Use Vercel's **Redeploy → Clear build cache** flow (or disable "Use existing Build Cache") when troubleshooting so that Prisma
+  migrations and NextAuth chunks are rebuilt from a clean state.
 - **Post-deploy verification**: confirm the deployment is wired correctly by querying the diagnostic endpoints:
   - `GET /api/_diag/auth` → `{ "hasGoogleClientId": true, "hasGoogleClientSecret": true, "appBaseUrl": "https://<your-domain>", "authTrustHost": "true", "trustHostEffective": true }`
   - `GET /api/auth/providers` → response includes `google`

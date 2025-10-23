@@ -3,8 +3,9 @@ import Google from "next-auth/providers/google";
 
 export const authConfig: NextAuthConfig = {
   trustHost: true,
-  session: { strategy: "jwt" },
+  // v5 でも top-level の secret はOK（AUTH_SECRET をそのまま使用）
   secret: process.env.AUTH_SECRET,
+  session: { strategy: "jwt" },
   providers: [
     Google({
       clientId: process.env.GOOGLE_OAUTH_CLIENT_ID!,
