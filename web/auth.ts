@@ -1,11 +1,11 @@
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
-// v5 は provider を「呼ばない」→ 配列にシンボルをそのまま入れる
 
+// 重要: v5 は providers に「関数そのもの」を渡す。Google() と“呼ばない”
 export const authConfig: NextAuthConfig = {
   trustHost: true,
   session: { strategy: "jwt" },
-  providers: [Google], // ← 絶対に Google() としない
+  providers: [Google],
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
