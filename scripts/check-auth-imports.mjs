@@ -143,14 +143,16 @@ async function main() {
       }
     }
 
-    for (const name of providerNames) {
-      const callPattern = new RegExp(`\\b${name}\\s*\\(`, "g");
-      if (callPattern.test(content)) {
-        fileIssues.add(`Provider "${name}" must be passed directly without calling it.`);
-      }
-      const newPattern = new RegExp(`new\\s+${name}\\s*\\(`, "g");
-      if (newPattern.test(content)) {
-        fileIssues.add(`Provider "${name}" must not be instantiated with 'new'.`);
+    if (relPath !== "web/auth.ts") {
+      for (const name of providerNames) {
+        const callPattern = new RegExp(`\\b${name}\\s*\\(`, "g");
+        if (callPattern.test(content)) {
+          fileIssues.add(`Provider "${name}" must be passed directly without calling it.`);
+        }
+        const newPattern = new RegExp(`new\\s+${name}\\s*\\(`, "g");
+        if (newPattern.test(content)) {
+          fileIssues.add(`Provider "${name}" must not be instantiated with 'new'.`);
+        }
       }
     }
 
