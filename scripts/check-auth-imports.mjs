@@ -52,6 +52,47 @@ function extractDefaultProviderNames(spec) {
   return [...names];
 }
 
+const MANIFEST_PATHS = [
+  "package.json",
+  "web/package.json",
+];
+
+async function checkManifests(issues) {
+  for (const manifestRelPath of MANIFEST_PATHS) {
+    const manifestPath = join(PROJECT_ROOT, manifestRelPath);
+    let manifest;
+
+    try {
+      manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    } catch (error) {
+      if (error && error.code === "ENOENT") {
+        continue;
+      }
+      throw error;
+    }
+
+    const manifestIssues = new Set();
+    const { dependencies = {}, devDependencies = {}, optionalDependencies = {}, peerDependencies = {} } = manifest;
+
+    if (dependencies["@auth/core"]) {
+      manifestIssues.add("Do not declare '@auth/core' as a dependency; rely on 'next-auth' to provide it.");
+    }
+    if (devDependencies["@auth/core"]) {
+      manifestIssues.add("Do not declare '@auth/core' as a devDependency.");
+    }
+    if (optionalDependencies["@auth/core"]) {
+      manifestIssues.add("Do not declare '@auth/core' as an optional dependency.");
+    }
+    if (peerDependencies["@auth/core"]) {
+      manifestIssues.add("Do not declare '@auth/core' as a peer dependency.");
+    }
+
+    if (manifestIssues.size > 0) {
+      issues.push({ file: manifestRelPath, messages: [...manifestIssues] });
+    }
+  }
+}
+
 async function main() {
   const issues = [];
 
@@ -117,6 +158,8 @@ async function main() {
       issues.push({ file: relPath, messages: [...fileIssues] });
     }
   }
+
+  await checkManifests(issues);
 
   if (issues.length > 0) {
     console.error("Auth import check failed:");
