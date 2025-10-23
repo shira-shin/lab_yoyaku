@@ -1,9 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 export default function LoginPage() {
-  const [tab, setTab] = useState<"login" | "signup">("login");
+  const [tab, setTab] = useState<"login" | "new">("new");
+  const googleButtonClass =
+    "w-full rounded-xl bg-foreground text-background py-3 font-medium inline-flex items-center justify-center gap-3";
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)] bg-background text-foreground">
@@ -56,9 +59,9 @@ export default function LoginPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTab("signup")}
+                  onClick={() => setTab("new")}
                   className={`px-1 pb-3 -mb-px border-b-2 font-medium transition-colors ${
-                    tab === "signup"
+                    tab === "new"
                       ? "border-foreground text-foreground"
                       : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
@@ -89,9 +92,9 @@ export default function LoginPage() {
                     テスト: <span className="font-mono">demo / demo</span> でもログインできます。
                   </p>
 
-                  <a
-                    href="/api/auth/signin/google?callbackUrl=%2Fgroups%2Fnew"
-                    className="w-full rounded-xl bg-foreground text-background py-3 font-medium inline-flex items-center justify-center gap-3"
+                  <Link
+                    href="/api/auth/signin/google?callbackUrl=/dashboard"
+                    className={googleButtonClass}
                   >
                     <svg width="18" height="18" viewBox="0 0 533.5 544.3" aria-hidden>
                       <path
@@ -112,16 +115,16 @@ export default function LoginPage() {
                       />
                     </svg>
                     Googleでログイン
-                  </a>
+                  </Link>
                 </>
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground">
                     Googleアカウントでログインすると、新しいグループを作成できます。
                   </p>
-                  <a
-                    href="/api/auth/signin/google?callbackUrl=%2Fgroups%2Fnew"
-                    className="w-full rounded-xl bg-foreground text-background py-3 font-medium inline-flex items-center justify-center gap-3"
+                  <Link
+                    href="/api/auth/signin/google?callbackUrl=/groups/new"
+                    className={googleButtonClass}
                   >
                     <svg width="18" height="18" viewBox="0 0 533.5 544.3" aria-hidden>
                       <path
@@ -142,7 +145,7 @@ export default function LoginPage() {
                       />
                     </svg>
                     Googleで新規作成
-                  </a>
+                  </Link>
                   <p className="text-xs text-muted-foreground text-center">
                     既存グループに参加する場合も、同じボタンからログインできます。
                   </p>
