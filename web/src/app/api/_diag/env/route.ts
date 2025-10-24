@@ -53,34 +53,15 @@ const summarizeDatabaseUrl = (value?: string | null): DatabaseSummary => {
 };
 
 export async function GET() {
-  const configuredAuthUrl = summarizeUrl(process.env.AUTH_URL);
   const configuredAppBaseUrl = summarizeUrl(process.env.APP_BASE_URL);
-  const effectiveConfiguredUrl = summarizeUrl(
-    process.env.AUTH_URL ?? process.env.APP_BASE_URL,
-  );
-  const nextAuthUrl = summarizeUrl(process.env.NEXTAUTH_URL);
-
-  const trustHostEffective =
-    process.env.AUTH_TRUST_HOST === "true" ||
-    process.env.AUTH_TRUST_HOST === "1" ||
-    process.env.NODE_ENV !== "production";
 
   return NextResponse.json({
-    GOOGLE_OAUTH_CLIENT_ID: mask(process.env.GOOGLE_OAUTH_CLIENT_ID),
-    GOOGLE_OAUTH_CLIENT_SECRET: mask(process.env.GOOGLE_OAUTH_CLIENT_SECRET),
-    AUTH_SECRET: mask(process.env.AUTH_SECRET),
-    AUTH_TRUST_HOST: process.env.AUTH_TRUST_HOST ?? null,
-    AUTH_TRUST_HOST_EFFECTIVE: trustHostEffective,
-    AUTH_URL: configuredAuthUrl,
     APP_BASE_URL: configuredAppBaseUrl,
     RESOLVED_APP_BASE_URL: summarizeUrl(appBaseUrl),
-    NEXTAUTH_URL: nextAuthUrl,
-    AUTH_URL_MATCHES_NEXTAUTH_URL:
-      effectiveConfiguredUrl.present && nextAuthUrl.present &&
-      "summary" in effectiveConfiguredUrl && "summary" in nextAuthUrl
-        ? effectiveConfiguredUrl.summary === nextAuthUrl.summary
-        : null,
     DATABASE_URL: summarizeDatabaseUrl(process.env.DATABASE_URL),
+    RUN_MIGRATIONS: process.env.RUN_MIGRATIONS ?? null,
+    APP_SESSION_COOKIE_NAME: process.env.APP_SESSION_COOKIE_NAME ?? "lab_session",
+    MAIL_WEBHOOK: mask(process.env.MAIL_WEBHOOK),
     NODE_ENV: process.env.NODE_ENV ?? null,
     VERCEL: process.env.VERCEL ?? null,
   });

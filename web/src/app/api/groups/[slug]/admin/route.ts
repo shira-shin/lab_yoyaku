@@ -3,7 +3,7 @@ export const revalidate = 0;
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
-import { getServerSession, normalizeEmail } from '@/lib/auth-legacy';
+import { getAuthContext, normalizeEmail } from '@/lib/auth-legacy';
 
 function decodeSlug(value: string) {
   try {
@@ -19,8 +19,8 @@ function sanitizeBaseUrl(value: string | undefined | null) {
 }
 
 export async function GET(_: Request, { params }: { params: { slug: string } }) {
-  const session = await getServerSession();
-  const email = session?.user?.email;
+  const auth = await getAuthContext();
+  const email = auth?.user?.email;
   if (!email) {
     return NextResponse.json({ code: 'unauthorized' }, { status: 401 });
   }

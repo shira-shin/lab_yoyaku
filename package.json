@@ -9,16 +9,9 @@
       "@prisma/client",
       "@prisma/engines",
       "prisma"
-    ],
-    "overrides": {
-      "next-auth": "5.0.0-beta.29",
-      "@auth/prisma-adapter": "2.11.0"
-    }
+    ]
   },
   "engines": {
     "node": "20.x"
-  },
-  "scripts": {
-    "check:imports": "node ./scripts/check-auth-imports.mjs"
   }
 }

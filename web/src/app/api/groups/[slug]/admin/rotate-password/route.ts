@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
-import { getServerSession, normalizeEmail } from '@/lib/auth-legacy';
+import { getAuthContext, normalizeEmail } from '@/lib/auth-legacy';
 
 function decodeSlug(value: string) {
   try {
@@ -18,8 +18,8 @@ function generatePasscode(length = 12) {
 }
 
 export async function POST(_: Request, { params }: { params: { slug: string } }) {
-  const session = await getServerSession();
-  const email = session?.user?.email;
+  const auth = await getAuthContext();
+  const email = auth?.user?.email;
   if (!email) {
     return NextResponse.json({ code: 'unauthorized' }, { status: 401 });
   }

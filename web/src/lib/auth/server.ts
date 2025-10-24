@@ -11,7 +11,7 @@ export async function auth() {
   return { user };
 }
 
-export async function getServerSession() {
+export async function getAuthContext() {
   return auth();
 }
 

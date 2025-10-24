@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import { prisma } from '@/server/db/prisma';
-import { getServerSession } from '@/lib/auth-legacy';
+import { getAuthContext } from '@/lib/auth-legacy';
 import { normalizeEmail } from '@/lib/email';
 
 export default async function GroupHeader({ slug }: { slug: string }) {
-  const session = await getServerSession();
+  const auth = await getAuthContext();
   const normalizedSlug = slug.toLowerCase();
   const group = await prisma.group.findUnique({
     where: { slug: normalizedSlug },
@@ -12,9 +12,9 @@ export default async function GroupHeader({ slug }: { slug: string }) {
   });
 
   const isOwner =
-    !!session?.user?.email &&
+    !!auth?.user?.email &&
     !!group?.hostEmail &&
-    normalizeEmail(session.user.email) === normalizeEmail(group.hostEmail);
+    normalizeEmail(auth.user.email) === normalizeEmail(group.hostEmail);
 
   if (!group) {
     return null;

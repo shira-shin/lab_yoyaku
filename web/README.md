@@ -1,38 +1,65 @@
 # Web frontend
 
-## ローカル起動
+## Local development
 
 ```bash
 pnpm -C web dev
 ```
 
-ブラウザで <http://localhost:3000> を開きます。
+Visit <http://localhost:3000> once the dev server boots.
 
-## 環境変数
+## Environment variables
 
-- `DATABASE_URL` : Prisma が接続する PostgreSQL の接続文字列。Neon を利用する場合は `*-pooler.neon.tech` の connection pooling URL（`sslmode=require&pgbouncer=true` を含む）を設定します。
-- `USE_MOCK` : `true` の場合は `/api/mock` 配下のモック API を有効化。`false`（デフォルト）の場合は Prisma 経由の本番 API のみを許可します。
-- `NEXT_PUBLIC_API_BASE` : クライアント側 fetch が別オリジンの API を叩く場合のベース URL。通常は空で相対パスを使用します。
-- `NEXT_PUBLIC_SITE_URL` : サーバー側 fetch のベース URL。指定がなければ Vercel 環境では `https://$VERCEL_URL`、ローカルでは `http://localhost:3000` を用います。
-- `AUTH_SECRET` : NextAuth.js で暗号化に使用するランダム文字列。
-- `AUTH_URL` : デプロイ先（例: `https://<domain>`）。`NEXTAUTH_URL` も同値で設定すると古いクライアントとの互換性が保てます。
-- `APP_SESSION_COOKIE_NAME` : セッション Cookie 名（省略時は `lab_session`）。
-- `AUTH_TRUST_HOST` : プロキシ配下で稼働させる場合は `true` に設定して `NextAuth.js` にホストヘッダーを信頼させます。
-- `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` : Google Cloud Console で発行した OAuth 2.0 クライアントのクレデンシャル。
+`pnpm build` calls `web/scripts/assert-env.ts` which currently requires `DATABASE_URL`. The helper prints a friendly error if it is missing before running `prisma generate`.
 
-### Google OAuth リダイレクト URI
+### Database connection
 
-Google Cloud Console の OAuth 2.0 クライアントには、以下のリダイレクト URI を登録してください。
+- `DATABASE_URL` — PostgreSQL connection string pointing to the **direct** Neon host with `sslmode=require` and a URL-encoded password.
+- Use `./scripts/set-database-url.sh` (macOS/Linux) or `./scripts/set-database-url.ps1` (PowerShell) to compose a safe URL:
+  ```bash
+  cd web
+  ./scripts/set-database-url.sh neondb_owner 'YOUR_REAL_PASSWORD' ep-xxxxx.ap-southeast-1.aws.neon.tech neondb
+  ```
+  ```powershell
+  cd web
+  ./scripts/set-database-url.ps1 -User 'neondb_owner' -PasswordRaw 'YOUR_REAL_PASSWORD' -Host 'ep-xxxxx.ap-southeast-1.aws.neon.tech' -DbName 'neondb'
+  ```
+  The scripts reject `-pooler` hosts and display a masked URL after exporting `DATABASE_URL` in the current shell.
 
-- ローカル開発: `http://localhost:3000/api/auth/callback/google`
-- Vercel (例): `https://<your-vercel-domain>/api/auth/callback/google`
+### Application settings
 
-## Tailwind v4 メモ
+- `APP_BASE_URL` (optional) — canonical origin used when generating email links (defaults to `http://localhost:3000` in development).
+- `APP_SESSION_COOKIE_NAME` (optional) — overrides the session cookie name (default: `lab_session`).
+- `USE_MOCK` — set to `true` to serve mock API responses during local testing without touching the database.
+- `NEXT_PUBLIC_API_BASE` — client-side base URL override for API calls.
+- `NEXT_PUBLIC_SITE_URL` — server-side fetch base URL override.
+- `NEXT_PUBLIC_APP_TZ` — display timezone (default `Asia/Tokyo`).
+- `BCRYPT_ROUNDS` — override the cost factor when generating temporary passwords.
 
-- `src/app/globals.css` で `@import "tailwindcss";` を使用します。
-- `postcss.config.js` は `@tailwindcss/postcss` プラグインのみを読み込みます。
-- v4 から `@tailwind base` などは不要です。
+### Build-time migrations
 
-## 検証時の注意
+`package.json` keeps the existing gate: `RUN_MIGRATIONS === '1'` triggers `prisma migrate deploy` during `pnpm build`. All other values skip the deploy.
 
-- プレビューと本番ではクッキーがホスト単位で分離されます。同じホスト（例: `https://labyoyaku.vercel.app`）に固定してログイン状態を確認してください。
+- **Vercel policy:** leave `RUN_MIGRATIONS` unset (or explicitly `0`). Builds will run `prisma generate` only and log `Skipping prisma migrate deploy`.
+- **Local/CI:** export `RUN_MIGRATIONS=1` when you intentionally want `pnpm build` to apply migrations:
+  ```bash
+  cd web
+  RUN_MIGRATIONS=1 pnpm build
+  ```
+
+For the detailed migration playbook see [`docs/db-ops.md`](./docs/db-ops.md).
+
+## Tailwind v4 notes
+
+- `src/app/globals.css` uses `@import "tailwindcss";`.
+- `postcss.config.js` loads the `@tailwindcss/postcss` plugin only.
+- Tailwind v4 no longer needs `@tailwind base` declarations.
+
+## Diagnostics
+
+- `/api/_diag/env` summarises the resolved environment (base URL, database host, etc.).
+- `/api/health/db` checks database connectivity.
+
+## Preview checks
+
+When working in preview deployments remember that cookies are isolated per domain. Use the same hostname (for example `https://labyoyaku.vercel.app`) when validating the login flow.

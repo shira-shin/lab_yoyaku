@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { prisma } from '@/server/db/prisma';
-import { getServerSession } from '@/lib/auth-legacy';
+import { getAuthContext } from '@/lib/auth-legacy';
 import { normalizeEmail } from '@/lib/email';
 import PasswordPanel from './PasswordPanel';
 import CopyButton from './CopyButton';
@@ -13,7 +13,7 @@ function sanitizeBaseUrl(value: string | undefined | null) {
 }
 
 export default async function AdminPage({ params }: { params: { slug: string } }) {
-  const session = await getServerSession();
+  const auth = await getAuthContext();
   const rawSlug = params?.slug ?? '';
   const decodedSlug = (() => {
     try {
@@ -40,7 +40,7 @@ export default async function AdminPage({ params }: { params: { slug: string } }
     return <div className="p-6">グループが見つかりません。</div>;
   }
 
-  const sessionEmail = session?.user?.email ? normalizeEmail(session.user.email) : null;
+  const sessionEmail = auth?.user?.email ? normalizeEmail(auth.user.email) : null;
   if (!sessionEmail || sessionEmail !== normalizeEmail(group.hostEmail ?? '')) {
     return <div className="p-6">権限がありません（ホストのみ）。</div>;
   }

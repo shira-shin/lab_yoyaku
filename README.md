@@ -43,8 +43,7 @@ If dependency installation fails with a `403` status, follow this order of opera
 
 2. **Attempt installation with an explicit registry**
    ```bash
-   pnpm -F lab_yoyaku-web add next-auth@^5 @auth/prisma-adapter@^2.5.4 \
-     --registry=https://registry.npmjs.org/
+   pnpm --filter web install --registry=https://registry.npmjs.org/
    ```
 
 3. **Check for network or certificate issues**
@@ -56,14 +55,19 @@ If dependency installation fails with a `403` status, follow this order of opera
 403 responses typically indicate that traffic is being routed to a private registry requiring authentication or is being blocked by a corporate proxy. Ensure requests are sent to the public npm registry before attempting other workarounds.
 
 ### Environment
-Set `DATABASE_URL` in `web/.env.local` to the **Neon connection pooling URL** (hosted at `*-pooler.neon.tech`) so that Prisma
-talks to PgBouncer with SSL enabled, for example:
+Set `DATABASE_URL` in `web/.env.local` (or export it in your shell) using the **direct** Neon host with `sslmode=require`. The helper scripts in `web/scripts/` URL-encode the password and reject pooler hosts:
 
-```
-postgresql://USER:PASS@ep-xxxxxx-pooler.neon.tech/neondb?sslmode=require&pgbouncer=true&connect_timeout=15
+```bash
+cd web
+./scripts/set-database-url.sh neondb_owner 'YOUR_REAL_PASSWORD' ep-xxxxx.ap-southeast-1.aws.neon.tech neondb
 ```
 
-Prisma migrations are applied automatically during `pnpm build`.
+```powershell
+cd web
+./scripts/set-database-url.ps1 -User 'neondb_owner' -PasswordRaw 'YOUR_REAL_PASSWORD' -Host 'ep-xxxxx.ap-southeast-1.aws.neon.tech' -DbName 'neondb'
+```
+
+`pnpm build` only runs `prisma migrate deploy` when `RUN_MIGRATIONS=1`. Leave it unset/`0` in environments such as Vercel so that the build logs `Skipping prisma migrate deploy` and only runs `prisma generate`.
 
 ### Database operations quick start
 See: `web/docs/db-ops.md`
@@ -81,23 +85,14 @@ pnpm run db:migrate:deploy
 #### Vercel deployment checklist
 
 - **Runtime**: Project Settings → General → Node.js Version → `20.x` (mirrors the repo `engines.node`).
-- **Environment variables** (set for Production and Preview):
-  - `GOOGLE_OAUTH_CLIENT_ID`
-  - `GOOGLE_OAUTH_CLIENT_SECRET`
-  - `AUTH_SECRET`
-  - `AUTH_TRUST_HOST=true` (required when running behind Vercel/production proxies)
-  - `AUTH_URL=https://<your-domain>` (also set `NEXTAUTH_URL` to the same origin if required)
-  - `DATABASE_URL=postgresql://...-pooler.neon.tech/...?...` (Neon connection pooling URL with `sslmode=require` and
-    `pgbouncer=true`)
-  - Preview deployments only: `USE_MOCK=true` to bypass live database traffic when troubleshooting
-- **Google OAuth**: ensure `https://<your-domain>/api/auth/callback/google` is an authorized redirect URI and `https://<your-domain>` is an authorized JavaScript origin in Google Cloud Console.
-- Use Vercel's **Redeploy → Clear build cache** flow (or disable "Use existing Build Cache") when troubleshooting so that Prisma
-  migrations and NextAuth chunks are rebuilt from a clean state.
-- **Post-deploy verification**: confirm the deployment is wired correctly by querying the diagnostic endpoints:
-  - `GET /api/_diag/auth` → `{ "hasGoogleClientId": true, "hasGoogleClientSecret": true, "appBaseUrl": "https://<your-domain>", "authTrustHost": "true", "trustHostEffective": true }`
-  - `GET /api/auth/providers` → response includes `google`
-  - `GET /api/auth/session` → `{}` when logged out, populated session when signed in
-  - `/api/auth/signin/google?callbackUrl=%2Fdashboard` → redirects to the Google consent screen
+- **Environment variables** (Production + Preview):
+  - `DATABASE_URL` — Neon direct host URL with `sslmode=require` and URL-encoded password.
+  - `RUN_MIGRATIONS` — leave unset or `0` so that builds skip `prisma migrate deploy`.
+  - `APP_BASE_URL` — canonical origin used in emails (e.g. `https://<your-domain>`).
+  - `APP_SESSION_COOKIE_NAME` — optional override, defaults to `lab_session`.
+  - Preview deployments only: `USE_MOCK=true` if you need to disable live database writes temporarily.
+- **Database migrations**: run manually from a trusted shell or CI job following [`web/docs/db-ops.md`](web/docs/db-ops.md).
+- **Post-deploy verification**: confirm `GET /api/_diag/env` reports the expected base URL and direct database host, and `GET /api/health/db` returns a healthy status.
 
 ### DB health check
 
