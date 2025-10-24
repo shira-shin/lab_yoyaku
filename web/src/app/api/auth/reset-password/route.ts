@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/server/db/prisma";
 
-import { destroySession, hashPassword } from "@/lib/auth";
+import { clearLoginCookie, hashPassword } from "@/lib/auth";
 import { consumePasswordResetToken } from "@/lib/reset-token";
 
 export async function POST(req: Request) {
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
   const passwordHash = await hashPassword(newPassword);
   await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
-  await destroySession();
+  await clearLoginCookie();
 
   return NextResponse.json({ ok: true });
 }

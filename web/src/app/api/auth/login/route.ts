@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/server/db/prisma";
 
-import { createSession, normalizeEmail, verifyPassword, needsRehash, hashPassword } from "@/lib/auth";
+import { createLoginCookie, normalizeEmail, verifyPassword, needsRehash, hashPassword } from "@/lib/auth";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     });
   }
 
-  await createSession(user.id);
+  await createLoginCookie(user.id);
 
   return NextResponse.json({ ok: true });
 }

@@ -4,8 +4,7 @@ const fallbackFromVercel = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : undefined;
 
-const envBaseUrl =
-  process.env.AUTH_URL ?? process.env.APP_BASE_URL ?? fallbackFromVercel;
+const envBaseUrl = process.env.APP_BASE_URL ?? fallbackFromVercel;
 
 const normalize = (value: string) => value.replace(/\/$/, "");
 

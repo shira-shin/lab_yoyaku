@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "@/lib/auth-legacy";
+import { getAuthContext } from "@/lib/auth-legacy";
 import { prisma } from "@/server/db/prisma";
 import { toUtcIsoZ } from "@/lib/time";
 
@@ -11,8 +11,8 @@ function mustUtcIsoZ(value: unknown): string {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession();
-  if (!session?.user?.email) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const auth = await getAuthContext();
+  if (!auth?.user?.email) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
   const { deviceId, deviceSlug, groupSlug, startsAtUTC, endsAtUTC, purpose } = body as {
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     data: {
       start: startAt,
       end: endAt,
-      userEmail: session.user.email,     // スキーマの必須項目
+      userEmail: auth.user.email,     // スキーマの必須項目
       device: { connect: { id: device.id } },
       purpose: purpose?.trim() ? purpose.trim() : undefined,
     },

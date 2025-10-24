@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { randomUUID } from 'crypto'
 import { prisma } from '@/server/db/prisma'
-import { getServerSession, normalizeEmail } from '@/lib/auth-legacy'
+import { getAuthContext, normalizeEmail } from '@/lib/auth-legacy'
 import { normalizeSlugInput } from '@/lib/slug'
 import { normalizeJoinInput } from '@/lib/text'
 
@@ -25,11 +25,11 @@ const decodeSlug = (value: string) => {
 
 export async function POST(req: Request, { params }: { params: { slug: string } }) {
   try {
-    const session = await getServerSession()
-    const emailRaw = session?.user?.email ?? ''
+    const auth = await getAuthContext()
+    const emailRaw = auth?.user?.email ?? ''
     const email = typeof emailRaw === 'string' ? emailRaw.trim() : ''
     const normalizedEmail = normalizeEmail(email)
-    const name = session?.user?.name?.trim() || null
+    const name = auth?.user?.name?.trim() || null
 
     if (!normalizedEmail) {
       return NextResponse.json({ ok: false, code: 'unauthorized', error: 'unauthorized' }, { status: 401 })

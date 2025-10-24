@@ -15,7 +15,7 @@ export async function hashPassword(raw: string) {
   return hashWithCost(raw);
 }
 
-export async function createSession(userId: string) {
+export async function createLoginCookie(userId: string) {
   const cookieStore = cookies();
   const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
 
@@ -30,7 +30,7 @@ export async function createSession(userId: string) {
   });
 }
 
-export async function destroySession() {
+export async function clearLoginCookie() {
   const cookieStore = cookies();
   cookieStore.delete(SESSION_COOKIE);
 }
