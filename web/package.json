@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node -e \"const {execSync}=require('node:child_process'); const run=c=>execSync(c,{stdio:'inherit',shell:true}); run('pnpm exec tsx scripts/assert-env.ts'); run('prisma generate'); if (process.env.VERCEL === '1' || process.env.USE_MOCK === 'true') { console.log('Skipping prisma migrate deploy on Vercel/CI or mock mode'); } else { run('prisma migrate deploy'); } run('next build');\"",
+    "build": "node -e \"const {execSync}=require('node:child_process'); const run=c=>execSync(c,{stdio:'inherit',shell:true}); run('pnpm exec tsx scripts/assert-env.ts'); run('prisma generate'); if (process.env.RUN_MIGRATIONS === '1') { run('prisma migrate deploy'); } else { console.log('Skipping prisma migrate deploy'); } run('next build');\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "next start",
     "lint": "next lint",
