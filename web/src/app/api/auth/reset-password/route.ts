@@ -21,7 +21,6 @@ export async function POST(req: Request) {
 
   const passwordHash = await hashPassword(newPassword);
   await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
-  await prisma.session.deleteMany({ where: { userId } });
   await destroySession();
 
   return NextResponse.json({ ok: true });

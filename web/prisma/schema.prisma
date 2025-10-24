@@ -15,7 +15,6 @@ model User {
   passwordHash     String        @db.Text
   emailVerified    DateTime?
   image            String?
-  sessions         Session[]
   reservations     Reservation[]
   dutyAssignments  DutyAssignment[]
   groupMemberships GroupMember[]
@@ -40,17 +39,6 @@ enum DutyManagePolicy {
 enum DutyKind {
   DAY_SLOT
   TIME_RANGE
-}
-
-model Session {
-  id         String   @id @default(cuid())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String
-  tokenHash  String   @unique @db.Text
-  userAgent  String?
-  ip         String?
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
 }
 
 model PasswordResetToken {
