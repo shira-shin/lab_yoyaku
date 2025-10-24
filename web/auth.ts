@@ -1,5 +1,7 @@
 import NextAuth, { type NextAuthConfig } from "next-auth";
-import Google from "next-auth/providers/google";
+import GoogleImport from "next-auth/providers/google";
+
+const Google = (GoogleImport as any)?.default ?? (GoogleImport as any);
 export const authConfig: NextAuthConfig = {
   trustHost: true,
   secret: process.env.AUTH_SECRET,
