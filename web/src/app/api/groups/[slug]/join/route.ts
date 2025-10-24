@@ -3,6 +3,7 @@ export const revalidate = 0
 
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
+import { randomUUID } from 'crypto'
 import { prisma } from '@/server/db/prisma'
 import { getServerSession, normalizeEmail } from '@/lib/auth-legacy'
 import { normalizeSlugInput } from '@/lib/slug'
@@ -73,11 +74,13 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
     let dbUser = await prisma.user.findUnique({ where: { normalizedEmail } })
     const fallbackName = email.split('@')[0]
     if (!dbUser) {
+      const tempPasswordHash = await bcrypt.hash(randomUUID(), 10)
       dbUser = await prisma.user.create({
         data: {
           email,
           normalizedEmail,
           name: name || fallbackName,
+          passwordHash: tempPasswordHash,
         },
       })
     } else if (name && dbUser.name !== name) {
