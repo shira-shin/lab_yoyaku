@@ -2,7 +2,8 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import { NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
+import bcrypt, { hash as bcryptHash } from 'bcryptjs'
+import { randomUUID } from 'crypto'
 import { prisma } from '@/server/db/prisma'
 import { getServerSession, normalizeEmail } from '@/lib/auth-legacy'
 import { normalizeSlugInput } from '@/lib/slug'
@@ -73,11 +74,15 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
     let dbUser = await prisma.user.findUnique({ where: { normalizedEmail } })
     const fallbackName = email.split('@')[0]
     if (!dbUser) {
+      // 招待経由の仮ユーザー作成用に、一時パスワードのハッシュを入れておく
+      const tempPasswordHash = await bcryptHash(randomUUID(), 10)
+
       dbUser = await prisma.user.create({
         data: {
           email,
           normalizedEmail,
           name: name || fallbackName,
+          passwordHash: tempPasswordHash,
         },
       })
     } else if (name && dbUser.name !== name) {
