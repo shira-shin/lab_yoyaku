@@ -65,6 +65,19 @@ postgresql://USER:PASS@ep-xxxxxx-pooler.neon.tech/neondb?sslmode=require&pgbounc
 
 Prisma migrations are applied automatically during `pnpm build`.
 
+### Database operations quick start
+See: `web/docs/db-ops.md`
+
+Minimum CI-equivalent checks:
+
+```bash
+cd web
+# (DATABASE_URL is assumed to be set via the helper scripts)
+pnpm run db:migrate:status
+pnpm run db:migrate:resolve-rolled
+pnpm run db:migrate:deploy
+```
+
 #### Vercel deployment checklist
 
 - **Runtime**: Project Settings → General → Node.js Version → `20.x` (mirrors the repo `engines.node`).

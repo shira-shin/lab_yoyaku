@@ -9,7 +9,12 @@
     "lint": "next lint",
     "postinstall": "echo skip prisma generate on postinstall",
     "prisma:deploy": "prisma migrate deploy",
-    "prisma:push": "prisma db push"
+    "prisma:push": "prisma db push",
+    "db:migrate:status": "prisma migrate status",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:resolve-rolled": "prisma migrate resolve --rolled-back 202409160001_group_enhancements",
+    "db:migrate:resolve-applied": "prisma migrate resolve --applied 202409160001_group_enhancements",
+    "db:print-url": "node -e \"console.log(process.env.DATABASE_URL || '')\""
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
