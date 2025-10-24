@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import { NextResponse } from 'next/server'
+import { hash as bcryptHash } from 'bcryptjs'
+import { randomUUID } from 'crypto'
 import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
 import { prisma } from '@/server/db/prisma'
 import { updateUserNameByEmail } from '@/lib/db'
@@ -73,10 +75,16 @@ export async function PUT(req: Request) {
   }
 
   const normalizedEmail = normalizeEmail(me.email)
+  const tempPasswordHash = await bcryptHash(randomUUID(), 10)
   const updated = await prisma.user.upsert({
     where: { normalizedEmail },
     update: { name, email: me.email },
-    create: { email: me.email, normalizedEmail, name },
+    create: {
+      email: me.email,
+      normalizedEmail,
+      name,
+      passwordHash: tempPasswordHash,
+    },
     select: { id: true, email: true, name: true },
   })
 
