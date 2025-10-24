@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useState } from "react";
 
 type UserMenuProps = {
   onNavigate?: () => void;
@@ -8,9 +10,30 @@ type UserMenuProps = {
 };
 
 export function UserMenu({ onNavigate, userLabel }: UserMenuProps) {
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+
   const handleNavigate = () => {
     onNavigate?.();
   };
+
+  const handleSignOut = useCallback(async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      const res = await fetch("/api/auth/logout", { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        window.alert(data?.error ?? "サインアウトに失敗しました");
+        return;
+      }
+      onNavigate?.();
+      router.push("/signin");
+      router.refresh();
+    } finally {
+      setSigningOut(false);
+    }
+  }, [onNavigate, router, signingOut]);
 
   return (
     <div className="min-w-48">
@@ -33,15 +56,16 @@ export function UserMenu({ onNavigate, userLabel }: UserMenuProps) {
       >
         所属グループ
       </Link>
-      <Link
-        href="/api/auth/signout?callbackUrl=/signin"
-        onClick={handleNavigate}
-        className="block w-full text-left px-4 py-2 hover:bg-gray-50"
+      <button
+        type="button"
+        onClick={handleSignOut}
+        className="block w-full text-left px-4 py-2 hover:bg-gray-50 text-sm disabled:opacity-60"
+        disabled={signingOut}
       >
-        ログアウト
-      </Link>
+        {signingOut ? "サインアウト中..." : "ログアウト"}
+      </button>
       <Link
-        href="/api/auth/signout?callbackUrl=/signin"
+        href="/signout"
         className="block px-4 py-2 text-xs text-gray-500 hover:bg-gray-50"
         onClick={handleNavigate}
       >

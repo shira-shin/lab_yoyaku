@@ -1,8 +1,9 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import * as jose from 'jose';
 
-const SESSION_COOKIE = process.env.APP_SESSION_COOKIE_NAME ?? 'lab_session';
+import { SESSION_COOKIE_NAME } from './src/lib/auth/cookies';
+
+const SESSION_COOKIE = SESSION_COOKIE_NAME;
 const PUBLIC_PATHS = ['/', '/login', '/signup'];
 const PUBLIC_PREFIXES = [
   '/api/auth',
@@ -13,7 +14,6 @@ const PUBLIC_PREFIXES = [
   '/sitemap',
 ];
 const CANONICAL_HOST = 'labyoyaku.vercel.app';
-const secret = new TextEncoder().encode(process.env.AUTH_SECRET || 'dev-secret');
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.includes(pathname)) {
@@ -48,17 +48,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  try {
-    await jose.jwtVerify(token, secret);
-    return NextResponse.next();
-  } catch (error) {
-    console.error('[auth] invalid token', error);
-    const url = req.nextUrl.clone();
-    url.pathname = '/login';
-    url.search = '';
-    url.searchParams.set('next', pathname + req.nextUrl.search);
-    return NextResponse.redirect(url);
-  }
+  return NextResponse.next();
 }
 
 export const config = {
