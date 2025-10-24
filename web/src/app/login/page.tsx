@@ -1,16 +1,109 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useCallback, useMemo, useState } from "react";
+
+type AuthTab = "login" | "register" | "forgot";
 
 export default function LoginPage() {
-  const [tab, setTab] = useState<"login" | "new">("new");
-  const googleButtonClass =
-    "w-full rounded-xl bg-foreground text-background py-3 font-medium inline-flex items-center justify-center gap-3";
+  const [tab, setTab] = useState<AuthTab>("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const redirectTo = useMemo(() => searchParams.get("next") ?? "/dashboard", [searchParams]);
+
+  const resetFeedback = useCallback(() => {
+    setFeedback(null);
+  }, []);
+
+  const handleLogin = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault();
+      setLoading(true);
+      setFeedback(null);
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          setFeedback(data?.error ?? "ログインに失敗しました");
+          return;
+        }
+        router.push(redirectTo);
+        router.refresh();
+      } finally {
+        setLoading(false);
+      }
+    },
+    [email, password, redirectTo, router],
+  );
+
+  const handleRegister = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault();
+      if (password !== confirmPassword) {
+        setFeedback("パスワードが一致しません");
+        return;
+      }
+
+      setLoading(true);
+      setFeedback(null);
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, name }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          setFeedback(data?.error ?? "登録に失敗しました");
+          return;
+        }
+        router.push(redirectTo);
+        router.refresh();
+      } finally {
+        setLoading(false);
+      }
+    },
+    [confirmPassword, email, name, password, redirectTo, router],
+  );
+
+  const handleForgot = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault();
+      setLoading(true);
+      setFeedback(null);
+      try {
+        const res = await fetch("/api/auth/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          setFeedback(data?.error ?? "送信に失敗しました");
+          return;
+        }
+        setFeedback("パスワード再設定メールを送信しました（届かない場合は迷惑メールをご確認ください）");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [email],
+  );
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)] bg-background text-foreground">
-      {/* ヒーロー */}
       <section className="max-w-5xl mx-auto px-4 py-12">
         <div className="text-center mb-10">
           <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-primary/10 grid place-items-center">
@@ -23,9 +116,8 @@ export default function LoginPage() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
-          {/* 左：できること */}
-          <div className="rounded-2xl border bg-card p-6">
-            <h2 className="text-lg font-semibold mb-4">できること</h2>
+          <div className="rounded-2xl border bg-card p-6 space-y-4">
+            <h2 className="text-lg font-semibold">できること</h2>
             <ol className="space-y-3 text-sm leading-6">
               <li>
                 ① <span className="font-medium">グループを作成</span>
@@ -40,15 +132,20 @@ export default function LoginPage() {
                 ：機器ごとにQR発行。予約・使用中がひと目で分かる。
               </li>
             </ol>
+            <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
+              メールアドレスとパスワードでログインできるようになりました。Google アカウントは不要です。
+            </div>
           </div>
 
-          {/* 右：ログインカード */}
-          <div className="rounded-2xl border bg-card p-0 overflow-hidden">
+          <div className="rounded-2xl border bg-card overflow-hidden">
             <div className="border-b px-6 pt-4">
               <div className="flex gap-6">
                 <button
                   type="button"
-                  onClick={() => setTab("login")}
+                  onClick={() => {
+                    setTab("login");
+                    resetFeedback();
+                  }}
                   className={`px-1 pb-3 -mb-px border-b-2 font-medium transition-colors ${
                     tab === "login"
                       ? "border-foreground text-foreground"
@@ -59,104 +156,152 @@ export default function LoginPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTab("new")}
+                  onClick={() => {
+                    setTab("register");
+                    resetFeedback();
+                  }}
                   className={`px-1 pb-3 -mb-px border-b-2 font-medium transition-colors ${
-                    tab === "new"
+                    tab === "register"
                       ? "border-foreground text-foreground"
                       : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  新規作成
+                  新規登録
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTab("forgot");
+                    resetFeedback();
+                  }}
+                  className={`px-1 pb-3 -mb-px border-b-2 font-medium transition-colors ${
+                    tab === "forgot"
+                      ? "border-foreground text-foreground"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  パスワード再設定
                 </button>
               </div>
             </div>
 
             <div className="p-6 space-y-4">
+              {feedback ? (
+                <div className="rounded-md border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+                  {feedback}
+                </div>
+              ) : null}
+
               {tab === "login" ? (
-                <>
-                  <input
-                    type="email"
-                    placeholder="メールアドレス"
-                    className="w-full rounded-xl border bg-background px-4 py-3"
-                  />
-                  <input
-                    type="password"
-                    placeholder="パスワード"
-                    className="w-full rounded-xl border bg-background px-4 py-3"
-                  />
-                  <button className="w-full rounded-xl bg-primary text-primary-foreground py-3 font-medium">
-                    ログイン
+                <form className="space-y-3" onSubmit={handleLogin}>
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    メールアドレス
+                    <input
+                      required
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="mt-1 w-full rounded-xl border bg-background px-4 py-3"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    パスワード
+                    <input
+                      required
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="mt-1 w-full rounded-xl border bg-background px-4 py-3"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full rounded-xl bg-primary text-primary-foreground py-3 font-medium disabled:opacity-60"
+                  >
+                    {loading ? "送信中..." : "ログイン"}
                   </button>
+                </form>
+              ) : null}
 
-                  <p className="text-center text-xs text-muted-foreground">
-                    テスト: <span className="font-mono">demo / demo</span> でもログインできます。
-                  </p>
-
-                  <Link
-                    href="/api/auth/signin/google?callbackUrl=/dashboard"
-                    className={googleButtonClass}
+              {tab === "register" ? (
+                <form className="space-y-3" onSubmit={handleRegister}>
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    メールアドレス
+                    <input
+                      required
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="mt-1 w-full rounded-xl border bg-background px-4 py-3"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    表示名（任意）
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="mt-1 w-full rounded-xl border bg-background px-4 py-3"
+                      placeholder="例: 山田 太郎"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    パスワード（8文字以上）
+                    <input
+                      required
+                      minLength={8}
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="mt-1 w-full rounded-xl border bg-background px-4 py-3"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    パスワード（確認）
+                    <input
+                      required
+                      minLength={8}
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="mt-1 w-full rounded-xl border bg-background px-4 py-3"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full rounded-xl bg-primary text-primary-foreground py-3 font-medium disabled:opacity-60"
                   >
-                    <svg width="18" height="18" viewBox="0 0 533.5 544.3" aria-hidden>
-                      <path
-                        d="M533.5 278.4c0-17.4-1.6-34.1-4.6-50.3H272v95.1h146.9c-6.3 34.2-25.2 63.2-53.7 82.6v68h86.8c50.8-46.8 81.5-115.8 81.5-195.4z"
-                        fill="#4285F4"
-                      />
-                      <path
-                        d="M272 544.3c73.7 0 135.6-24.4 180.8-66.5l-86.8-68c-24.1 16.2-55 25.8-94 25.8-72 0-133-48.6-154.8-114.2H27.9v71.7C72.7 485.5 164.8 544.3 272 544.3z"
-                        fill="#34A853"
-                      />
-                      <path
-                        d="M117.2 321.4c-8.3-24.7-8.3-51.6 0-76.3V173.4H27.9c-38.7 77.4-38.7 169.9 0 247.3l89.3-69.3z"
-                        fill="#FBBC04"
-                      />
-                      <path
-                        d="M272 107.7c39.9-.6 77.7 14.5 106.7 41.9l79.4-79.4C407.5 24.3 345.6 0 272 0 164.8 0 72.7 58.8 27.9 151.2l89.3 71.7C139 156.6 200 108.1 272 107.7z"
-                        fill="#EA4335"
-                      />
-                    </svg>
-                    Googleでログイン
-                  </Link>
-                </>
-              ) : (
-                <>
+                    {loading ? "送信中..." : "登録する"}
+                  </button>
+                </form>
+              ) : null}
+
+              {tab === "forgot" ? (
+                <form className="space-y-3" onSubmit={handleForgot}>
                   <p className="text-sm text-muted-foreground">
-                    Googleアカウントでログインすると、新しいグループを作成できます。
+                    登録済みのメールアドレスに、パスワード再設定リンクを送信します。
                   </p>
-                  <Link
-                    href="/api/auth/signin/google?callbackUrl=/groups/new"
-                    className={googleButtonClass}
+                  <label className="block text-sm font-medium text-muted-foreground">
+                    メールアドレス
+                    <input
+                      required
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="mt-1 w-full rounded-xl border bg-background px-4 py-3"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full rounded-xl bg-primary text-primary-foreground py-3 font-medium disabled:opacity-60"
                   >
-                    <svg width="18" height="18" viewBox="0 0 533.5 544.3" aria-hidden>
-                      <path
-                        d="M533.5 278.4c0-17.4-1.6-34.1-4.6-50.3H272v95.1h146.9c-6.3 34.2-25.2 63.2-53.7 82.6v68h86.8c50.8-46.8 81.5-115.8 81.5-195.4z"
-                        fill="#4285F4"
-                      />
-                      <path
-                        d="M272 544.3c73.7 0 135.6-24.4 180.8-66.5l-86.8-68c-24.1 16.2-55 25.8-94 25.8-72 0-133-48.6-154.8-114.2H27.9v71.7C72.7 485.5 164.8 544.3 272 544.3z"
-                        fill="#34A853"
-                      />
-                      <path
-                        d="M117.2 321.4c-8.3-24.7-8.3-51.6 0-76.3V173.4H27.9c-38.7 77.4-38.7 169.9 0 247.3l89.3-69.3z"
-                        fill="#FBBC04"
-                      />
-                      <path
-                        d="M272 107.7c39.9-.6 77.7 14.5 106.7 41.9l79.4-79.4C407.5 24.3 345.6 0 272 0 164.8 0 72.7 58.8 27.9 151.2l89.3 71.7C139 156.6 200 108.1 272 107.7z"
-                        fill="#EA4335"
-                      />
-                    </svg>
-                    Googleで新規作成
-                  </Link>
-                  <p className="text-xs text-muted-foreground text-center">
-                    既存グループに参加する場合も、同じボタンからログインできます。
-                  </p>
-                </>
-              )}
-
-              <div className="text-center">
-                <a href="/api/auth/error" className="text-xs text-muted-foreground underline">
-                  Google ログインのトラブルシューティング
-                </a>
-              </div>
+                    {loading ? "送信中..." : "再設定メールを送信"}
+                  </button>
+                </form>
+              ) : null}
             </div>
           </div>
         </div>

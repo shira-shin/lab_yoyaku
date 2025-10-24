@@ -1,16 +1,20 @@
 import "server-only";
 
-// Legacy cookie/session helper
-// 1) モジュール内で使うために import（別名）
+import { getAuthUser } from "../auth";
 import { readUserFromCookie as _readUserFromCookie } from "../auth-legacy";
-// 2) 既存の呼び出し元向けに再エクスポートも維持
+
 export { readUserFromCookie } from "../auth-legacy";
 
-// NextAuth v5 helpers
-export { auth } from "@/auth";
-export { auth as getServerSession } from "@/auth";
+export async function auth() {
+  const user = await getAuthUser();
+  if (!user) return null;
+  return { user };
+}
 
-// 既存コードが使っているかもしれない便宜関数
+export async function getServerSession() {
+  return auth();
+}
+
 export async function getUserFromCookies() {
   return _readUserFromCookie();
 }

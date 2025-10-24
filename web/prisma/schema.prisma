@@ -10,16 +10,16 @@ datasource db {
 model User {
   id               String        @id @default(cuid())
   name             String?
-  email            String?       @db.Text
+  email            String        @unique @db.Text
   normalizedEmail  String        @unique @db.Text
-  passwordHash     String?       @db.Text
+  passwordHash     String        @db.Text
   emailVerified    DateTime?
   image            String?
-  accounts         Account[]
   sessions         Session[]
   reservations     Reservation[]
   dutyAssignments  DutyAssignment[]
   groupMemberships GroupMember[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 enum DeviceManagePolicy {
@@ -42,38 +42,25 @@ enum DutyKind {
   TIME_RANGE
 }
 
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
 model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  tokenHash  String   @unique @db.Text
+  userAgent  String?
+  ip         String?
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
 }
 
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
+model PasswordResetToken {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  tokenHash  String   @unique @db.Text
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
 }
 
 model Group {
