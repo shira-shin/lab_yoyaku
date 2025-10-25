@@ -87,6 +87,7 @@ model Group {
 model Device {
   id        String   @id @default(cuid())
   slug      String   @unique
+  qrToken   String   @unique @default(uuid())
   groupId   String?
   group     Group?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
