@@ -1,37 +1,48 @@
 export class UnauthorizedError extends Error {}
 
-function resolveBaseUrl() {
-  if (typeof window !== 'undefined') return '';
-  if (process.env.NEXTAUTH_URL) return process.env.NEXTAUTH_URL;
-  if (process.env.AUTH_URL) return process.env.AUTH_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+export type JSONHeaders = Record<string, string>;
+
+function isBrowser() {
+  return typeof window !== 'undefined' && typeof window.document !== 'undefined';
+}
+
+function baseUrl() {
+  if (isBrowser()) return '';
+  const env = process.env;
+  const fromNextAuth = env.NEXTAUTH_URL || env.AUTH_URL;
+  if (fromNextAuth) return fromNextAuth.replace(/\/+$/, '');
+  if (env.VERCEL_URL) return `https://${env.VERCEL_URL}`;
   return 'http://localhost:3000';
 }
 
-export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
-  const base = resolveBaseUrl();
-  const url = path.startsWith('http') ? path : `${base}${path.startsWith('/') ? path : `/${path}`}`;
-  const extraHeaders =
-    init?.headers instanceof Headers
-      ? Object.fromEntries(init.headers.entries())
-      : (init?.headers as Record<string, string> | undefined);
-  const headers: HeadersInit = {
-    accept: 'application/json',
-    ...extraHeaders,
-  };
+/** HeadersInit -> Record<string,string> に正規化（型安全・ランタイム差吸収） */
+function normalizeHeaders(h?: HeadersInit): JSONHeaders | undefined {
+  if (!h) return undefined;
+  const out: JSONHeaders = {};
+  if (h instanceof Headers) {
+    h.forEach((v, k) => { out[k] = v; });
+    return out;
+  }
+  if (Array.isArray(h)) {
+    for (const [k, v] of h) out[k] = v;
+    return out;
+  }
+  return h as Record<string, string>;
+}
 
-  const response = await fetch(url, {
+export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
+  const url = `${baseUrl()}${path}`;
+  const extra = normalizeHeaders(init?.headers);
+
+  const res = await fetch(url, {
     ...init,
-    headers,
+    headers: {
+      accept: 'application/json',
+      ...(extra || {}),
+    },
   });
 
-  if (response.status === 401) {
-    throw new UnauthorizedError('unauthorized');
-  }
-
-  if (!response.ok) {
-    throw new Error(`GET ${url} ${response.status}`);
-  }
-
-  return (await response.json()) as T;
+  if (res.status === 401) throw new UnauthorizedError('unauthorized');
+  if (!res.ok) throw new Error(`GET ${url} ${res.status}`);
+  return (await res.json()) as T;
 }
