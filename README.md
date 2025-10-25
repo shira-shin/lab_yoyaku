@@ -55,7 +55,7 @@ If dependency installation fails with a `403` status, follow this order of opera
 403 responses typically indicate that traffic is being routed to a private registry requiring authentication or is being blocked by a corporate proxy. Ensure requests are sent to the public npm registry before attempting other workarounds.
 
 ### Environment
-Set `DATABASE_URL` in `web/.env.local` (or export it in your shell) using the **direct** Neon host with `sslmode=require`. The helper scripts in `web/scripts/` URL-encode the password and reject pooler hosts:
+Set `DATABASE_URL` in `web/.env.local` (or export it in your shell) using the **pooler** Neon host, and add a matching `DIRECT_URL` that points to the **direct** host. Prisma `generate`/`migrate` use `DIRECT_URL` while the runtime continues to hit the pooler endpoint. The helper scripts in `web/scripts/` URL-encode the password and reject pooler hosts, making them ideal for preparing the `DIRECT_URL` value:
 
 ```bash
 cd web
@@ -86,7 +86,8 @@ pnpm run db:migrate:deploy
 
 - **Runtime**: Project Settings → General → Node.js Version → `20.x` (mirrors the repo `engines.node`).
 - **Environment variables** (Production + Preview):
-  - `DATABASE_URL` — Neon direct host URL with `sslmode=require` and URL-encoded password.
+  - `DATABASE_URL` — Neon pooler host URL with `sslmode=require` and URL-encoded password.
+  - `DIRECT_URL` — Neon direct host URL with `sslmode=require` and URL-encoded password (no `-pooler`).
   - `RUN_MIGRATIONS` — leave unset or `0` so that builds skip `prisma migrate deploy`.
   - `APP_BASE_URL` — canonical origin used in emails (e.g. `https://<your-domain>`).
   - `APP_SESSION_COOKIE_NAME` — optional override, defaults to `lab_session`.
