@@ -4,8 +4,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")   // ランタイム（pooler / Accelerate 可）
-  directUrl = env("DIRECT_URL")     // generate/migrate 用（Direct 必須）
+  url       = env("DATABASE_URL")   // ランタイム：pooler可
+  directUrl = env("DIRECT_URL")     // migrate/generate：Direct必須
 }
 
 model User {

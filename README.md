@@ -71,6 +71,16 @@ cd web
 
 ## Database URLs: runtime vs migrate
 
+### How to fix `P2021: public."User" does not exist`
+
+1. Deploy and open `/api/health/db` to confirm runtime connection details.
+   - `runtime.DATABASE_URL` (host / db / hasPooler)
+   - `userTable`: `present` / `absent`
+2. In GitHub Secrets set `DIRECT_URL` to the **Direct** version of that same database.
+   - Same user/password/dbname/query; remove only `-pooler` from the hostname.
+3. Run **Actions → Bootstrap DB (deploy or push)**.
+4. Reload `/api/health/db` and confirm `userTable: present`.
+
 ### DB bootstrap (empty DB -> create tables)
 - 初回起動や空DBで `P2021: public."User" does not exist` が出る場合：
   1. GitHub Secrets に `DIRECT_URL`（Neon **Direct** URL, no `-pooler`）を登録
@@ -87,8 +97,8 @@ cd web
 ```prisma
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")   // ランタイム（pooler / Accelerate 可）
-  directUrl = env("DIRECT_URL")     // generate/migrate 用（Direct 必須）
+  url       = env("DATABASE_URL")   // ランタイム：pooler可
+  directUrl = env("DIRECT_URL")     // migrate/generate：Direct必須
 }
 ```
 
