@@ -2,20 +2,25 @@
 
 This document defines how we run database operations for the web app. The goals are:
 
-- keep Prisma and the application pointed at the Neon **direct** host at all times;
+- keep Prisma pointed at the Neon **direct** host while the runtime uses the pooler URL;
 - avoid schema drift between environments by controlling when `prisma migrate` runs;
 - guarantee runtime secrets are present while allowing Vercel builds to complete; and
 - provide a repeatable playbook for clearing the Prisma P3009 failure caused by the `202409160001_group_enhancements` migration.
 
 ## Direct host only policy
 
-Always configure `DATABASE_URL` with the Neon **direct** host (no `-pooler` suffix) and include `sslmode=require`. Mixing pooled
-and direct URLs causes `_prisma_migrations` to diverge and leads to P3009 checksum errors because pooled connections bypass the
-transactional behaviour Prisma expects. The helper scripts ensure the right format and error when a pooled host is provided.
+Always configure `DIRECT_URL` with the Neon **direct** host (no `-pooler` suffix) and include `sslmode=require`. `DATABASE_URL`
+may point at the pooler host for compatibility with serverless runtimes, but Prisma CLI commands must fall back to the direct
+connection by reading `DIRECT_URL`. Mixing pooled and direct URLs without `DIRECT_URL` causes `_prisma_migrations` to diverge
+and leads to P3009 checksum errors because pooled connections bypass the transactional behaviour Prisma expects. The helper
+scripts ensure the right format and error when hosts are mismatched.
+
+> **Neon quirk:** remove the `channel_binding=require` query parameter from both URLs. Prisma (especially when combined with
+> pgBouncer) frequently fails the TLS negotiation when channel binding is forced, resulting in `P1001` connection errors.
 
 ### DATABASE_URL helper scripts
 
-Use the helper scripts to set an URL-encoded `DATABASE_URL` with a direct host and `sslmode=require`.
+Use the helper scripts to set URL-encoded `DATABASE_URL` **and** `DIRECT_URL` values with matching credentials and `sslmode=require`.
 
 #### PowerShell
 
@@ -31,8 +36,8 @@ cd web
 ./scripts/set-database-url.sh neondb_owner 'YOUR_REAL_PASSWORD' ep-xxxxx.ap-southeast-1.aws.neon.tech neondb
 ```
 
-On success the scripts export `DATABASE_URL` in the current shell and print the masked value so that you can verify it quickly.
-They also exit with an error when the host contains `-pooler` to enforce the direct-host rule.
+On success the scripts export both variables in the current shell and print masked values so that you can verify them quickly.
+They also exit with an error when the direct/pooler pairing is inconsistent.
 
 ## Build and deployment policy
 
