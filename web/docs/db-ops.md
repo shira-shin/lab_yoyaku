@@ -83,43 +83,43 @@ Pending or rolled-back migrations must be investigated before considering the da
 ## Diagnosing Prisma P2021 (`public.User` missing)
 
 When authentication fails with a Prisma `P2021` error complaining that `public.User` does not exist, the root cause is one of the
-following. Execute the steps in order to identify the mismatch quickly.
+following. Work through the checklist below **in order** and keep command output as evidence so that you can prove which step
+fails.
 
-### A. Confirm the actual database target
+### 1. Confirm what actually exists in the production database
 
-Use the same `DATABASE_URL` as production (pooler or direct are both acceptable for this check) and run the following commands.
-Replace the sample URL with the real value from Vercel → Production.
+Use the **same direct host** URL that production relies on (`DIRECT_URL` style, no `-pooler` suffix) and run the following from
+your local machine. Replace the sample URL with the real value from Vercel → Production.
 
 ```bash
-export DATABASE_URL="postgresql://...-pooler....neon.tech/neondb?sslmode=require"
-psql "$DATABASE_URL" -c "select current_database() as db, current_user as user, current_schema() as schema, inet_server_addr() as addr;"
-psql "$DATABASE_URL" -c "\\dt public.*"
-psql "$DATABASE_URL" -c "select table_name from information_schema.tables where table_schema='public' and lower(table_name) in ('user','users','account','session');"
+export DIRECT_URL='postgresql://.../neondb?sslmode=require'
+psql "$DIRECT_URL" -c "select current_database() as db, current_user as user, current_schema() as schema;"
+psql "$DIRECT_URL" -c "select to_regclass('public."User"') as user_tbl, to_regclass('public.users') as users_tbl;"
+psql "$DIRECT_URL" -c "\\dt public.*"
 ```
 
-- No results at all → the database is empty (migrations were never applied) or you are pointing at the wrong database.
-- `users` exists but `"User"` does not → the Prisma schema is looking for the wrong table name (see [C.](#c-users-exists-but-user-does-not)).
+- `user_tbl` is `NULL` → the `"User"` table was never created (migrations missing or you are on the wrong database).
+- Only `users` shows up → the database uses a lowercase table name while Prisma expects `"User"` (see [step 3](#3-map-prisma-to-the-existing-table-names)).
 
-### B. Apply migrations if the database is empty
+### 2. Apply migrations if the table is missing
 
-Run migrations against the production database after exporting both `DATABASE_URL` and `DIRECT_URL` explicitly so Prisma connects
-directly for schema operations.
+This project intentionally skips `prisma migrate deploy` on Vercel, so brand-new databases stay empty until you run migrations
+manually. Point both `DATABASE_URL` (pooler) and `DIRECT_URL` (direct) at the production database before executing the commands.
 
 ```bash
-export DATABASE_URL="postgresql://...-pooler.../neondb?sslmode=require"
-export DIRECT_URL="postgresql://.../neondb?sslmode=require"
+export DATABASE_URL='postgresql://...-pooler.../neondb?sslmode=require'
+export DIRECT_URL='postgresql://.../neondb?sslmode=require'
 
 pnpm prisma migrate status
 pnpm prisma migrate deploy
 ```
 
-If the migration deployment fails, capture and share the full logs. Remember that Vercel skips `prisma migrate deploy` on this
-project, so a brand-new database stays empty until you run the command manually.
+Retry the failing request afterwards. If the `P2021` persists move on to step 3.
 
-### C. `users` exists but `"User"` does not
+### 3. Map Prisma to the existing table names
 
-Prisma queries `"User"` when the model name is capitalised. Align the Prisma models with the actual table names using `@@map` for
-the model and `@map` for individual fields when necessary. NextAuth-style schemas typically map the models as follows:
+When Prisma defines `model User { ... }` it queries `"User"` with quotes. Align the schema with the actual table names using
+`@@map` for each model (and `@map` on fields if needed). A typical NextAuth schema looks like this:
 
 ```prisma
 model User {
@@ -143,21 +143,22 @@ model VerificationToken {
 }
 ```
 
-Point Prisma at whichever table name truly exists (`users` vs `"User"`)—the safest approach is to adapt the schema to the database
-you confirmed in step A.
+After updating `schema.prisma` run `pnpm prisma generate`. Use `pnpm prisma db pull` if you only need to synchronise with the
+existing tables, or `pnpm prisma migrate deploy` to enforce migrations.
 
-After changing the schema run `pnpm prisma generate` followed by `pnpm prisma migrate deploy` or `pnpm prisma db push`, depending
-on your workflow.
+### 4. Double-check the runtime connection string
 
-### D. Ensure the runtime uses the expected URL
-
-Serverless functions sometimes read a different `DATABASE_URL` than the build step. Temporarily log the runtime value at the top of
-`src/server/db/prisma.ts` (a helper is available in this repository; see below) or print the hostname manually:
+Serverless functions sometimes read a different `DATABASE_URL` than your CLI environment. The repository already includes a guard
+in `src/server/db/prisma.ts`: set `LOG_DB_URL_HOST=1` temporarily and Prisma will print the masked host automatically. You can
+also add custom logging:
 
 ```ts
 const url = process.env.DATABASE_URL || "NO_DB_URL";
-console.log("[DB_URL_HOST] ", url.replace(/:\/\/.*@/, "://***@").split("@")[1].split("?")[0]);
+console.log("[DB_URL_HOST]", url.replace(/:\/\/.*@/, "://***@").split("@")[1]?.split("?")[0] ?? url);
 ```
+
+If the hostname does not match your expectation, review the Vercel Production/Preview/Development environment variables and team
+or project secrets until all instances line up.
 
 Verify that all Vercel environment tabs (Production / Preview / Development) share the same secret and check for project-level or
 team-level overrides. Edge runtimes historically did not support pooler hosts—ensure the affected API routes run on the Node.js
