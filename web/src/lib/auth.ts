@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/server/db/prisma";
 
 import { hashPassword as hashWithCost, verifyPassword, needsRehash } from "./password";
-import { normalizeEmail } from "./email";
+import { normalizeEmail } from "./users";
 import { SESSION_COOKIE_NAME } from "./auth/cookies";
 
 const SESSION_COOKIE = SESSION_COOKIE_NAME;
@@ -61,7 +61,7 @@ export async function ensureUserEmail(userId: string, email: string) {
   const normalized = normalizeEmail(email);
   await prisma.user.update({
     where: { id: userId },
-    data: { email, normalizedEmail: normalized },
+    data: { email: normalized },
   });
 }
 
