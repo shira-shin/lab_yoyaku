@@ -3,8 +3,9 @@ export const revalidate = 0;
 
 import { NextResponse } from 'next/server';
 import { auth, normalizeEmail } from '@/lib/auth-legacy';
-import { prisma } from '@/server/db/prisma';
 import { getActorByEmail } from '@/lib/perm';
+import { findUserByEmailNormalized } from '@/lib/users';
+import { prisma } from '@/server/db/prisma';
 
 export async function GET(_req: Request, { params }: { params: { slug: string } }) {
   try {
@@ -65,10 +66,7 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
       const hostEmail = normalizeEmail(group.hostEmail);
       const existing = items.some((item) => normalizeEmail(item.email) === hostEmail);
       if (!existing) {
-        const host = await prisma.user.findUnique({
-          where: { normalizedEmail: hostEmail },
-          select: { id: true, name: true, email: true },
-        });
+        const host = await findUserByEmailNormalized(hostEmail);
         if (host) {
           append(host.id, host.email, host.name);
         }

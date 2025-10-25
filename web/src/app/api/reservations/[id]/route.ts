@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { z } from '@/lib/zod-helpers'
 import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
+import { findUserByEmailNormalized } from '@/lib/users'
 import { prisma } from '@/server/db/prisma'
 
 const ParamsSchema = z.object({
@@ -113,10 +114,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const { groupSlug, reminderMinutes } = parsedBody.data
   const normalizedGroupSlug = groupSlug?.toLowerCase()
 
-  const normalizedEmail = normalizeEmail(me.email)
   const [reservation, actor] = await Promise.all([
     loadReservation(id),
-    prisma.user.findUnique({ where: { normalizedEmail }, select: { id: true } }),
+    findUserByEmailNormalized(me.email),
   ])
   if (!reservation) {
     return NextResponse.json({ error: 'reservation not found' }, { status: 404 })
@@ -179,10 +179,9 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
   const { id } = parsedParams.data
 
-  const normalizedEmail = normalizeEmail(me.email)
   const [reservation, actor] = await Promise.all([
     loadReservation(id),
-    prisma.user.findUnique({ where: { normalizedEmail }, select: { id: true } }),
+    findUserByEmailNormalized(me.email),
   ])
   if (!reservation) {
     return NextResponse.json({ error: 'reservation not found' }, { status: 404 })

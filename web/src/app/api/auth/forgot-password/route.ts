@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
 
 import { createPasswordResetToken } from "@/lib/reset-token";
-import { normalizeEmail } from "@/lib/auth";
+import { findUserByEmailNormalized } from "@/lib/users";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -13,10 +13,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid payload" }, { status: 400 });
   }
 
-  const normalizedEmail = normalizeEmail(email);
-  const user = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
-  });
+  const user = await findUserByEmailNormalized(email);
 
   if (user) {
     await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });

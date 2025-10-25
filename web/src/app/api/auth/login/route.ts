@@ -3,7 +3,8 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 import { prisma } from "@/server/db/prisma";
 
-import { createLoginCookie, normalizeEmail, verifyPassword, needsRehash, hashPassword } from "@/lib/auth";
+import { createLoginCookie, verifyPassword, needsRehash, hashPassword } from "@/lib/auth";
+import { findUserByEmailNormalized, normalizeEmail } from "@/lib/users";
 
 function isP2021UserTable(err: unknown): err is PrismaClientKnownRequestError {
   return (
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
     }
 
     const normalizedEmail = normalizeEmail(email);
-    const user = await prisma.user.findUnique({ where: { normalizedEmail } });
+    const user = await findUserByEmailNormalized(email);
 
     if (!user || !user.passwordHash) {
       return NextResponse.json({ error: "invalid credentials" }, { status: 401 });

@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs'
 import { randomUUID } from 'crypto'
 import { prisma } from '@/server/db/prisma'
 import { getAuthContext, normalizeEmail } from '@/lib/auth-legacy'
+import { findUserByEmailNormalized } from '@/lib/users'
 import { normalizeSlugInput } from '@/lib/slug'
 import { normalizeJoinInput } from '@/lib/text'
 
@@ -71,7 +72,7 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
       return NextResponse.json({ ok: false, code: 'group_not_found', error: 'group not found' }, { status: 404 })
     }
 
-    let dbUser = await prisma.user.findUnique({ where: { normalizedEmail } })
+    let dbUser = await findUserByEmailNormalized(email)
     const fallbackName = email.split('@')[0]
     if (!dbUser) {
       const tempPasswordHash = await bcrypt.hash(randomUUID(), 10)
@@ -84,7 +85,7 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
         },
       })
     } else if (name && dbUser.name !== name) {
-      dbUser = await prisma.user.update({ where: { normalizedEmail }, data: { name, email } })
+      dbUser = await prisma.user.update({ where: { id: dbUser.id }, data: { name, email } })
     }
 
     if (group.passcode) {
