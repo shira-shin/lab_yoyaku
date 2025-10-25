@@ -26,11 +26,12 @@ jobs:
       - name: Install (workspace)
         run: pnpm -w install
 
+      # ✅ IMPORTANT:
+      # ここで実行する URL は /api/health/db の "runtime.DATABASE_URL" と
+      # 同じ DB を指す **Direct(-pooler無し)** 版にすること！
       - name: Prisma bootstrap (web)
         working-directory: web
         env:
-          # Use the Neon Direct URL (no -pooler) for schema operations
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: |
-          pnpm run db:bootstrap
+        run: pnpm run db:bootstrap
