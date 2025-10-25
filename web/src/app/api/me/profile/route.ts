@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { hash as bcryptHash } from 'bcryptjs'
 import { randomUUID } from 'crypto'
 import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
+import { findUserByEmailNormalized } from '@/lib/users'
 import { prisma } from '@/server/db/prisma'
 import { updateUserNameByEmail } from '@/lib/db'
 
@@ -25,10 +26,7 @@ export async function GET() {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  const normalizedEmail = normalizeEmail(me.email)
-  const existing = await prisma.user.findUnique({
-    where: { normalizedEmail },
-  })
+  const existing = await findUserByEmailNormalized(me.email)
 
   if (!existing) {
     return NextResponse.json({
@@ -74,19 +72,28 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: 'name too long' }, { status: 400 })
   }
 
-  const normalizedEmail = normalizeEmail(me.email)
   const tempPasswordHash = await bcryptHash(randomUUID(), 10)
-  const updated = await prisma.user.upsert({
-    where: { normalizedEmail },
-    update: { name, email: me.email },
-    create: {
-      email: me.email,
-      normalizedEmail,
-      name,
-      passwordHash: tempPasswordHash,
-    },
-    select: { id: true, email: true, name: true },
-  })
+  const normalizedEmail = normalizeEmail(me.email)
+
+  let updated: { id: string; email: string | null; name: string | null }
+  const existing = await findUserByEmailNormalized(me.email)
+  if (existing) {
+    updated = await prisma.user.update({
+      where: { id: existing.id },
+      data: { name, email: me.email },
+      select: { id: true, email: true, name: true },
+    })
+  } else {
+    updated = await prisma.user.create({
+      data: {
+        email: me.email,
+        normalizedEmail,
+        name,
+        passwordHash: tempPasswordHash,
+      },
+      select: { id: true, email: true, name: true },
+    })
+  }
 
   await updateUserNameByEmail(me.email, name)
 

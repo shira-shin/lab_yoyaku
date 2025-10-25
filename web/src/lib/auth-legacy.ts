@@ -1,8 +1,7 @@
 import "server-only";
 
-import { prisma } from "@/server/db/prisma";
-
-import { getAuthUser, normalizeEmail } from "./auth";
+import { getAuthUser } from "./auth";
+import { findUserByEmailNormalized, normalizeEmail } from "./users";
 import { SESSION_COOKIE_NAME } from "./auth/cookies";
 
 export type User = { id: string; name: string; email: string };
@@ -32,5 +31,5 @@ export async function findUserByEmail(email: string) {
   const normalized = normalizeEmail(email);
   if (!normalized) return null;
 
-  return prisma.user.findUnique({ where: { normalizedEmail: normalized } });
+  return findUserByEmailNormalized(normalized);
 }
