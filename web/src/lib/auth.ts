@@ -13,8 +13,6 @@ import { prisma } from "@/server/db/prisma";
 import { hashPassword as hashWithCost, verifyPassword, needsRehash } from "./password";
 import { normalizeEmail } from "./users";
 import { SESSION_COOKIE_NAME } from "./auth/cookies";
-import { deleteCookie } from "@/lib/cookies-client";
-
 const SESSION_COOKIE = SESSION_COOKIE_NAME;
 const SESSION_TTL_DAYS = 30;
 
@@ -52,7 +50,7 @@ export async function getAuthUser() {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     try {
-      await deleteCookie(SESSION_COOKIE);
+      cookieStore.delete(SESSION_COOKIE);
     } catch (error) {
       console.error("[auth] failed to delete invalid session cookie", error);
     }
