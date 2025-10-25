@@ -11,6 +11,7 @@ type ParsedUrl = {
   hostname: string
   port: string | null
   pathname: string
+  dbname: string
   search: string | null
   hasPooler: boolean
 } | null
@@ -25,6 +26,7 @@ function parse(url: string | undefined): ParsedUrl {
       hostname: u.hostname,
       port: u.port || null,
       pathname: u.pathname,
+      dbname: u.pathname,
       search: u.search || null,
       hasPooler: u.hostname.includes('-pooler.'),
     }
@@ -47,6 +49,8 @@ export async function GET() {
       runtime: {
         DATABASE_URL: parse(process.env.DATABASE_URL),
         DIRECT_URL: parse(process.env.DIRECT_URL),
+        vercel: process.env.VERCEL ?? '0',
+        nodeEnv: process.env.NODE_ENV ?? 'unknown',
       },
       userTable: exists ? 'present' : 'absent',
     })
