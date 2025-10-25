@@ -348,7 +348,7 @@ export async function POST(req: Request) {
       select: { userId: true },
     });
     const allowedIds = validMembers.map((member) => member.userId).filter((value): value is string => Boolean(value));
-    const uniqueAllowedIds = Array.from(new Set(allowedIds));
+    const uniqueAllowedIds: string[] = Array.from(new Set(allowedIds));
 
     if (uniqueAllowedIds.length === 0) {
       return NextResponse.json({ error: 'members required' }, { status: 400 });
@@ -358,14 +358,14 @@ export async function POST(req: Request) {
     if (body.mode === 'ROUND_ROBIN') {
       let index = 0;
       for (const date of targetDates) {
-        const assigneeId = uniqueAllowedIds[index % uniqueAllowedIds.length];
+        const assigneeId = uniqueAllowedIds[index % uniqueAllowedIds.length]!;
         picks.push({ date, assigneeId });
         index += 1;
       }
     } else {
       for (const date of targetDates) {
         const randomIndex = Math.floor(Math.random() * uniqueAllowedIds.length);
-        picks.push({ date, assigneeId: uniqueAllowedIds[randomIndex] });
+        picks.push({ date, assigneeId: uniqueAllowedIds[randomIndex]! });
       }
     }
 

@@ -1,12 +1,21 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+
+type CookieOptions = Partial<{
+  path: string;
+  domain: string;
+}>;
 
 export async function POST(req: Request) {
-  const { name, options } = await req.json();
+  const { name, options } = (await req.json()) as {
+    name?: string;
+    options?: CookieOptions;
+  };
   if (!name) return NextResponse.json({ ok: false, error: 'name required' }, { status: 400 });
 
-  const defaults = { path: '/' };
-  cookies().delete(name, { ...defaults, ...(options || {}) });
+  const res = NextResponse.json({ ok: true });
+  const { path = '/', domain } = options ?? {};
 
-  return NextResponse.json({ ok: true });
+  res.cookies.delete({ name, path, domain });
+
+  return res;
 }

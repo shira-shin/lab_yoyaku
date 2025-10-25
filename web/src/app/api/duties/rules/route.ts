@@ -6,7 +6,6 @@ import { auth } from '@/lib/auth-legacy';
 import { prisma } from '@/server/db/prisma';
 import { getActorByEmail, isAdmin } from '@/lib/perm';
 import { z } from '@/lib/zod-shim';
-import type { Prisma } from '@prisma/client';
 
 const Body = z.object({
   typeId: z.string(),
@@ -141,7 +140,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'invalid rule for TIME_RANGE' }, { status: 400 });
     }
 
-    const data: Prisma.DutyRuleCreateInput = {
+    const data = {
       type: { connect: { id: input.typeId } },
       startDate: new Date(input.startDate),
       endDate: new Date(input.endDate),

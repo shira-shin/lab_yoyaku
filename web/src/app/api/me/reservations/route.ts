@@ -4,8 +4,6 @@ export const revalidate = 0
 import { NextResponse } from 'next/server'
 import { readUserFromCookie } from '@/lib/auth-legacy'
 import { prisma } from '@/server/db/prisma'
-import type { Prisma } from '@prisma/client'
-
 
 function parseDate(value: string | null): Date | null {
   if (!value) return null
@@ -36,18 +34,16 @@ export async function GET(req: Request) {
   const to = parseDate(url.searchParams.get('to'))
   const take = parseTake(url.searchParams.get('take'))
 
-  const orConditions: Prisma.ReservationWhereInput[] = [{ userEmail: me.email }]
+  const orConditions: Array<{ userEmail?: string; userId?: string }> = [{ userEmail: me.email }]
   if (me.id) {
     orConditions.push({ userId: me.id })
   }
 
-  const where: Prisma.ReservationWhereInput = { OR: orConditions }
-  if (from && to) {
-    where.AND = [{ start: { lt: to } }, { end: { gt: from } }]
-  }
-
   const reservations = await prisma.reservation.findMany({
-    where,
+    where: {
+      OR: orConditions,
+      ...(from && to ? { AND: [{ start: { lt: to } }, { end: { gt: from } }] } : {}),
+    },
     orderBy: { start: 'asc' },
     take,
     include: {
