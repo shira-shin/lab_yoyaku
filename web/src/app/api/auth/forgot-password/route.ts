@@ -14,7 +14,9 @@ export async function POST(req: Request) {
   }
 
   const normalizedEmail = normalizeEmail(email);
-  const user = await prisma.user.findUnique({ where: { normalizedEmail } });
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+  });
 
   if (user) {
     await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
