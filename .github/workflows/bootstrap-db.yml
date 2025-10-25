@@ -1,0 +1,36 @@
+name: Bootstrap DB (deploy or push)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install (workspace)
+        run: pnpm -w install
+
+      - name: Prisma bootstrap (web)
+        working-directory: web
+        env:
+          # Use the Neon Direct URL (no -pooler) for schema operations
+          DATABASE_URL: ${{ secrets.DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          pnpm run db:bootstrap
