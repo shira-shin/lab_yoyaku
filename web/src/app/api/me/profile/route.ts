@@ -74,19 +74,21 @@ export async function PUT(req: Request) {
 
   const tempPasswordHash = await bcryptHash(randomUUID(), 10)
   const normalizedEmail = normalizeEmail(me.email)
+  const emailValue = me.email.trim()
 
   let updated: { id: string; email: string | null; name: string | null }
   const existing = await findUserByEmailNormalized(me.email)
   if (existing) {
     updated = await prisma.user.update({
       where: { id: existing.id },
-      data: { name, email: normalizedEmail },
+      data: { name, email: emailValue, normalizedEmail },
       select: { id: true, email: true, name: true },
     })
   } else {
     updated = await prisma.user.create({
       data: {
-        email: normalizedEmail,
+        email: emailValue,
+        normalizedEmail,
         name,
         passwordHash: tempPasswordHash,
       },
