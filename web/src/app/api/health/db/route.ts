@@ -3,34 +3,28 @@ export const revalidate = 0
 
 import { NextResponse } from 'next/server'
 
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/server/db/prisma'
 
 type ParsedUrl = {
   protocol: string
-  host: string
   hostname: string
-  port: string | null
-  pathname: string
+  host: string
   dbname: string
-  search: string | null
   hasPooler: boolean
-} | null
+}
 
-function parse(url: string | undefined): ParsedUrl {
+function parseUrl(raw?: string | null): ParsedUrl | null {
+  if (!raw) return null
   try {
-    if (!url) return null
-    const u = new URL(url)
+    const url = new URL(raw)
     return {
-      protocol: u.protocol.replace(':', ''),
-      host: u.host,
-      hostname: u.hostname,
-      port: u.port || null,
-      pathname: u.pathname,
-      dbname: u.pathname,
-      search: u.search || null,
-      hasPooler: u.hostname.includes('-pooler.'),
+      protocol: url.protocol.replace(':', ''),
+      hostname: url.hostname,
+      host: url.host,
+      dbname: url.pathname,
+      hasPooler: url.hostname.includes('-pooler.'),
     }
-  } catch {
+  } catch (error) {
     return null
   }
 }
@@ -38,26 +32,23 @@ function parse(url: string | undefined): ParsedUrl {
 export async function GET() {
   try {
     await prisma.$queryRaw`SELECT 1`
-
-    const rows = await prisma.$queryRaw<Array<{ regclass: string | null }>>`
+    const result = await prisma.$queryRaw<Array<{ regclass: string | null }>>`
       SELECT to_regclass('public."User"') AS regclass
     `
-    const exists = rows?.[0]?.regclass !== null
+    const userPresent = result?.[0]?.regclass !== null
 
     return NextResponse.json({
       ok: true,
       runtime: {
-        DATABASE_URL: parse(process.env.DATABASE_URL),
-        DIRECT_URL: parse(process.env.DIRECT_URL),
+        DATABASE_URL: parseUrl(process.env.DATABASE_URL),
+        DIRECT_URL: parseUrl(process.env.DIRECT_URL),
         vercel: process.env.VERCEL ?? '0',
         nodeEnv: process.env.NODE_ENV ?? 'unknown',
       },
-      userTable: exists ? 'present' : 'absent',
+      userTable: userPresent ? 'present' : 'absent',
     })
-  } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: String(e?.message ?? e) },
-      { status: 500 },
-    )
+  } catch (e: unknown) {
+    const error = e instanceof Error ? e.message : `${e}`
+    return NextResponse.json({ ok: false, error }, { status: 500 })
   }
 }
