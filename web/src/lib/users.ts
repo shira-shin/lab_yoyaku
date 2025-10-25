@@ -5,5 +5,16 @@ export { normalizeEmail };
 
 export async function findUserByEmailNormalized(email: string) {
   const normalized = normalizeEmail(email);
-  return prisma.user.findUnique({ where: { email: normalized } });
+  const user = await prisma.user.findUnique({ where: { email: normalized } });
+  if (user) {
+    return user;
+  }
+  return prisma.user.findFirst({
+    where: {
+      OR: [
+        { normalizedEmail: normalized },
+        { email: { equals: email, mode: 'insensitive' } },
+      ],
+    },
+  });
 }

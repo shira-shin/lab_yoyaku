@@ -52,10 +52,10 @@ export async function POST(req: Request) {
       await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
     }
 
-    if (user.email !== email || user.normalizedEmail !== normalizedEmail) {
+    if (user.email !== normalizedEmail || user.normalizedEmail !== normalizedEmail) {
       await prisma.user.update({
         where: { id: user.id },
-        data: { email, normalizedEmail },
+        data: { email: normalizedEmail, normalizedEmail },
       });
     }
 
