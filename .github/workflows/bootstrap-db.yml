@@ -9,19 +9,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10.18.2
+        with: { version: 10.18.2 }
       - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
+        with: { node-version: 20, cache: 'pnpm' }
       - run: pnpm -w install
 
-      # /api/health/db の runtime.DATABASE_URL と同じ DB の
-      # **Direct(-pooler無し)** を Secrets.DIRECT_URL に入れて実行する
-      - name: Prisma bootstrap (web)
+      - name: Generate Prisma Client
+        working-directory: web
+        run: pnpm prisma:generate
+
+      - name: Prisma bootstrap (deploy or push)
         working-directory: web
         env:
-          DATABASE_URL: ${{ secrets.DIRECT_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DIRECT_URL }}   # ← Neon の Direct（-pooler なし）
+          DIRECT_URL:   ${{ secrets.DIRECT_URL }}
         run: pnpm run db:bootstrap

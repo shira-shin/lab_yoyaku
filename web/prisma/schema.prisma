@@ -4,176 +4,60 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")   // ランタイム：pooler可
-  directUrl = env("DIRECT_URL")     // migrate/generate：Direct必須
+  url       = env("DATABASE_URL")   // runtime（pooler 可）
+  directUrl = env("DIRECT_URL")     // migrate/generate（Direct 必須）
 }
 
 model User {
-  id               String        @id @default(cuid())
-  name             String?
-  email            String        @unique @db.Text
-  normalizedEmail  String        @unique @db.Text
-  passwordHash     String        @db.Text
-  emailVerified    DateTime?
-  image            String?
-  reservations     Reservation[]
-  dutyAssignments  DutyAssignment[]
-  groupMemberships GroupMember[]
-  passwordResetTokens PasswordResetToken[]
+  id            String   @id @default(cuid())
+  name          String?
+  email         String?  @unique
+  emailVerified DateTime?
+  image         String?
+
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("User") // 大文字テーブル名を明示
 }
 
-enum DeviceManagePolicy {
-  HOST_ONLY
-  MEMBERS_ALLOWED
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("Account")
 }
 
-enum DutyVisibility {
-  PUBLIC
-  MEMBERS_ONLY
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("Session")
 }
 
-enum DutyManagePolicy {
-  ADMINS_ONLY
-  MEMBERS_ALLOWED
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("VerificationToken")
 }
 
-enum DutyKind {
-  DAY_SLOT
-  TIME_RANGE
-}
-
-model PasswordResetToken {
-  id         String   @id @default(cuid())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String
-  tokenHash  String   @unique @db.Text
-  expiresAt  DateTime
-  usedAt     DateTime?
-  createdAt  DateTime @default(now())
-}
-
-model Group {
-  id          String        @id @default(cuid())
-  slug        String        @unique
-  name        String?
-  passcode    String?
-  hostEmail   String
-  reserveFrom DateTime?
-  reserveTo   DateTime?
-  memo        String?
-  deviceManagePolicy DeviceManagePolicy @default(HOST_ONLY)
-  dutyManagePolicy  DutyManagePolicy  @default(ADMINS_ONLY)
-  devices     Device[]
-  members     GroupMember[]
-  dutyTypes   DutyType[]
-  dutyAssignments DutyAssignment[]
-  createdAt   DateTime      @default(now())
-}
-
-model Device {
-  id           String        @id @default(cuid())
-  slug         String
-  name         String
-  caution      String?
-  code         String?
-  qrToken      String        @default(cuid())
-  createdAt    DateTime      @default(now())
-  group        Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId      String
-  reservations Reservation[]
-
-  @@unique([groupId, slug])
-}
-
-model Reservation {
-  id              String   @id @default(cuid())
-  device          Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
-  deviceId        String
-  userId          String?
-  userEmail       String
-  userName        String?
-  start           DateTime
-  end             DateTime
-  purpose         String?
-  reminderMinutes Int?
-  createdAt       DateTime @default(now())
-
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([deviceId, start])
-  @@index([start, end])
-}
-
-enum GroupMemberRole {
-  OWNER
-  ADMIN
-  MEMBER
-}
-
-model GroupMember {
-  id        String   @id @default(cuid())
-  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId   String
-  email     String
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  userId    String?
-  role      GroupMemberRole @default(MEMBER)
-  createdAt DateTime @default(now())
-
-  @@unique([groupId, email])
-}
-
-model UserProfile {
-  email       String   @id
-  displayName String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model DutyType {
-  id           String            @id @default(cuid())
-  group        Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId      String
-  name         String
-  color        String            @default("#7c3aed")
-  visibility   DutyVisibility    @default(PUBLIC)
-  kind         DutyKind          @default(DAY_SLOT)
-  rules        DutyRule[]
-  assignments  DutyAssignment[]
-
-  @@unique([groupId, name])
-}
-
-model DutyRule {
-  id                String      @id @default(cuid())
-  type              DutyType    @relation(fields: [typeId], references: [id], onDelete: Cascade)
-  typeId            String
-  startDate         DateTime
-  endDate           DateTime
-  byWeekday         Int[]       @default([])
-  slotsPerDay       Int         @default(1)
-  startTime         String?
-  endTime           String?
-  includeMemberIds  String[]    @default([])
-  excludeMemberIds  String[]    @default([])
-  avoidConsecutive  Boolean     @default(true)
-  disabled          Boolean     @default(false)
-}
-
-model DutyAssignment {
-  id          String   @id @default(cuid())
-  type        DutyType @relation(fields: [typeId], references: [id], onDelete: Cascade)
-  typeId      String
-  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId     String
-  date        DateTime
-  slotIndex   Int      @default(0)
-  startsAt    DateTime?
-  endsAt      DateTime?
-  assignee    User?    @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
-  assigneeId  String?
-  locked      Boolean  @default(false)
-  done        Boolean  @default(false)
-
-  @@unique([groupId, typeId, date, slotIndex])
-}
