@@ -21,7 +21,12 @@ export async function POST(req: Request) {
   const normalizedEmail = normalizeEmail(email);
 
   const existing = await prisma.user.findFirst({
-    where: { email: { in: [normalizedEmail, email] } },
+    where: {
+      OR: [
+        { email: normalizedEmail },
+        { normalizedEmail: normalizedEmail },
+      ],
+    },
   });
 
   if (existing) {
@@ -32,7 +37,7 @@ export async function POST(req: Request) {
 
   const user = await prisma.user.create({
     data: {
-      email,
+      email: normalizedEmail,
       normalizedEmail,
       name,
       passwordHash,

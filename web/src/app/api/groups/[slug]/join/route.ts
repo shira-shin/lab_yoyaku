@@ -78,14 +78,17 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
       const tempPasswordHash = await bcrypt.hash(randomUUID(), 10)
       dbUser = await prisma.user.create({
         data: {
-          email,
+          email: normalizedEmail,
           normalizedEmail,
           name: name || fallbackName,
           passwordHash: tempPasswordHash,
         },
       })
     } else if (name && dbUser.name !== name) {
-      dbUser = await prisma.user.update({ where: { id: dbUser.id }, data: { name, email } })
+      dbUser = await prisma.user.update({
+        where: { id: dbUser.id },
+        data: { name, email: normalizedEmail, normalizedEmail },
+      })
     }
 
     if (group.passcode) {

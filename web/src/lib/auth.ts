@@ -61,7 +61,7 @@ export async function ensureUserEmail(userId: string, email: string) {
   const normalized = normalizeEmail(email);
   await prisma.user.update({
     where: { id: userId },
-    data: { email, normalizedEmail: normalized },
+    data: { email: normalized, normalizedEmail: normalized },
   });
 }
 
