@@ -53,10 +53,10 @@ export async function POST(req: Request) {
     }
 
     // Prisma の User.email は String? なので null 安全に比較
-    if ((user.email ?? "") !== normalizedEmail) {
+    if (user.normalizedEmail !== normalizedEmail || (user.email ?? "") !== email) {
       await prisma.user.update({
         where: { id: user.id },
-        data: { email: normalizedEmail },
+        data: { email, normalizedEmail },
       });
     }
 

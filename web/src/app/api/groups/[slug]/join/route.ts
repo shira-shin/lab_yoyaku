@@ -85,7 +85,10 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
         },
       })
     } else if (name && dbUser.name !== name) {
-      dbUser = await prisma.user.update({ where: { id: dbUser.id }, data: { name, email } })
+      dbUser = await prisma.user.update({
+        where: { id: dbUser.id },
+        data: { name, email, normalizedEmail },
+      })
     }
 
     if (group.passcode) {
