@@ -1,61 +1,64 @@
 import process from "node:process";
-import { URL as NodeURL } from "node:url";
+import { URL } from "node:url";
 
 const isVercel = process.env.VERCEL === "1";
 const isBuildPhase = process.env.npm_lifecycle_event === "build";
 
-// 常に必須
-const requiredAlways = ["DATABASE_URL", "DIRECT_URL"] as const;
-// ランタイム必須（ビルド中は緩和可）
-const requiredRuntime = ["JWT_SECRET"] as const;
-
-const required = isVercel && isBuildPhase
-  ? [...requiredAlways]
-  : [...requiredAlways, ...requiredRuntime];
-
-const missing = required.filter((k) => !process.env[k] || String(process.env[k]).trim() === "");
-if (missing.length > 0) {
-  throw new Error(`[assert-env] Missing required env(s): ${missing.join(", ")}`);
-}
-if (!process.env.JWT_SECRET && isVercel && isBuildPhase) {
-  console.warn("[assert-env] Warning: JWT_SECRET is missing during build. Ensure it is set at runtime!");
-}
-
-const parseEnvUrl = (key: string) => {
-  const raw = String(process.env[key]);
-  try {
-    return new NodeURL(raw);
-  } catch (err) {
-    throw new Error(`[assert-env] Invalid ${key}: ${String(err)}`);
+function mustString(name: string) {
+  const value = process.env[name];
+  if (!value || String(value).trim() === "") {
+    throw new Error(`[assert-env] Missing ${name}`);
   }
-};
+  return String(value);
+}
 
-const dbUrl = parseEnvUrl("DATABASE_URL");
-const directUrl = parseEnvUrl("DIRECT_URL");
+function mustUrl(name: string) {
+  const raw = mustString(name);
+  try {
+    return new URL(raw);
+  } catch (err) {
+    throw new Error(`[assert-env] Invalid ${name}: ${String(err)}`);
+  }
+}
 
-const hasSslRequire = (url: NodeURL) => url.searchParams.get("sslmode") === "require";
+const dbUrl = mustUrl("DATABASE_URL");
+const directUrl = mustUrl("DIRECT_URL");
+
+const hasSslRequire = (url: URL) => url.searchParams.get("sslmode") === "require";
 
 if (!hasSslRequire(dbUrl)) {
-  console.warn(`[assert-env] Hint: add "sslmode=require" to DATABASE_URL for Neon.`);
+  console.warn("[assert-env] Hint: add \"sslmode=require\" to DATABASE_URL for Neon.");
 }
 if (!hasSslRequire(directUrl)) {
-  console.warn(`[assert-env] Hint: add "sslmode=require" to DIRECT_URL for Neon.`);
+  console.warn("[assert-env] Hint: add \"sslmode=require\" to DIRECT_URL for Neon.");
 }
 
-const isPooler = (url: NodeURL) => url.hostname.includes("-pooler");
+const isPoolerHost = (host: string) => host.includes("-pooler.");
 
-if (isPooler(directUrl)) {
-  throw new Error(
-    `[assert-env] DIRECT_URL must point to the Direct host (no "-pooler"). Received: ${directUrl.hostname}`,
-  );
-}
-
-if (isPooler(dbUrl)) {
+// 要件：
+// - DATABASE_URL が pooler でもビルドを通す
+// - その場合は DIRECT_URL が Direct（非-pooler）であることを必須にする
+if (isPoolerHost(dbUrl.host)) {
   console.log(
-    `[assert-env] DATABASE_URL is pooler host (${dbUrl.hostname}); Prisma operations will use DIRECT_URL (${directUrl.hostname}).`,
+    `[assert-env] DATABASE_URL is pooler host (${dbUrl.host}); Prisma operations will use DIRECT_URL (${directUrl.host}).`,
   );
+  if (isPoolerHost(directUrl.host)) {
+    throw new Error("[assert-env] DIRECT_URL must point to a Direct (non-pooler) host.");
+  }
 } else {
   console.log("[assert-env] DATABASE_URL is Direct host; DIRECT_URL also configured.");
+  if (isPoolerHost(directUrl.host)) {
+    throw new Error("[assert-env] DIRECT_URL must point to a Direct (non-pooler) host.");
+  }
+}
+
+// JWT_SECRET は本番実行時に必要、ビルド時は警告に留める
+if (!process.env.JWT_SECRET) {
+  if (isVercel && isBuildPhase) {
+    console.warn("[assert-env] Warning: JWT_SECRET is missing during build. Ensure it is set at runtime!");
+  } else {
+    throw new Error("[assert-env] Missing JWT_SECRET");
+  }
 }
 
 console.log("[assert-env] OK: envs present and validated.");
