@@ -41,6 +41,38 @@ echo "[info] endpoint=${NEON_ENDPOINT_ID} db=${NEON_DATABASE} project=${NEON_PRO
 echo "[info] DIRECT_URL=$(echo "${DIRECT_URL}" | mask)"
 echo "[info] DATABASE_URL=$(echo "${DATABASE_URL}" | mask)"
 
+if [ -z "${NEON_BRANCH_ID:-}" ]; then
+  if [ -n "${NEON_API_KEY:-}" ]; then
+    echo "[info] resolving Neon branch ID for endpoint ${NEON_ENDPOINT_ID}"
+    endpoint_payload=$(curl -fsS "https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/endpoints/${NEON_ENDPOINT_ID}" \
+      -H "Authorization: Bearer ${NEON_API_KEY}" \
+      -H "Content-Type: application/json") || {
+        echo "[fail] Unable to fetch endpoint metadata from Neon" >&2
+        exit 1
+      }
+    if ! NEON_BRANCH_ID=$(printf '%s' "${endpoint_payload}" | python - <<'PY'
+import json
+import sys
+
+data = json.load(sys.stdin)
+branch_id = data.get("endpoint", {}).get("branch_id")
+if not branch_id:
+    print("[fail] Neon endpoint metadata missing branch_id", file=sys.stderr)
+    sys.exit(1)
+print(branch_id)
+PY
+); then
+      echo "[fail] Unable to parse Neon branch ID from endpoint metadata" >&2
+      exit 1
+    fi
+  else
+    echo "[fail] NEON_BRANCH_ID not provided and NEON_API_KEY unavailable to resolve it" >&2
+    exit 1
+  fi
+fi
+
+echo "[info] branch=${NEON_BRANCH_ID}"
+
 # Regenerate init.sql from Prisma schema.
 pnpm prisma migrate diff \
   --from-empty \
@@ -54,7 +86,7 @@ if ! tail -n 50 init.sql | grep -Eq '\);|END;|END\s*\$\$;'; then
 fi
 echo "[ok] init.sql regenerated."
 
-API="https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/branches/main/endpoints/${NEON_ENDPOINT_ID}/sql"
+API="https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/branches/${NEON_BRANCH_ID}/endpoints/${NEON_ENDPOINT_ID}/sql"
 Q="$(tr '\n' ' ' < init.sql | sed 's/"/\\"/g')"
 
 # Apply SQL via Neon Data API.
