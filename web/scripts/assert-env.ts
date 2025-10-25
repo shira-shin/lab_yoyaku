@@ -5,7 +5,7 @@ const isVercel = process.env.VERCEL === "1";
 const isBuildPhase = process.env.npm_lifecycle_event === "build";
 
 // 常に必須
-const requiredAlways = ["DATABASE_URL"] as const;
+const requiredAlways = ["DATABASE_URL", "DIRECT_URL"] as const;
 // ランタイム必須（ビルド中は緩和可）
 const requiredRuntime = ["JWT_SECRET"] as const;
 
@@ -21,17 +21,41 @@ if (!process.env.JWT_SECRET && isVercel && isBuildPhase) {
   console.warn("[assert-env] Warning: JWT_SECRET is missing during build. Ensure it is set at runtime!");
 }
 
-const dbUrl = String(process.env.DATABASE_URL);
-try {
-  const u = new NodeURL(dbUrl);
-  if (u.hostname.includes("-pooler")) {
-    throw new Error(`[assert-env] DATABASE_URL points to a pooler host (${u.hostname}). Use the Direct host (no "-pooler").`);
+const parseEnvUrl = (key: string) => {
+  const raw = String(process.env[key]);
+  try {
+    return new NodeURL(raw);
+  } catch (err) {
+    throw new Error(`[assert-env] Invalid ${key}: ${String(err)}`);
   }
-  if (u.searchParams.get("sslmode") !== "require") {
-    console.warn(`[assert-env] Hint: add "sslmode=require" to DATABASE_URL for Neon.`);
-  }
-} catch (err) {
-  throw new Error(`[assert-env] Invalid DATABASE_URL: ${String(err)}`);
+};
+
+const dbUrl = parseEnvUrl("DATABASE_URL");
+const directUrl = parseEnvUrl("DIRECT_URL");
+
+const hasSslRequire = (url: NodeURL) => url.searchParams.get("sslmode") === "require";
+
+if (!hasSslRequire(dbUrl)) {
+  console.warn(`[assert-env] Hint: add "sslmode=require" to DATABASE_URL for Neon.`);
+}
+if (!hasSslRequire(directUrl)) {
+  console.warn(`[assert-env] Hint: add "sslmode=require" to DIRECT_URL for Neon.`);
 }
 
-console.log("[assert-env] OK: envs present; DATABASE_URL is Direct host.");
+const isPooler = (url: NodeURL) => url.hostname.includes("-pooler");
+
+if (isPooler(directUrl)) {
+  throw new Error(
+    `[assert-env] DIRECT_URL must point to the Direct host (no "-pooler"). Received: ${directUrl.hostname}`,
+  );
+}
+
+if (isPooler(dbUrl)) {
+  console.log(
+    `[assert-env] DATABASE_URL is pooler host (${dbUrl.hostname}); Prisma operations will use DIRECT_URL (${directUrl.hostname}).`,
+  );
+} else {
+  console.log("[assert-env] DATABASE_URL is Direct host; DIRECT_URL also configured.");
+}
+
+console.log("[assert-env] OK: envs present and validated.");
