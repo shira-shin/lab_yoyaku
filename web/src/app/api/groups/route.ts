@@ -7,7 +7,6 @@ import { prisma } from '@/server/db/prisma'
 import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
 import { makeSlug } from '@/lib/slug'
 import { normalizeJoinInput } from '@/lib/text'
-import type { Prisma } from '@prisma/client'
 
 function parseDate(value: unknown) {
   if (!value) return null
@@ -40,10 +39,8 @@ export async function GET(req: Request) {
         where: {
           OR: [
             { hostEmail: { equals: me.email, mode: 'insensitive' } },
-            groupIds.length ? { id: { in: groupIds } } : undefined,
-          ].filter(
-            Boolean
-          ) as Prisma.GroupWhereInput[],
+            ...(groupIds.length ? [{ id: { in: groupIds } }] : []),
+          ],
         },
         orderBy: { createdAt: 'desc' },
         select: { slug: true, name: true },
