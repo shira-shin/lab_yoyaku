@@ -81,6 +81,14 @@ cd web
 3. Run **Actions → Bootstrap DB (deploy or push)**.
 4. Reload `/api/health/db` and confirm `userTable: present`.
 
+### First-time DB bootstrap
+1. Ensure Vercel env:
+   - `DATABASE_URL` = pooler
+   - `DIRECT_URL`   = Direct (no "-pooler")
+2. Run GitHub Actions → Bootstrap DB (deploy or push)
+   - It runs `prisma migrate deploy` first, falls back to `prisma db push`
+3. Open the app and try login again.
+
 ### DB bootstrap (empty DB -> create tables)
 - 初回起動や空DBで `P2021: public."User" does not exist` が出る場合：
   1. GitHub Secrets に `DIRECT_URL`（Neon **Direct** URL, no `-pooler`）を登録
