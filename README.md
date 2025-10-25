@@ -71,6 +71,14 @@ cd web
 
 ## Database URLs: runtime vs migrate
 
+### DB bootstrap (empty DB -> create tables)
+- 初回起動や空DBで `P2021: public."User" does not exist` が出る場合：
+  1. GitHub Secrets に `DIRECT_URL`（Neon **Direct** URL, no `-pooler`）を登録
+  2. Actions → **Bootstrap DB (deploy or push)** を手動実行
+     - `migrate deploy` を試行、無ければ `db push` にフォールバックしてテーブルを作成
+  3. `/api/health/db` で `userTable: present` を確認
+
+### URLs
 - `DATABASE_URL`: runtime 接続。**pooler 可**（例: `ep-xxxx-**pooler**.region.aws.neon.tech`）
 - `DIRECT_URL`: Prisma の `generate`/`migrate` 用。**Direct 必須**（`-pooler` を含まない）
 
@@ -80,7 +88,7 @@ cd web
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")   // ランタイム（pooler / Accelerate 可）
-  directUrl = env("DIRECT_URL")     // generate / migrate 用（必ず Direct）
+  directUrl = env("DIRECT_URL")     // generate/migrate 用（Direct 必須）
 }
 ```
 
@@ -93,7 +101,7 @@ Vercel では `RUN_MIGRATIONS === '1' && VERCEL !== '1'` のため自動実行�
 1. GitHub Secrets に `DIRECT_URL`（Direct URL）を登録
 2. Actions → **Run Prisma Migrate (one-off)** → Run
 
-初回のみテーブル未作成で 500 が出る場合、暫定で `pnpm prisma db push` も検討（後で正式 migration に統合）。
+初回のみテーブル未作成で 500 が出る場合は、Actions → **Bootstrap DB (deploy or push)** を実行してテーブルを作成（`migrate deploy` に成功すればそのまま継続、失敗時は `db push` にフォールバック）。
 
 #### Local tips
 
