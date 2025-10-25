@@ -1,0 +1,33 @@
+name: Prisma Migrate Deploy (Prod)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - web/prisma/**
+      - web/prisma/schema.prisma
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: pnpm install --frozen-lockfile
+      - name: Prisma migrate deploy (Prod)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DEBUG: prisma:engine
+        run: |
+          pnpm prisma migrate status
+          pnpm prisma migrate deploy
