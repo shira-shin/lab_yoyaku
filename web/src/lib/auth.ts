@@ -1,3 +1,11 @@
+/* COOKIES-WRITE-MIGRATION:
+   - このファイルで cookies().set/delete を使っていますが、Next.js 14 では
+     Server Action か Route Handler でのみ許可されています。
+   - 置き換え案（簡単）: クライアント側から
+       import { setCookie, deleteCookie } from "@/lib/cookies-client";
+       await setCookie("name", "value", { path:"/" });
+     ※ レンダー中(関数本体直下)では呼ばず、イベントやエフェクトで呼んでください。
+*/
 import { cookies } from "next/headers";
 
 import { prisma } from "@/server/db/prisma";
@@ -5,6 +13,7 @@ import { prisma } from "@/server/db/prisma";
 import { hashPassword as hashWithCost, verifyPassword, needsRehash } from "./password";
 import { normalizeEmail } from "./users";
 import { SESSION_COOKIE_NAME } from "./auth/cookies";
+import { deleteCookie } from "@/lib/cookies-client";
 
 const SESSION_COOKIE = SESSION_COOKIE_NAME;
 const SESSION_TTL_DAYS = 30;
@@ -42,7 +51,11 @@ export async function getAuthUser() {
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
-    cookieStore.delete(SESSION_COOKIE);
+    try {
+      await deleteCookie(SESSION_COOKIE);
+    } catch (error) {
+      console.error("[auth] failed to delete invalid session cookie", error);
+    }
     return null;
   }
 
