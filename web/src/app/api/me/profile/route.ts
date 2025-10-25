@@ -80,14 +80,13 @@ export async function PUT(req: Request) {
   if (existing) {
     updated = await prisma.user.update({
       where: { id: existing.id },
-      data: { name, email: me.email },
+      data: { name, email: normalizedEmail },
       select: { id: true, email: true, name: true },
     })
   } else {
     updated = await prisma.user.create({
       data: {
-        email: me.email,
-        normalizedEmail,
+        email: normalizedEmail,
         name,
         passwordHash: tempPasswordHash,
       },

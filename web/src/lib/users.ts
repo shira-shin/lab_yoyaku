@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/prisma';
-import { normalizeEmail } from '@/lib/email';
 
-export { normalizeEmail };
+export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
 export async function findUserByEmailNormalized(email: string) {
   const normalized = normalizeEmail(email);
