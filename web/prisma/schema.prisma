@@ -75,3 +75,23 @@ model VerificationToken {
   @@unique([identifier, token])
   @@map("VerificationToken")
 }
+
+model Group {
+  id      String   @id @default(cuid())
+  name    String?
+  devices Device[]
+
+  @@map("Group")
+}
+
+model Device {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  groupId   String?
+  group     Group?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@map("Device")
+}
