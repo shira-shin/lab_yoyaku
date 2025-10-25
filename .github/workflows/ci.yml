@@ -21,7 +21,7 @@ jobs:
           pnpm install --frozen-lockfile
           pip install fastapi uvicorn pytest
       - name: Check auth imports
-        run: pnpm run check:imports
+        run: pnpm --filter ./web run check:imports
       - name: Lint web
         run: pnpm --filter ./web lint
       - name: Test api
