@@ -5,7 +5,17 @@ import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
 import { addMonths, buildWeeks, firstOfMonth } from '@/lib/date-cal';
 import { utcIsoToLocalDate } from '@/lib/time';
 
-export default function DashboardClient({ initialItems, initialSpans, isLoggedIn }: { initialItems: Item[]; initialSpans: Span[]; isLoggedIn: boolean }) {
+export default function DashboardClient({
+  initialItems,
+  initialSpans,
+  isLoggedIn,
+  initialError,
+}: {
+  initialItems: Item[];
+  initialSpans: Span[];
+  isLoggedIn: boolean;
+  initialError?: 'unauth' | 'load' | null;
+}) {
   const [spans, setSpans] = useState<Span[]>(initialSpans);
   const today = new Date();
   const [anchor, setAnchor] = useState(firstOfMonth(today.getFullYear(), today.getMonth()));
@@ -60,6 +70,7 @@ export default function DashboardClient({ initialItems, initialSpans, isLoggedIn
           initialItems={initialItems}
           onLoaded={handleLoaded}
           isLoggedIn={isLoggedIn}
+          initialError={initialError}
         />
       </section>
 

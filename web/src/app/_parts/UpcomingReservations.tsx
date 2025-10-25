@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { updateReservation, deleteReservation } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { deviceColor } from '@/lib/color';
+import { getJSON, UnauthorizedError } from '@/lib/fetch-json';
 
 export type Item = {
   id: string;
@@ -27,39 +28,52 @@ function fmtRange(s: string, e: string) {
     ? `${d(S)}–${pad(E.getHours())}:${pad(E.getMinutes())}`
     : `${d(S)} → ${d(E)}`;
 }
+type ErrorState = 'unauth' | 'load' | null;
+
 export default function UpcomingReservations({
   initialItems,
   onLoaded,
   isLoggedIn,
+  initialError,
 }: {
   initialItems: Item[];
   onLoaded?: (payload: any) => void;
   isLoggedIn: boolean;
+  initialError?: ErrorState;
 }) {
   const [items, setItems] = useState<Item[]>(initialItems);
   const [loading, setLoading] = useState(false);
   const [sel, setSel] = useState<Item | null>(null);
-  const [err, setErr] = useState<string | null>(isLoggedIn ? null : 'unauth');
+  const [err, setErr] = useState<ErrorState>(
+    initialError ?? (isLoggedIn ? null : 'unauth')
+  );
 
   const load = async () => {
     setLoading(true);
     setErr(null);
     try {
-      const r = await fetch('/api/me/reservations?take=50', {
-        cache: 'no-store',
-        credentials: 'same-origin',
-      });
-      if (r.status === 401) {
-        setItems([]);
-        setErr('unauth');
-        return;
-      }
-      const j = await r.json();
+      const j = await getJSON<{ data?: Item[]; all?: any[] }>(
+        '/api/me/reservations?take=50',
+        {
+          cache: 'no-store',
+          credentials: 'same-origin',
+        }
+      );
       const arr: Item[] = (j.data ?? []).sort((a: any, b: any) =>
         new Date(a.start).getTime() - new Date(b.start).getTime()
       ).slice(0, 10);
       setItems(arr);
       onLoaded?.(j);
+    } catch (error) {
+      if (error instanceof UnauthorizedError) {
+        setItems([]);
+        setErr('unauth');
+        return;
+      }
+      console.error('reservations load failed', error);
+      toast.error('予約の取得に失敗しました。時間をおいて再度お試しください。');
+      setItems([]);
+      setErr('load');
     } finally {
       setLoading(false);
     }
@@ -88,7 +102,13 @@ export default function UpcomingReservations({
           ログインが必要です。<a className="underline" href="/login">ログイン</a>
         </p>
       )}
-      {items.length === 0 && err !== 'unauth' ? (
+      {err === 'load' ? (
+        <p className="text-sm text-red-600">
+          予約の取得に失敗しました。時間をおいて再度お試しください。
+        </p>
+      ) : null}
+
+      {items.length === 0 && err !== 'unauth' && err !== 'load' ? (
         <div className="text-muted text-sm">
           直近の予約はありません。右上の「グループ参加」から始めましょう。
         </div>
