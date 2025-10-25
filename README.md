@@ -55,7 +55,7 @@ If dependency installation fails with a `403` status, follow this order of opera
 403 responses typically indicate that traffic is being routed to a private registry requiring authentication or is being blocked by a corporate proxy. Ensure requests are sent to the public npm registry before attempting other workarounds.
 
 ### Environment
-Set `DATABASE_URL` in `web/.env.local` (or export it in your shell) using the **pooler** Neon host, and add a matching `DIRECT_URL` that points to the **direct** host. Prisma `generate`/`migrate` use `DIRECT_URL` while the runtime continues to hit the pooler endpoint. The helper scripts in `web/scripts/` URL-encode the password and reject pooler hosts, making them ideal for preparing the `DIRECT_URL` value:
+Set both `DATABASE_URL` and `DIRECT_URL` in `web/.env.local` (or export them in your shell). See [Database URLs: runtime vs migrate](#database-urls-runtime-vs-migrate) for requirements. The helper scripts in `web/scripts/` URL-encode the password and output both env vars:
 
 ```bash
 cd web
@@ -69,17 +69,39 @@ cd web
 
 `pnpm build` only runs `prisma migrate deploy` when `RUN_MIGRATIONS=1`. Leave it unset/`0` in environments such as Vercel so that the build logs `Skipping prisma migrate deploy` and only runs `prisma generate`.
 
-### Database operations quick start
-See: `web/docs/db-ops.md`
+## Database URLs: runtime vs migrate
 
-Minimum CI-equivalent checks:
+- `DATABASE_URL`: runtime 接続。**pooler 可**（例: `ep-xxxx-**pooler**.region.aws.neon.tech`）
+- `DIRECT_URL`: Prisma の `generate`/`migrate` 用。**Direct 必須**（`-pooler` を含まない）
+
+`web/prisma/schema.prisma`:
+
+```prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")   // ランタイム（pooler / Accelerate 可）
+  directUrl = env("DIRECT_URL")     // generate / migrate 用（必ず Direct）
+}
+```
+
+### Migrations policy
+
+Vercel では `RUN_MIGRATIONS === '1' && VERCEL !== '1'` のため自動実行しません。
+
+本番 DB への反映は One-off Workflow を用います：
+
+1. GitHub Secrets に `DIRECT_URL`（Direct URL）を登録
+2. Actions → **Run Prisma Migrate (one-off)** → Run
+
+初回のみテーブル未作成で 500 が出る場合、暫定で `pnpm prisma db push` も検討（後で正式 migration に統合）。
+
+#### Local tips
 
 ```bash
-cd web
-# (DATABASE_URL is assumed to be set via the helper scripts)
-pnpm run db:migrate:status
-pnpm run db:migrate:resolve-rolled
-pnpm run db:migrate:deploy
+# Local (Direct で)
+export DIRECT_URL='postgresql://... (no -pooler) ...'
+export DATABASE_URL="$DIRECT_URL"
+pnpm -C web prisma migrate deploy
 ```
 
 #### Vercel deployment checklist
@@ -92,8 +114,21 @@ pnpm run db:migrate:deploy
   - `APP_BASE_URL` — canonical origin used in emails (e.g. `https://<your-domain>`).
   - `APP_SESSION_COOKIE_NAME` — optional override, defaults to `lab_session`.
   - Preview deployments only: `USE_MOCK=true` if you need to disable live database writes temporarily.
-- **Database migrations**: run manually from a trusted shell or CI job following [`web/docs/db-ops.md`](web/docs/db-ops.md).
+- **Database migrations**: run manually from a trusted shell or CI job using the one-off workflow or following [`web/docs/db-ops.md`](web/docs/db-ops.md).
 - **Post-deploy verification**: confirm `GET /api/_diag/env` reports the expected base URL and direct database host, and `GET /api/health/db` returns a healthy status.
+
+### Database operations quick start
+See: `web/docs/db-ops.md`
+
+Minimum CI-equivalent checks:
+
+```bash
+cd web
+# (DATABASE_URL is assumed to be set via the helper scripts)
+pnpm run db:migrate:status
+pnpm run db:migrate:resolve-rolled
+pnpm run db:migrate:deploy
+```
 
 ### DB health check
 
