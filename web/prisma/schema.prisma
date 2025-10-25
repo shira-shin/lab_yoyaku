@@ -4,19 +4,20 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")   // runtime（pooler 可）
-  directUrl = env("DIRECT_URL")     // migrate/generate（Direct 必須）
+  url       = env("DATABASE_URL") // runtime（pooler 可）
+  directUrl = env("DIRECT_URL") // migrate/generate（Direct 必須）
 }
 
 model User {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   name          String?
-  email         String?  @unique
+  email         String?   @unique
   emailVerified DateTime?
   image         String?
 
-  accounts      Account[]
-  sessions      Session[]
+  accounts            Account[]
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("User") // 大文字テーブル名を明示
 }
@@ -35,7 +36,7 @@ model Account {
   id_token          String?
   session_state     String?
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("Account")
@@ -47,7 +48,7 @@ model Session {
   userId       String
   expires      DateTime
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("Session")
 }
@@ -61,6 +62,7 @@ model PasswordResetToken {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("PasswordResetToken")
 }
 
@@ -72,4 +74,3 @@ model VerificationToken {
   @@unique([identifier, token])
   @@map("VerificationToken")
 }
-

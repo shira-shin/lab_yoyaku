@@ -9,6 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "echo skip prisma generate on postinstall",
+    "prisma:format": "prisma format",
+    "prisma:generate": "prisma generate",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:push": "prisma db push",
     "db:migrate:status": "prisma migrate status",
