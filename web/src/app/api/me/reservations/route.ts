@@ -4,6 +4,7 @@ export const revalidate = 0
 import { NextResponse } from 'next/server'
 import { readUserFromCookie } from '@/lib/auth-legacy'
 import { prisma } from '@/server/prisma'
+import { isMissingTableError, respondDbNotInitializedWithLog } from '@/server/api/db-not-initialized'
 
 function parseDate(value: string | null): Date | null {
   if (!value) return null
@@ -112,11 +113,10 @@ export async function GET(req: Request) {
     }))
 
     return NextResponse.json({ ok: true, data: payload, all: payload })
-  } catch (e: any) {
-    if (e?.code === 'P2021') {
-      console.warn('[api.me.reservations.GET] table missing; returning empty []')
-      return NextResponse.json({ ok: true, data: [], all: [], items: [], total: 0 })
+  } catch (error: unknown) {
+    if (isMissingTableError(error)) {
+      return respondDbNotInitializedWithLog('api.me.reservations.GET')
     }
-    throw e
+    throw error
   }
 }

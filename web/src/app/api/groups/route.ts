@@ -7,6 +7,7 @@ import { prisma } from '@/server/prisma'
 import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
 import { makeSlug } from '@/lib/slug'
 import { normalizeJoinInput } from '@/lib/text'
+import { isMissingTableError, respondDbNotInitializedWithLog } from '@/server/api/db-not-initialized'
 
 function parseDate(value: unknown) {
   if (!value) return null
@@ -35,10 +36,9 @@ export async function GET(req: Request) {
           where: { email: { equals: me.email, mode: 'insensitive' } },
           select: { groupId: true },
         })
-      } catch (e: any) {
-        if (e?.code === 'P2021') {
-          console.warn('[api.groups.GET] table missing; returning empty []')
-          return NextResponse.json({ groups: [] }, { status: 200 })
+      } catch (e: unknown) {
+        if (isMissingTableError(e)) {
+          return respondDbNotInitializedWithLog('api.groups.GET.memberships')
         }
         throw e
       }
@@ -55,10 +55,9 @@ export async function GET(req: Request) {
           orderBy: { createdAt: 'desc' },
           select: { slug: true, name: true },
         })
-      } catch (e: any) {
-        if (e?.code === 'P2021') {
-          console.warn('[api.groups.GET] table missing; returning empty []')
-          return NextResponse.json({ groups: [] }, { status: 200 })
+      } catch (e: unknown) {
+        if (isMissingTableError(e)) {
+          return respondDbNotInitializedWithLog('api.groups.GET.mine')
         }
         throw e
       }
@@ -71,10 +70,9 @@ export async function GET(req: Request) {
         orderBy: { createdAt: 'desc' },
         select: { slug: true, name: true },
       })
-    } catch (e: any) {
-      if (e?.code === 'P2021') {
-        console.warn('[api.groups.GET] table missing; returning empty []')
-        return NextResponse.json({ groups: [] }, { status: 200 })
+    } catch (e: unknown) {
+      if (isMissingTableError(e)) {
+        return respondDbNotInitializedWithLog('api.groups.GET.public')
       }
       throw e
     }
@@ -85,6 +83,9 @@ export async function GET(req: Request) {
     })
     return NextResponse.json({ groups })
   } catch (error) {
+    if (isMissingTableError(error)) {
+      return respondDbNotInitializedWithLog('api.groups.GET.catch')
+    }
     console.error('list groups failed', error)
     return NextResponse.json({ error: 'list groups failed' }, { status: 500 })
   }
@@ -150,6 +151,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ group: created }, { status: 201 })
   } catch (error) {
+    if (isMissingTableError(error)) {
+      return respondDbNotInitializedWithLog('api.groups.POST', { slug: req.url })
+    }
     console.error('create group failed', error)
     return NextResponse.json({ error: 'create group failed' }, { status: 500 })
   }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { DB_NOT_INITIALIZED_ERROR } from "@/lib/db/constants";
 
 export default function GroupJoinPage() {
   const searchParams = useSearchParams();
@@ -9,6 +10,7 @@ export default function GroupJoinPage() {
   const [passcode, setPasscode] = useState("");
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [dbNotInitialized, setDbNotInitialized] = useState(false);
   const router = useRouter();
 
   const slugParam = searchParams.get("slug") || "";
@@ -21,6 +23,7 @@ export default function GroupJoinPage() {
     e.preventDefault();
     setErr('');
     setLoading(true);
+    setDbNotInitialized(false);
     try {
       const slug = group.trim().toLowerCase();
       if (!slug) {
@@ -37,7 +40,12 @@ export default function GroupJoinPage() {
       const payload = await res.json().catch(() => null);
       if (!res.ok || !payload?.ok) {
         const code = payload?.code || payload?.error || 'join_failed';
-        setErr(String(code));
+        if (code === DB_NOT_INITIALIZED_ERROR) {
+          setDbNotInitialized(true);
+          setErr('データベースが初期化されていません。管理者に連絡してください。');
+        } else {
+          setErr(String(code));
+        }
         return;
       }
       const nextSlug = payload?.data?.slug || slug;
@@ -82,12 +90,20 @@ export default function GroupJoinPage() {
         )}
         <button
           className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={loading || !group.trim()}
-          aria-disabled={loading || !group.trim()}
+          disabled={loading || !group.trim() || dbNotInitialized}
+          aria-disabled={loading || !group.trim() || dbNotInitialized}
         >
           {loading ? "参加中..." : "参加する"}
         </button>
       </form>
+      {dbNotInitialized && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+          <p className="font-semibold">データベースが初期化されていません。</p>
+          <p className="mt-2 text-sm">
+            管理者に連絡し、Prisma のマイグレーションを実行してテーブルを作成してください。
+          </p>
+        </div>
+      )}
     </div>
   );
 }

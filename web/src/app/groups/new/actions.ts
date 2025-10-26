@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { serverFetch } from '@/lib/http/serverFetch'
+import { DB_NOT_INITIALIZED_ERROR } from '@/lib/db/constants'
 
 export type NewGroupFormState = {
   error?: string
@@ -14,10 +15,17 @@ function asNullableString(value: FormDataEntryValue | null) {
 }
 
 async function readError(res: Response, fallback: string) {
+  if (res.status === 503) {
+    return 'データベースが初期化されていません。管理者に連絡してください。'
+  }
   const text = await res.text().catch(() => '')
   if (!text) return fallback
   try {
     const parsed = JSON.parse(text)
+    const errorCode = typeof parsed?.error === 'string' ? parsed.error : null
+    if (errorCode === DB_NOT_INITIALIZED_ERROR || parsed?.code === DB_NOT_INITIALIZED_ERROR) {
+      return 'データベースが初期化されていません。管理者に連絡してください。'
+    }
     const message =
       typeof parsed?.error === 'string'
         ? parsed.error
