@@ -1,4 +1,4 @@
-import { ensureDbInitialized } from '@/lib/db/safe-init';
+import { ensureDbInitialized } from '@/lib/db/ensure-initialized';
 import { prisma } from '@/server/db/prisma';
 
 type GlobalWithDbLog = typeof globalThis & {

@@ -5,6 +5,7 @@ import { prisma } from "@/server/db/prisma";
 
 import { createLoginCookie, verifyPassword, needsRehash, hashPassword } from "@/lib/auth";
 import { findUserByEmailNormalized, normalizeEmail } from "@/lib/users";
+import { respondDbNotInitializedWithLog } from "@/server/api/db-not-initialized";
 
 function isP2021UserTable(err: unknown): err is PrismaClientKnownRequestError {
   return (
@@ -66,14 +67,7 @@ export async function POST(req: Request) {
   } catch (err: unknown) {
     if (isP2021UserTable(err)) {
       logRuntimeDbDetails();
-      return NextResponse.json(
-        {
-          ok: false,
-          reason: "service_unavailable",
-          message: "Auth is temporarily unavailable. Please retry shortly.",
-        },
-        { status: 503 },
-      );
+      return respondDbNotInitializedWithLog("api.auth.login");
     }
     throw err;
   }
