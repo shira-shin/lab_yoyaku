@@ -16,5 +16,8 @@
   },
   "scripts": {
     "migrate:deploy": "tsx scripts/migrate-deploy.ts"
+  },
+  "devDependencies": {
+    "tsx": "workspace:*"
   }
 }
