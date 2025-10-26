@@ -14,23 +14,22 @@ Visit <http://localhost:3000> once the dev server boots.
 
 ### Database connection
 
-- `DATABASE_URL` — PostgreSQL connection string pointing to the **direct** Neon host with `sslmode=require` and a URL-encoded password.
-- Use `./scripts/set-database-url.sh` (macOS/Linux) or `./scripts/set-database-url.ps1` (PowerShell) to compose a safe URL:
-  ```bash
-  cd web
-  ./scripts/set-database-url.sh neondb_owner 'YOUR_REAL_PASSWORD' ep-xxxxx.ap-southeast-1.aws.neon.tech neondb
-  ```
-  ```powershell
-  cd web
-  ./scripts/set-database-url.ps1 -User 'neondb_owner' -PasswordRaw 'YOUR_REAL_PASSWORD' -Host 'ep-xxxxx.ap-southeast-1.aws.neon.tech' -DbName 'neondb'
-  ```
-  The scripts reject `-pooler` hosts and display a masked URL after exporting `DATABASE_URL` in the current shell.
+- `DATABASE_URL` — PostgreSQL connection string pointing to the **pooler** host (example: `ep-xxxxx-pooler.ap-*.neon.tech`).
+- `DIRECT_URL` — PostgreSQL connection string pointing to the **direct** host (example: `ep-xxxxx.ap-*.neon.tech`).
+- 双方とも **同じ ep-ID** を用いること。Production だけでなく Preview/Development でも ID が揃っていると、接続先のテーブル状態を一貫して追跡できる。
+- Local での接続文字列作成には `./scripts/set-database-url.sh` (macOS/Linux) または `./scripts/set-database-url.ps1` (PowerShell) を使うと安全に URL が組み立てられる。スクリプトは直結ホスト向けなので、実行後に得られた URL を `DIRECT_URL` として保存し、同じ ep-ID に `-pooler` を付与したホスト名へ書き換えたものを `DATABASE_URL` として記録する（例: `ep-bitter-leaf-a1bq8tp9` → `ep-bitter-leaf-a1bq8tp9-pooler`）。
 
 ## Neon endpoint (ep-ID) の統一と検証
 
-- `DATABASE_URL` は Neon の **pooler** ホスト、`DIRECT_URL` は **直結** ホストを指す。どちらも **同じ ep-ID** を使うこと。
-- ビルド前ガード（`web/scripts/assert-endpoints-match.ts`）が `pnpm build` 実行時に ep-ID をチェックする。不一致の場合は Preview で `PREBUILD_ALLOW_ENDPOINT_MISMATCH=1` を付けると警告ログだけにできる（Production では常に失敗）。
-- 本番環境では `GET /api/health/db` を叩くと、接続中の `endpoint` と主要テーブルの有無（null / 非 null）が確認できる。
+- `web/scripts/assert-endpoints-match.ts` が `pnpm build` 中に `DATABASE_URL` と `DIRECT_URL` の ep-ID を比較する。Production では不一致で即失敗し、Preview/Development では警告を出してビルドを継続する（ログに詳細な診断情報を残す）。
+- `PREBUILD_EXPECT_EP` を指定すると、両方の URL が特定の ep-ID を指しているかどうかを追加チェックできる。Production では不一致時に fail-fast、非本番では警告となる。
+- `/api/health/db` にアクセスすると、接続中の `endpoint` と主要テーブル（`User` / `GroupMember` / `Reservation` / `PasswordResetToken`）の存在可否を JSON で確認できる。
+
+### Vercel 環境の設定フロー
+
+1. Vercel ダッシュボードの **Project Settings → Environment Variables** を開き、Production / Preview / Development すべてのスコープで `DATABASE_URL`（pooler ホスト）と `DIRECT_URL`（直結ホスト）が同じ ep-ID を指していることを確認する。
+2. Env Group を使っている場合は Group 側の値も同じ組み合わせに更新し、ブランチ固有の ENV があれば削除または統一する。
+3. 値を変更したら再デプロイし、Preview でも Production でも `/api/health/db` の `info.endpoint` が期待どおりになっているか確認する。
 
 ### テーブル作成（統一先の ep 側）
 
@@ -41,6 +40,8 @@ pnpm -C web prisma db push --skip-generate --accept-data-loss --url "$DIRECT_URL
 ```
 
 もしくは Neon SQL エディタで [`web/init.sql`](./init.sql) を実行する。
+
+テーブルが一部 `null` のままの場合は、同じ ep-ID を指す ENV を再確認し、`prisma db push` か `init.sql` を適用して不足分を作成する。Preview でテーブルが欠けている間は API が 200/空配列で応答するため画面は落ちないが、根本対応としてテーブルを整備すること。
 
 After the push completes, call `/api/health/db` on the production deployment to confirm that the expected tables exist and that the endpoint ID matches the configured environment variables.
 
