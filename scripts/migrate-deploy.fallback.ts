@@ -11,11 +11,11 @@ const env = {
 };
 
 function run(cmd: string) {
-  execSync(`pnpm ${cmd}`, { stdio: 'inherit', shell: true, cwd: webDir, env });
+  execSync(`pnpm exec ${cmd}`, { stdio: 'inherit', shell: true, cwd: webDir, env });
 }
 
 function capture(cmd: string): string {
-  return execSync(`pnpm ${cmd}`, { stdio: ['ignore', 'pipe', 'pipe'], shell: true, cwd: webDir, env }).toString();
+  return execSync(`pnpm exec ${cmd}`, { stdio: ['ignore', 'pipe', 'pipe'], shell: true, cwd: webDir, env }).toString();
 }
 
 function extractFailedMigration(msg: string): string | null {
