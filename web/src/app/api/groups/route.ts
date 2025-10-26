@@ -29,25 +29,23 @@ export async function GET(req: Request) {
       if (!me?.email) {
         return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
       }
-      const normalizedEmail = normalizeEmail(me.email)
-      const memberships = await prisma.groupMember
-        .findMany({
+      let memberships: Awaited<ReturnType<typeof prisma.groupMember.findMany>>
+      try {
+        memberships = await prisma.groupMember.findMany({
           where: { email: { equals: me.email, mode: 'insensitive' } },
           select: { groupId: true },
         })
-        .catch((e: any) => {
-          if (e?.code === 'P2021') {
-            console.warn('[api.groups.GET] table missing; returning empty list')
-            return null
-          }
-          throw e
-        })
-      if (!memberships) {
-        return NextResponse.json({ groups: [] })
+      } catch (e: any) {
+        if (e?.code === 'P2021') {
+          console.warn('[api.groups.GET] table missing; returning empty []')
+          return NextResponse.json({ groups: [] })
+        }
+        throw e
       }
       const groupIds = memberships.map((m) => m.groupId)
-      const groups = await prisma.group
-        .findMany({
+      let groups: Awaited<ReturnType<typeof prisma.group.findMany>>
+      try {
+        groups = await prisma.group.findMany({
           where: {
             OR: [
               { hostEmail: { equals: me.email, mode: 'insensitive' } },
@@ -57,33 +55,28 @@ export async function GET(req: Request) {
           orderBy: { createdAt: 'desc' },
           select: { slug: true, name: true },
         })
-        .catch((e: any) => {
-          if (e?.code === 'P2021') {
-            console.warn('[api.groups.GET] table missing; returning empty list')
-            return null
-          }
-          throw e
-        })
-      if (!groups) {
-        return NextResponse.json({ groups: [] })
+      } catch (e: any) {
+        if (e?.code === 'P2021') {
+          console.warn('[api.groups.GET] table missing; returning empty []')
+          return NextResponse.json({ groups: [] })
+        }
+        throw e
       }
       return NextResponse.json({ groups })
     }
 
-    const groups = await prisma.group
-      .findMany({
+    let groups: Awaited<ReturnType<typeof prisma.group.findMany>>
+    try {
+      groups = await prisma.group.findMany({
         orderBy: { createdAt: 'desc' },
         select: { slug: true, name: true },
       })
-      .catch((e: any) => {
-        if (e?.code === 'P2021') {
-          console.warn('[api.groups.GET] table missing; returning empty list')
-          return null
-        }
-        throw e
-      })
-    if (!groups) {
-      return NextResponse.json({ groups: [] })
+    } catch (e: any) {
+      if (e?.code === 'P2021') {
+        console.warn('[api.groups.GET] table missing; returning empty []')
+        return NextResponse.json({ groups: [] })
+      }
+      throw e
     }
     console.info('[api.groups.GET]', {
       mine: false,

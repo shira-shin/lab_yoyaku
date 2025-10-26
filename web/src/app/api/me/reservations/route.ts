@@ -39,8 +39,9 @@ export async function GET(req: Request) {
     orConditions.push({ userId: me.id })
   }
 
-  const reservations = await prisma.reservation
-    .findMany({
+  let reservations: Awaited<ReturnType<typeof prisma.reservation.findMany>>
+  try {
+    reservations = await prisma.reservation.findMany({
       where: {
         OR: orConditions,
         ...(from && to ? { AND: [{ start: { lt: to } }, { end: { gt: from } }] } : {}),
@@ -59,13 +60,13 @@ export async function GET(req: Request) {
         user: { select: { id: true, name: true, email: true } },
       },
     })
-    .catch((e: any) => {
-      if (e?.code === 'P2021') {
-        console.warn('[api.me.reservations.GET] table missing; returning empty list')
-        return [] as Awaited<ReturnType<typeof prisma.reservation.findMany>>
-      }
-      throw e
-    })
+  } catch (e: any) {
+    if (e?.code === 'P2021') {
+      console.warn('[api.me.reservations.GET] table missing; returning empty []')
+      return NextResponse.json({ ok: true, data: [], all: [] })
+    }
+    throw e
+  }
 
   const payload = reservations.map((reservation) => ({
     id: reservation.id,
