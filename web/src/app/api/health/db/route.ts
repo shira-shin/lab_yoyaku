@@ -18,7 +18,12 @@ export async function GET() {
         NOW() AS now,
         current_database() AS db,
         version() AS version,
-        to_regclass('public."User"')::text AS user_table
+        (
+          SELECT tablename::text
+          FROM pg_catalog.pg_tables
+          WHERE schemaname = 'public' AND tablename = 'User'
+          LIMIT 1
+        ) AS user_table
     `
 
     const row = rows?.[0]

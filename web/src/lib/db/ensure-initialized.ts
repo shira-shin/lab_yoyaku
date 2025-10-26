@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const REQUIRED_TABLES = ['User', 'Group', 'GroupMember', 'Reservation'] as const;
 const ADVISORY_LOCK_KEY = [48_151, 62_342] as const;
@@ -22,8 +22,6 @@ export type DbBootstrapResult = {
   tablesAfter: TableStatus[];
   error?: { name: string; message: string } | null;
 };
-
-type TableCheckRow = Record<TableName, string | null>;
 
 type GlobalWithEnsure = typeof globalThis & {
   __ensureDbInitPromise?: Promise<void> | null;
@@ -52,14 +50,15 @@ async function withPrismaClient<T>(fn: (client: PrismaClient) => Promise<T>): Pr
 }
 
 async function fetchTableStatuses(client: PrismaClient): Promise<TableStatus[]> {
-  const columns = REQUIRED_TABLES.map((name) => `to_regclass('public."${name}"') AS "${name}"`).join(', ');
   try {
-    const result = (await client.$queryRawUnsafe(`SELECT ${columns}`)) as TableCheckRow[] | undefined;
-    const row = result?.[0];
-    if (!row) {
-      return REQUIRED_TABLES.map((name) => ({ name, exists: false }));
-    }
-    return REQUIRED_TABLES.map((name) => ({ name, exists: Boolean(row[name]) }));
+    const rows = await client.$queryRaw<{ table_name: string }[]>`
+      SELECT tablename::text AS table_name
+      FROM pg_catalog.pg_tables
+      WHERE schemaname = 'public'
+        AND tablename IN (${Prisma.join(REQUIRED_TABLES)})
+    `;
+    const tableSet = new Set(rows?.map((row) => row.table_name) ?? []);
+    return REQUIRED_TABLES.map((name) => ({ name, exists: tableSet.has(name) }));
   } catch (error) {
     console.warn('[bootstrap] failed to check table statuses', error);
     return REQUIRED_TABLES.map((name) => ({ name, exists: false }));
