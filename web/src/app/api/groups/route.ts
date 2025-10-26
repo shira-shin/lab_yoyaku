@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       if (!me?.email) {
         return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
       }
-      let memberships: Awaited<ReturnType<typeof prisma.groupMember.findMany>>
+      let memberships: { groupId: string }[] = []
       try {
         memberships = await prisma.groupMember.findMany({
           where: { email: { equals: me.email, mode: 'insensitive' } },
