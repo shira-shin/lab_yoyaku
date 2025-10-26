@@ -36,9 +36,9 @@ function deployOnce() {
   return run('pnpm', ['--filter', 'lab_yoyaku-web', 'exec', 'prisma', 'migrate', 'deploy']);
 }
 
-function resolveRolledBack(migrationName) {
-  console.warn(`[migrate] resolve --rolled-back ${migrationName}`);
-  return run('pnpm', ['--filter', 'lab_yoyaku-web', 'exec', 'prisma', 'migrate', 'resolve', '--rolled-back', migrationName]);
+function resolveApplied(migrationName) {
+  console.warn(`[migrate] resolve --applied ${migrationName}`);
+  return run('pnpm', ['--filter', 'lab_yoyaku-web', 'exec', 'prisma', 'migrate', 'resolve', '--applied', migrationName]);
 }
 
 function resolveApplied(migrationName) {
@@ -64,7 +64,11 @@ function migrateDiffScript() {
     'migrate',
     'diff',
     '--from-schema-datamodel',
+codex/fix-migration-state-inconsistency-py060o
+    'prisma/schema.prisma',
+=======
     'web/prisma/schema.prisma',
+main
     '--to-url',
     env.DIRECT_URL,
     '--script',
@@ -143,12 +147,23 @@ function printHints(all) {
     }
 
     if (!repaired) {
+codex/fix-migration-state-inconsistency-py060o
+      console.warn('[migrate] attempting resolve --applied as fallback');
+      const applied = resolveApplied(failed);
+      if (!applied.ok) {
+        console.warn(`[migrate] resolve applied failed: code=${applied.code}\n${applied.stderr || applied.stdout}`);
+        process.exit(1);
+        return;
+      }
+      repaired = true;
+=======
       const r = resolveRolledBack(failed);
       if (!r.ok) {
         console.warn(`[migrate] resolve rolled-back failed: code=${r.code}\n${r.stderr || r.stdout}`);
         process.exit(1);
         return;
       }
+main
     }
 
     // 2) 再 deploy
