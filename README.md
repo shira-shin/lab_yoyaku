@@ -67,7 +67,7 @@ cd web
 ./scripts/set-database-url.ps1 -User 'neondb_owner' -PasswordRaw 'YOUR_REAL_PASSWORD' -Host 'ep-xxxxx.ap-southeast-1.aws.neon.tech' -DbName 'neondb'
 ```
 
-`pnpm build` only runs `prisma migrate deploy` when `RUN_MIGRATIONS=1`. Leave it unset/`0` in environments such as Vercel so that the build logs `Skipping prisma migrate deploy` and only runs `prisma generate`.
+`pnpm build` runs `prisma migrate deploy` when `RUN_MIGRATIONS=1`. On Vercel the step is skipped unless you also opt-in with `ALLOW_MIGRATE_ON_VERCEL=1`. Preview builds fall back to `prisma db push --accept-data-loss` if `migrate deploy` fails so that empty databases can be bootstrapped automatically.
 
 ## Database URLs: runtime vs migrate
 
@@ -82,19 +82,20 @@ cd web
 4. Reload `/api/health/db` and confirm `userTable: present`.
 
 ### First-time DB bootstrap
-1. Ensure Vercel env:
-   - `DATABASE_URL` = pooler
-   - `DIRECT_URL`   = Direct (no "-pooler")
-2. Run GitHub Actions → Bootstrap DB (deploy or push)
-   - It runs `prisma migrate deploy` first, falls back to `prisma db push`
-3. Open the app and try login again.
+1. Ensure Vercel env (Production + Preview):
+   - `DATABASE_URL` — Neon **pooler** URL (fixed endpoint, URL-encoded password).
+   - `DIRECT_URL`   — Same database via the **direct** host (no `-pooler`).
+   - `RUN_MIGRATIONS=1`
+   - `ALLOW_MIGRATE_ON_VERCEL=1`
+2. Redeploy the site. The build will run `prisma migrate deploy` (and `prisma db push --accept-data-loss` as a preview-only fallback).
+3. Open `/api/health/db` to confirm the tables exist, then sign in and test the UI.
 
 ### DB bootstrap (empty DB -> create tables)
 - 初回起動や空DBで `P2021: public."User" does not exist` が出る場合：
-  1. GitHub Secrets に `DIRECT_URL`（Neon **Direct** URL, no `-pooler`）を登録
-  2. Actions → **Bootstrap DB (deploy or push)** を手動実行
-     - `migrate deploy` を試行、無ければ `db push` にフォールバックしてテーブルを作成
-  3. `/api/health/db` で `userTable: present` を確認
+  1. Vercel プロジェクトの Preview / Production すべてに同じ `DATABASE_URL`（pooler）と `DIRECT_URL`（direct）を設定し、エンドポイントが固定されていることを確認する（デプロイごとに `ep-xxxx` が変わらないようにする）。
+  2. `RUN_MIGRATIONS=1` と `ALLOW_MIGRATE_ON_VERCEL=1` を設定して再デプロイする。
+     - Preview 環境では、`prisma migrate deploy` に失敗した場合に自動で `prisma db push --accept-data-loss` を実行してテーブルを作成する。
+  3. `/api/health/db` で主要テーブルが存在することを確認する。
 
 ### URLs
 - `DATABASE_URL`: runtime 接続。**pooler 可**（例: `ep-xxxx-**pooler**.region.aws.neon.tech`）
@@ -112,14 +113,11 @@ datasource db {
 
 ### Migrations policy
 
-Vercel では `RUN_MIGRATIONS === '1' && VERCEL !== '1'` のため自動実行しません。
-
-本番 DB への反映は One-off Workflow を用います：
-
-1. GitHub Secrets に `DIRECT_URL`（Direct URL）を登録
-2. Actions → **Run Prisma Migrate (one-off)** → Run
-
-初回のみテーブル未作成で 500 が出る場合は、Actions → **Bootstrap DB (deploy or push)** を実行してテーブルを作成（`migrate deploy` に成功すればそのまま継続、失敗時は `db push` にフォールバック）。
+- すべての環境で同一の Neon エンドポイントを使用する。`DATABASE_URL`（pooler）と `DIRECT_URL`（direct）は同じ DB/branch を指す URL を設定し、`ep-xxxx` が毎回変わらないようにする。
+- Vercel で自動的にマイグレーションを実行したい場合は `RUN_MIGRATIONS=1` と `ALLOW_MIGRATE_ON_VERCEL=1` を設定する。
+  - Preview 環境は `prisma migrate deploy` に失敗した場合 `prisma db push --accept-data-loss` にフォールバックする。
+  - Production 環境はフォールバックせず、失敗した場合はデプロイを失敗として扱う。
+- 手動実行する場合は引き続き GitHub Actions の one-off ワークフローやローカル CLI から `pnpm prisma migrate deploy` を実行できる。
 
 #### Local tips
 
@@ -136,7 +134,8 @@ pnpm -C web prisma migrate deploy
 - **Environment variables** (Production + Preview):
   - `DATABASE_URL` — Neon pooler host URL with `sslmode=require` and URL-encoded password.
   - `DIRECT_URL` — Neon direct host URL with `sslmode=require` and URL-encoded password (no `-pooler`).
-  - `RUN_MIGRATIONS` — leave unset or `0` so that builds skip `prisma migrate deploy`.
+  - `RUN_MIGRATIONS=1`
+  - `ALLOW_MIGRATE_ON_VERCEL=1`
   - `APP_BASE_URL` — canonical origin used in emails (e.g. `https://<your-domain>`).
   - `APP_SESSION_COOKIE_NAME` — optional override, defaults to `lab_session`.
   - Preview deployments only: `USE_MOCK=true` if you need to disable live database writes temporarily.

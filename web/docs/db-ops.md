@@ -2,20 +2,25 @@
 
 This document defines how we run database operations for the web app. The goals are:
 
-- keep Prisma and the application pointed at the Neon **direct** host at all times;
+- pin Prisma and the application to the same Neon branch/endpoint (pooler for runtime, direct for migrations);
 - avoid schema drift between environments by controlling when `prisma migrate` runs;
 - guarantee runtime secrets are present while allowing Vercel builds to complete; and
 - provide a repeatable playbook for clearing the Prisma P3009 failure caused by the `202409160001_group_enhancements` migration.
 
-## Direct host only policy
+## Consistent Neon endpoint policy
 
-Always configure `DATABASE_URL` with the Neon **direct** host (no `-pooler` suffix) and include `sslmode=require`. Mixing pooled
-and direct URLs causes `_prisma_migrations` to diverge and leads to P3009 checksum errors because pooled connections bypass the
-transactional behaviour Prisma expects. The helper scripts ensure the right format and error when a pooled host is provided.
+Use a single Neon branch/endpoint per environment and point both URLs at that database:
+
+- `DATABASE_URL` should use the **pooler** host so that serverless runtimes reuse connections efficiently.
+- `DIRECT_URL` must use the **direct** host (no `-pooler`) for Prisma CLI operations.
+
+Mixing different hosts across deployments can lead to empty databases (new `ep-xxxx` identifiers) or `_prisma_migrations`
+divergence. The helper scripts below ensure credentials are URL-encoded and warn if the wrong host type is supplied.
 
 ### DATABASE_URL helper scripts
 
-Use the helper scripts to set an URL-encoded `DATABASE_URL` with a direct host and `sslmode=require`.
+Use the helper scripts to generate URL-encoded credentials for the Neon direct host with `sslmode=require`. Apply the output to
+`DIRECT_URL` as-is, and duplicate it to `DATABASE_URL` after swapping the hostname for the `-pooler` variant.
 
 #### PowerShell
 
@@ -31,13 +36,14 @@ cd web
 ./scripts/set-database-url.sh neondb_owner 'YOUR_REAL_PASSWORD' ep-xxxxx.ap-southeast-1.aws.neon.tech neondb
 ```
 
-On success the scripts export `DATABASE_URL` in the current shell and print the masked value so that you can verify it quickly.
-They also exit with an error when the host contains `-pooler` to enforce the direct-host rule.
+On success the scripts export `DATABASE_URL` (direct) in the current shell and print the masked value so that you can verify it
+quickly. Copy the value to `DIRECT_URL`, then update the hostname to the `-pooler` variant and store it separately as
+`DATABASE_URL` for runtime use.
 
 ## Build and deployment policy
 
-- Vercel builds run `pnpm build` with `RUN_MIGRATIONS` unset (or explicitly `0`), which means the build only executes `pnpm exec tsx scripts/assert-env.ts`, `prisma generate`, and `next build`. The `prisma migrate deploy` step is skipped automatically while `VERCEL=1`.
-- Only run database migrations from a secure environment (local shell with the helper scripts above or a dedicated CI job) where you can confirm the target database and credentials before execution.
+- Vercel builds run `pnpm build` with `RUN_MIGRATIONS=1` and `ALLOW_MIGRATE_ON_VERCEL=1` so that migrations execute automatically. Preview builds fall back to `prisma db push --accept-data-loss` when `prisma migrate deploy` fails (Production fails fast).
+- When executing migrations manually use a secure environment (local shell with the helper scripts above or a dedicated CI job) where you can confirm the target database and credentials before execution.
 - `JWT_SECRET` is mandatory at runtime. The build step on Vercel tolerates a missing value and prints a warning, but production deployments must ensure the secret is configured via Vercel environment variables.
 
 ## P3009 recovery playbook (`202409160001_group_enhancements`)
@@ -103,8 +109,10 @@ psql "$DIRECT_URL" -c "\\dt public.*"
 
 ### 2. Apply migrations if the table is missing
 
-This project intentionally skips `prisma migrate deploy` on Vercel, so brand-new databases stay empty until you run migrations
-manually. Point both `DATABASE_URL` (pooler) and `DIRECT_URL` (direct) at the production database before executing the commands.
+Vercel builds execute `prisma migrate deploy` automatically when `RUN_MIGRATIONS=1` and `ALLOW_MIGRATE_ON_VERCEL=1` are set.
+Preview deployments fall back to `prisma db push --accept-data-loss` if migrations fail, so brand-new databases can bootstrap
+the schema automatically. Confirm both `DATABASE_URL` (pooler) and `DIRECT_URL` (direct) point to the intended database before
+executing the commands below.
 
 ```bash
 export DATABASE_URL='postgresql://...-pooler.../neondb?sslmode=require'

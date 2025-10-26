@@ -9,6 +9,7 @@ import { serverFetch } from '@/lib/http/serverFetch';
 import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { utcIsoToLocalDate } from '@/lib/time';
+import { DB_NOT_INITIALIZED_ERROR } from '@/lib/db/constants';
 
 type Mine = {
   id:string; deviceId:string; deviceName?:string; userEmail:string; userName?:string;
@@ -33,6 +34,8 @@ export default async function DashboardPage() {
   };
 
   let upcomingError: 'load' | null = null;
+  let dbNotInitialized = false;
+  let dbWarning: string | null = null;
   try {
     const res = await serverFetch('/api/me/reservations?take=50', { cache: 'no-store' });
     if (res.status === 401) redirect('/login?next=/dashboard');
@@ -62,6 +65,16 @@ export default async function DashboardPage() {
           device: r.deviceId ? { id: r.deviceId, name: deviceName } : null,
         } satisfies Span;
       });
+    } else if (res.status === 503) {
+      const payload = await res.json().catch(() => null);
+      const code = payload?.error ?? payload?.code;
+      if (code === DB_NOT_INITIALIZED_ERROR) {
+        dbNotInitialized = true;
+        dbWarning = 'データベースが初期化されていません。管理者に連絡してください。';
+      } else {
+        upcomingError = 'load';
+        console.error('failed to load /api/me/reservations', res.status);
+      }
     } else {
       upcomingError = 'load';
       console.error('failed to load /api/me/reservations', res.status);
@@ -78,6 +91,16 @@ export default async function DashboardPage() {
     if (gRes.ok) {
       const gJson = await gRes.json();
       myGroups = Array.isArray(gJson) ? gJson : gJson?.groups ?? [];
+    } else if (gRes.status === 503) {
+      const payload = await gRes.json().catch(() => null);
+      const code = payload?.error ?? payload?.code;
+      if (code === DB_NOT_INITIALIZED_ERROR) {
+        dbNotInitialized = true;
+        dbWarning = dbWarning ?? 'データベースが初期化されていません。管理者に連絡してください。';
+      } else {
+        groupsError = true;
+        console.error('failed to load /api/groups?mine=1', gRes.status);
+      }
     } else {
       groupsError = true;
       console.error('failed to load /api/groups?mine=1', gRes.status);
@@ -87,15 +110,50 @@ export default async function DashboardPage() {
     console.error('failed to load /api/groups?mine=1', error);
   }
 
+  if (dbNotInitialized) {
+    upcoming = [];
+    spans = [];
+    myGroups = [];
+  }
+
+  const isPreview = process.env.VERCEL_ENV === 'preview';
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">ダッシュボード</h1>
         <div className="flex gap-2">
-          <a href="/groups/new" className="btn btn-primary">グループをつくる</a>
-          <a href="/groups/join" className="btn btn-secondary">グループ参加</a>
+          <a
+            href="/groups/new"
+            className={`btn btn-primary${dbNotInitialized ? ' pointer-events-none opacity-60' : ''}`}
+            aria-disabled={dbNotInitialized}
+            tabIndex={dbNotInitialized ? -1 : undefined}
+          >
+            グループをつくる
+          </a>
+          <a
+            href="/groups/join"
+            className={`btn btn-secondary${dbNotInitialized ? ' pointer-events-none opacity-60' : ''}`}
+            aria-disabled={dbNotInitialized}
+            tabIndex={dbNotInitialized ? -1 : undefined}
+          >
+            グループ参加
+          </a>
         </div>
       </div>
+
+      {dbNotInitialized && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+          <p className="font-semibold">データベースが初期化されていません。</p>
+          <p className="mt-2 text-sm">{dbWarning}</p>
+          {isPreview && (
+            <p className="mt-2 text-xs text-amber-800">
+              プレビュー環境では再デプロイ時に <code>RUN_MIGRATIONS=1</code> と
+              <code>ALLOW_MIGRATE_ON_VERCEL=1</code> が設定されているか確認してください。
+            </p>
+          )}
+        </div>
+      )}
 
       {me && (myGroups.length > 0 || groupsError) && (
         <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">

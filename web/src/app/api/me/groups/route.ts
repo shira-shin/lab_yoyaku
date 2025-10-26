@@ -4,6 +4,7 @@ export const revalidate = 0
 import { NextResponse } from 'next/server'
 import { readUserFromCookie } from '@/lib/auth-legacy'
 import { prisma } from '@/server/db/prisma'
+import { isMissingTableError, respondDbNotInitializedWithLog } from '@/server/api/db-not-initialized'
 
 
 export async function POST(req: Request) {
@@ -34,11 +35,14 @@ export async function POST(req: Request) {
     `
 
     return NextResponse.json({ group: rows[0] }, { status: 201 })
-  } catch (e: any) {
-    console.error('create group failed', e)
+  } catch (error: unknown) {
+    if (isMissingTableError(error)) {
+      return respondDbNotInitializedWithLog('api.me.groups.POST')
+    }
+    console.error('create group failed', error)
     return NextResponse.json(
-      { error: e?.message ?? 'create group failed' },
-      { status: e?.status ?? 500 }
+      { error: (error as any)?.message ?? 'create group failed' },
+      { status: (error as any)?.status ?? 500 }
     )
   }
 }
@@ -55,15 +59,14 @@ export async function GET() {
       select: { id: true, name: true, slug: true, createdAt: true },
     })
     return NextResponse.json(groups, { status: 200 })
-  } catch (e: any) {
-    if (e?.code === 'P2021') {
-      console.warn('[api.me.groups.GET] table missing; returning empty []')
-      return NextResponse.json([], { status: 200 })
+  } catch (error: unknown) {
+    if (isMissingTableError(error)) {
+      return respondDbNotInitializedWithLog('api.me.groups.GET')
     }
-    console.error('list groups failed', e)
+    console.error('list groups failed', error)
     return NextResponse.json(
-      { error: e?.message ?? 'list groups failed' },
-      { status: e?.status ?? 500 }
+      { error: (error as any)?.message ?? 'list groups failed' },
+      { status: (error as any)?.status ?? 500 }
     )
   }
 }
