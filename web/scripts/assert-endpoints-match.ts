@@ -48,10 +48,16 @@ if (isProd) {
   // 本番は厳格
   if (mismatch) throw new Error(`[assert-endpoints-match] ep mismatch: DATABASE_URL(${epDb}) !== DIRECT_URL(${epDirect})`);
   if (wrongEp) throw new Error(`[assert-endpoints-match] ep unexpected: expected(${expected}) but got db(${epDb})/direct(${epDirect})`);
-  console.log(`[assert-endpoints-match] OK (prod): ep=${epDb}`);
+  console.log(`[assert-endpoints-match] OK (prod): VERCEL_ENV=${vercelEnv}, epDb=${epDb}, epDirect=${epDirect}`);
 } else {
   // Preview/Dev は警告のみで続行
-  if (mismatch) console.warn(`[assert-endpoints-match] WARNING (non-prod): ep mismatch db(${epDb}) vs direct(${epDirect})`);
-  if (wrongEp) console.warn(`[assert-endpoints-match] WARNING (non-prod): expected(${expected}) but got db(${epDb})/direct(${epDirect})`);
-  console.log(`[assert-endpoints-match] CONTINUE (non-prod): epDb=${epDb}, epDirect=${epDirect}`);
+  if (mismatch)
+    console.warn(
+      `[assert-endpoints-match] WARNING (non-prod): VERCEL_ENV=${vercelEnv}, ep mismatch db(${epDb}) vs direct(${epDirect})`
+    );
+  if (wrongEp)
+    console.warn(
+      `[assert-endpoints-match] WARNING (non-prod): VERCEL_ENV=${vercelEnv}, expected(${expected}) but got db(${epDb})/direct(${epDirect})`
+    );
+  console.log(`[assert-endpoints-match] CONTINUE (non-prod): VERCEL_ENV=${vercelEnv}, epDb=${epDb}, epDirect=${epDirect}`);
 }

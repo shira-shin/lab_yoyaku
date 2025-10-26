@@ -87,6 +87,7 @@ cd web
    - `DIRECT_URL`   — Same database via the **direct** host (no `-pooler`).
    - `RUN_MIGRATIONS=1`
    - `ALLOW_MIGRATE_ON_VERCEL=1`
+   - Optional preview safety net: `ALLOW_RUNTIME_BOOTSTRAP=1` to let the API run `prisma db push --accept-data-loss` exactly once if the tables are still missing during the first request.
 2. Redeploy the site. The build will run `prisma migrate deploy` (and `prisma db push --accept-data-loss` as a preview-only fallback).
 3. Open `/api/health/db` to confirm the tables exist, then sign in and test the UI.
 
@@ -95,6 +96,7 @@ cd web
   1. Vercel プロジェクトの Preview / Production すべてに同じ `DATABASE_URL`（pooler）と `DIRECT_URL`（direct）を設定し、エンドポイントが固定されていることを確認する（デプロイごとに `ep-xxxx` が変わらないようにする）。
   2. `RUN_MIGRATIONS=1` と `ALLOW_MIGRATE_ON_VERCEL=1` を設定して再デプロイする。
      - Preview 環境では、`prisma migrate deploy` に失敗した場合に自動で `prisma db push --accept-data-loss` を実行してテーブルを作成する。
+     - 追加の保険として Preview 環境で `ALLOW_RUNTIME_BOOTSTRAP=1` を指定すると、初回リクエストでテーブルが見つからない場合に 1 度だけ `prisma db push --accept-data-loss` を実行する。
   3. `/api/health/db` で主要テーブルが存在することを確認する。
 
 ### URLs
