@@ -13,9 +13,11 @@ Set the following keys on the Vercel project. Keep `DATABASE_URL` and `DIRECT_UR
 | `ALLOW_RUNTIME_BOOTSTRAP` | `1` while we still need the preview safety net | Preview only |
 | `OPS_DB_INIT_EMAIL_ALLOWLIST` | Comma-separated admin emails allowed to call `/api/ops/db/init` | Preview only |
 
+Migrations are orchestrated by `scripts/migrate-deploy.cjs`, a plain CommonJS runner invoked during builds (`pnpm --workspace-root run migrate:deploy`) and via the `/api/ops/db/deploy` endpoint. The runner ensures Prisma always talks to the Neon writer by copying `DIRECT_URL` into `DATABASE_URL`, repairs failed migrations automatically, and only falls back to `prisma db push --accept-data-loss` on preview deployments.
+
 ## Deployment checklist
 
-1. Trigger a new deployment. During `pnpm build` the logs must include either `[migrate] prisma migrate deploy: OK` or `[migrate] fallback to prisma db push (preview only)`.
+1. Trigger a new deployment. During `pnpm build` the logs must include either `[migrate] deploy: OK`, `[migrate] deploy after resolve: OK`, or `[migrate] db push: OK` (preview only fallback).
 2. After the deploy is live, hit `/api/health/db` and ensure it returns `200`.
 3. Call `/api/groups` (GET) and `/api/groups` (POST) to verify the API responds with real data and no `DB_NOT_INITIALIZED` banner appears in the UI.
 4. If the preview build still lands before migrations run, the runtime bootstrap logs `[bootstrap] ...` messages exactly once per process.
@@ -56,5 +58,5 @@ git commit -m "chore(pnpm): regenerate lockfile to include tsx@workspace:*"
 
 ## Database repair tooling
 
-- `GET/POST /api/ops/db/deploy` executes the TypeScript migrate runner (`scripts/migrate-deploy.ts`) so Vercel deployments can trigger `prisma migrate deploy` with the same fallback logic used during builds. Ensure `RUN_MIGRATIONS=1` and `ALLOW_MIGRATE_ON_VERCEL=1` are present in the environment.
-- `POST /api/ops/db/repair` forces the fallback repair path that resolves stuck migrations (e.g., Prisma `P3009`) and, on preview deployments only, finishes with `prisma db push --accept-data-loss` if repeated deploy attempts fail. Use this endpoint when `/api/health/db` reports `db:not-initialized` after a failed build.
+- `GET/POST /api/ops/db/deploy` executes the CommonJS migrate runner (`scripts/migrate-deploy.cjs`). The runner always rewrites `DATABASE_URL` to `DIRECT_URL` before invoking Prisma so production deployments use the writer endpoint. It resolves `P3009` failures automatically and only falls back to `prisma db push --accept-data-loss` on preview builds. Ensure `RUN_MIGRATIONS=1` and `ALLOW_MIGRATE_ON_VERCEL=1` are present in the environment.
+- `POST /api/ops/db/repair` forces the same fallback repair path used by the runner (resolve failed migrations, then preview-only `prisma db push`) when `/api/health/db` reports `db:not-initialized` after a failed build.
