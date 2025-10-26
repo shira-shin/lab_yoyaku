@@ -1,24 +1,32 @@
 # Operations runbook
 
-## Vercel database bootstrap
+## Required Vercel environment variables
 
-To guarantee the first deployment creates all Prisma tables:
+Set the following keys on the Vercel project. Keep `DATABASE_URL` and `DIRECT_URL` aligned with the same Neon endpoint (e.g. `ep-bitter-leaf-a1bq8tp9`).
 
-1. Set the following environment variables in the Vercel project (Production **and** Preview):
-   - `DATABASE_URL` — Neon pooler endpoint for the production database/branch. Keep the endpoint fixed (e.g. `ep-bitter-leaf-a1bq8tp9`).
-   - `DIRECT_URL` — The same database via the direct host (identical credentials, no `-pooler`).
-   - `RUN_MIGRATIONS=1`
-   - `ALLOW_MIGRATE_ON_VERCEL=1`
-2. Trigger a new deployment. The build logs will include `[migrate] prisma migrate deploy: OK`. On preview deployments a failed migration automatically falls back to `prisma db push --accept-data-loss`.
-3. Visit `/api/health/db` after the deploy finishes and confirm it returns `200`.
-4. Hit `/api/groups` (GET) and `/api/groups` (POST) to verify the API responds with real data (no `DB_NOT_INITIALIZED`).
+| Key | Value | Scope |
+| --- | --- | --- |
+| `DATABASE_URL` | Neon pooler connection string | Production & Preview |
+| `DIRECT_URL` | Same Neon database without the `-pooler` host | Production & Preview |
+| `RUN_MIGRATIONS` | `1` | Production & Preview |
+| `ALLOW_MIGRATE_ON_VERCEL` | `1` (enables `prisma migrate deploy` during builds) | Production & Preview (Preview may be enough) |
+| `ALLOW_RUNTIME_BOOTSTRAP` | `1` while we still need the preview safety net | Preview only |
+| `OPS_DB_INIT_EMAIL_ALLOWLIST` | Comma-separated admin emails allowed to call `/api/ops/db/init` | Preview only |
 
-## Runtime safety net (preview only)
+## Deployment checklist
 
-If a preview deployment still reaches the API before migrations run, enable the runtime bootstrap once per process:
+1. Trigger a new deployment. During `pnpm build` the logs must include either `[migrate] prisma migrate deploy: OK` or `[migrate] fallback to prisma db push (preview only)`.
+2. After the deploy is live, hit `/api/health/db` and ensure it returns `200`.
+3. Call `/api/groups` (GET) and `/api/groups` (POST) to verify the API responds with real data and no `DB_NOT_INITIALIZED` banner appears in the UI.
+4. If the preview build still lands before migrations run, the runtime bootstrap logs `[bootstrap] ...` messages exactly once per process.
 
-- Add `ALLOW_RUNTIME_BOOTSTRAP=1` to the Vercel environment (Preview only).
-- When the API detects that `Group`, `GroupMember`, and `Reservation` tables are missing it will execute `prisma db push --accept-data-loss` exactly once and log the `[db:init]` messages.
+## Manual preview bootstrap endpoint
+
+- Endpoint: `/api/ops/db/init` (GET for status, POST to run the bootstrap).
+- Access control: only available on preview deployments and to emails listed in `OPS_DB_INIT_EMAIL_ALLOWLIST`.
+- Response payload includes the tables that exist/missing and whether the command attempted a `prisma db push`.
+- The endpoint forces the same direct-connection `prisma db push --accept-data-loss` used by the runtime bootstrap and logs `[ops.db.init] ...` lines.
+- Use this endpoint when a preview build fails to initialize automatically—trigger a POST once and confirm `/api/health/db` turns healthy.
 
 ## Keep Neon endpoints stable
 
