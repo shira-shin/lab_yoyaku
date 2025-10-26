@@ -1,28 +1,36 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/server/prisma';
+import { NextResponse } from 'next/server'
+import { prisma } from '@/server/prisma'
 
-type DbInfoRow = { endpoint: string | null; db: string; usr: string }
-type TableInfoRow = {
-  User: string | null
-  GroupMember: string | null
-  Reservation: string | null
-  PasswordResetToken: string | null
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+type HealthCheckRow = {
+  now: Date
+  db: string
+  version: string
+  user_table: string | null
 }
 
 export async function GET() {
-  const info = (await prisma.$queryRawUnsafe(`
-    SELECT current_setting('neon.endpoint_id', true) AS endpoint,
-           current_database() AS db,
-           current_user       AS usr
-  `)) as DbInfoRow[]
+  try {
+    const rows = await prisma.$queryRaw<HealthCheckRow[]>`
+      SELECT
+        NOW() AS now,
+        current_database() AS db,
+        version() AS version,
+        to_regclass('public."User"')::text AS user_table
+    `
 
-  const tables = (await prisma.$queryRawUnsafe(`
-    SELECT
-      to_regclass('public."User"')               AS "User",
-      to_regclass('public."GroupMember"')        AS "GroupMember",
-      to_regclass('public."Reservation"')        AS "Reservation",
-      to_regclass('public."PasswordResetToken"') AS "PasswordResetToken"
-  `)) as TableInfoRow[]
+    const row = rows?.[0]
+    const ok = !!row
 
-  return NextResponse.json({ info: info?.[0], tables: tables?.[0] });
+    return NextResponse.json({ ok, ...row }, { status: 200 })
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e)
+
+    return NextResponse.json(
+      { ok: false, error: message },
+      { status: 500 }
+    )
+  }
 }
