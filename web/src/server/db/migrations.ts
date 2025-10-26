@@ -10,7 +10,7 @@ const env = {
 };
 
 function run(cmd: string) {
-  execSync(cmd, { stdio: 'inherit', shell: true, cwd: webRoot, env });
+  execSync(`pnpm ${cmd}`, { stdio: 'inherit', shell: true, cwd: webRoot, env });
 }
 
 export async function migrateDeployWithRepair() {
@@ -23,7 +23,7 @@ export async function migrateDeployWithRepair() {
     if (/P3009/.test(msg)) {
       // 失敗マイグレーション名は status から取得（より安定）
       try {
-        const json = execSync('prisma migrate status --json', {
+        const json = execSync('pnpm prisma migrate status --json', {
           stdio: ['ignore', 'pipe', 'pipe'],
           shell: true,
           cwd: webRoot,
