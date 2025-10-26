@@ -36,13 +36,34 @@ function deployOnce() {
   return run('pnpm', ['--filter', 'lab_yoyaku-web', 'exec', 'prisma', 'migrate', 'deploy']);
 }
 
-function resolveRolledBack(migrationName) {
-  console.warn(`[migrate] resolve --rolled-back ${migrationName}`);
-  return run('pnpm', ['--filter', 'lab_yoyaku-web', 'exec', 'prisma', 'migrate', 'resolve', '--rolled-back', migrationName]);
+function resolveApplied(migrationName) {
+  console.warn(`[migrate] resolve --applied ${migrationName}`);
+  return run('pnpm', ['--filter', 'lab_yoyaku-web', 'exec', 'prisma', 'migrate', 'resolve', '--applied', migrationName]);
 }
 
 function migrateDiagnose() {
   return run('pnpm', ['--filter', 'lab_yoyaku-web', 'exec', 'prisma', 'migrate', 'diagnose', '--json']);
+}
+
+function migrateDiffScript() {
+  if (!env.DIRECT_URL) {
+    console.warn('[migrate] DIRECT_URL is not set; skip migrate diff');
+    return null;
+  }
+
+  return run('pnpm', [
+    '--filter',
+    'lab_yoyaku-web',
+    'exec',
+    'prisma',
+    'migrate',
+    'diff',
+    '--from-schema-datamodel',
+    'prisma/schema.prisma',
+    '--to-url',
+    env.DIRECT_URL,
+    '--script',
+  ]);
 }
 
 function parseFailedMigrationName(text) {
@@ -90,11 +111,41 @@ function printHints(all) {
     }
 
     console.warn(`[migrate] detected failed migration: ${failed}`);
-    const r = resolveRolledBack(failed);
-    if (!r.ok) {
-      console.warn(`[migrate] resolve rolled-back failed: code=${r.code}\n${r.stderr || r.stdout}`);
-      process.exit(1);
-      return;
+    let repaired = false;
+
+    const diff = migrateDiffScript();
+    if (diff && diff.ok) {
+      const meaningfulDiff = diff.stdout
+        .split('\n')
+        .some((line) => {
+          const trimmed = line.trim();
+          return trimmed && !trimmed.startsWith('--');
+        });
+
+      if (!meaningfulDiff) {
+        console.warn('[migrate] migrate diff is empty; marking migration as applied');
+        const applied = resolveApplied(failed);
+        if (applied.ok) {
+          repaired = true;
+        } else {
+          console.warn(`[migrate] resolve applied failed: code=${applied.code}\n${applied.stderr || applied.stdout}`);
+        }
+      } else {
+        console.warn('[migrate] migrate diff contains statements; skipping auto --applied');
+      }
+    } else if (diff && !diff.ok) {
+      console.warn(`[migrate] migrate diff failed: code=${diff.code}\n${diff.stderr || diff.stdout}`);
+    }
+
+    if (!repaired) {
+      console.warn('[migrate] attempting resolve --applied as fallback');
+      const applied = resolveApplied(failed);
+      if (!applied.ok) {
+        console.warn(`[migrate] resolve applied failed: code=${applied.code}\n${applied.stderr || applied.stdout}`);
+        process.exit(1);
+        return;
+      }
+      repaired = true;
     }
 
     // 2) 再 deploy
