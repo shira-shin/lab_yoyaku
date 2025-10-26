@@ -3,6 +3,7 @@ export const revalidate = 0
 
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/server/prisma'
 import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
 import { makeSlug } from '@/lib/slug'
@@ -13,6 +14,9 @@ function parseDate(value: unknown) {
   const date = new Date(String(value))
   return Number.isNaN(date.getTime()) ? null : date
 }
+
+type MembershipRow = Prisma.GroupMemberGetPayload<{ select: { groupId: true } }>
+type GroupSummary = Prisma.GroupGetPayload<{ select: { slug: true; name: true } }>
 
 export async function GET(req: Request) {
   try {
@@ -29,7 +33,7 @@ export async function GET(req: Request) {
       if (!me?.email) {
         return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
       }
-      let memberships: Awaited<ReturnType<typeof prisma.groupMember.findMany>>
+      let memberships: MembershipRow[] = []
       try {
         memberships = await prisma.groupMember.findMany({
           where: { email: { equals: me.email, mode: 'insensitive' } },
@@ -43,7 +47,7 @@ export async function GET(req: Request) {
         throw e
       }
       const groupIds = memberships.map((m) => m.groupId)
-      let groups: Awaited<ReturnType<typeof prisma.group.findMany>>
+      let groups: GroupSummary[] = []
       try {
         groups = await prisma.group.findMany({
           where: {
@@ -65,7 +69,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ groups })
     }
 
-    let groups: Awaited<ReturnType<typeof prisma.group.findMany>>
+    let groups: GroupSummary[] = []
     try {
       groups = await prisma.group.findMany({
         orderBy: { createdAt: 'desc' },

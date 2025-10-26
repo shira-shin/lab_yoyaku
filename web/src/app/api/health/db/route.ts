@@ -16,5 +16,12 @@ export async function GET() {
       to_regclass('public."PasswordResetToken"') AS "PasswordResetToken"
   `);
 
+  if (info?.[0]) {
+    console.info('[api.health.db] info', info[0]);
+  }
+  if (tables?.[0]) {
+    console.info('[api.health.db] tables', tables[0]);
+  }
+
   return NextResponse.json({ info: info?.[0], tables: tables?.[0] });
 }
