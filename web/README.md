@@ -10,12 +10,13 @@ Visit <http://localhost:3000> once the dev server boots.
 
 ## Environment variables
 
-`pnpm build` calls `web/scripts/assert-env.ts` which currently requires `DATABASE_URL`. The helper prints a friendly error if it is missing before running `prisma generate`.
+`pnpm build` calls `web/scripts/assert-env.ts` which currently requires both `DATABASE_URL` and `DIRECT_URL`. The helper prints a friendly error if either value is missing before running `prisma generate`.
 
 ### Database connection
 
-- `DATABASE_URL` — PostgreSQL connection string pointing to the **direct** Neon host with `sslmode=require` and a URL-encoded password.
-- Use `./scripts/set-database-url.sh` (macOS/Linux) or `./scripts/set-database-url.ps1` (PowerShell) to compose a safe URL:
+- `DATABASE_URL` — PostgreSQL connection string pointing to the Neon **pooler** host with `sslmode=require` and a URL-encoded password. This is what the Next.js runtime reads.
+- `DIRECT_URL` — PostgreSQL connection string for the Neon **direct** host (no `-pooler` suffix) with `sslmode=require`. Prisma CLI operations use this value when the pooler URL is detected.
+- Use `./scripts/set-database-url.sh` (macOS/Linux) or `./scripts/set-database-url.ps1` (PowerShell) to compose a safe pair of URLs:
   ```bash
   cd web
   ./scripts/set-database-url.sh neondb_owner 'YOUR_REAL_PASSWORD' ep-xxxxx.ap-southeast-1.aws.neon.tech neondb
@@ -24,7 +25,7 @@ Visit <http://localhost:3000> once the dev server boots.
   cd web
   ./scripts/set-database-url.ps1 -User 'neondb_owner' -PasswordRaw 'YOUR_REAL_PASSWORD' -Host 'ep-xxxxx.ap-southeast-1.aws.neon.tech' -DbName 'neondb'
   ```
-  The scripts reject `-pooler` hosts and display a masked URL after exporting `DATABASE_URL` in the current shell.
+  The scripts export both variables, reject mismatched hosts, and display masked URLs so you can verify the values quickly.
 
 ## Neon endpoint (ep-ID) の統一と検証
 
