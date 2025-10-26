@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import { NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/server/db/prisma'
 import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
 import { makeSlug } from '@/lib/slug'
@@ -31,11 +32,21 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
 
-    const devices = await prisma.device.findMany({
-      where: { groupId: group.id },
-      orderBy: { name: 'asc' },
-      select: { id: true, slug: true, name: true, caution: true, code: true },
-    })
+    type DeviceSummary = Prisma.DeviceGetPayload<{ select: { id: true; slug: true; name: true; caution: true; code: true } }>
+    let devices: DeviceSummary[] = []
+    try {
+      devices = await prisma.device.findMany({
+        where: { groupId: group.id },
+        orderBy: { name: 'asc' },
+        select: { id: true, slug: true, name: true, caution: true, code: true },
+      })
+    } catch (e: any) {
+      if (e?.code === 'P2021') {
+        console.warn('[api.groups.[slug].devices.GET] table missing; returning empty []')
+        return NextResponse.json({ devices: [] })
+      }
+      throw e
+    }
 
     return NextResponse.json({ devices })
   } catch (error) {

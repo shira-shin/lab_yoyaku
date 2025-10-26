@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import { NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { readUserFromCookie } from '@/lib/auth-legacy'
 import { prisma } from '@/server/db/prisma'
 
@@ -50,10 +51,20 @@ export async function GET() {
       hasUserId: Boolean(me?.id),
       hasEmail: Boolean(me?.email),
     })
-    const groups = await prisma.group.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: { id: true, name: true, slug: true, createdAt: true }
-    })
+    type GroupSummary = Prisma.GroupGetPayload<{ select: { id: true; name: true; slug: true; createdAt: true } }>
+    let groups: GroupSummary[] = []
+    try {
+      groups = await prisma.group.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, name: true, slug: true, createdAt: true }
+      })
+    } catch (e: any) {
+      if (e?.code === 'P2021') {
+        console.warn('[api.me.groups.GET] table missing; returning empty []')
+        return NextResponse.json([], { status: 200 })
+      }
+      throw e
+    }
     return NextResponse.json(groups, { status: 200 })
   } catch (e: any) {
     console.error('list groups failed', e)
