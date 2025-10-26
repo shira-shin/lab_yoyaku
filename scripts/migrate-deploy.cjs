@@ -78,10 +78,19 @@ function migrateDiffScript() {
     return null;
   }
 
-  return run(`pnpm --filter lab_yoyaku-web exec prisma migrate diff \
-    --from-schema-datamodel prisma/schema.prisma \
-    --to-url "${process.env.DIRECT_URL}" \
-    --script`);
+  return run('pnpm', [
+    '--filter',
+    'lab_yoyaku-web',
+    'exec',
+    'prisma',
+    'migrate',
+    'diff',
+    '--from-schema-datamodel',
+    'prisma/schema.prisma',
+    '--to-url',
+    env.DIRECT_URL,
+    '--script',
+  ]);
 }
 
 function parseFailedMigrationName(text) {
