@@ -149,7 +149,8 @@ function printHints(all) {
           console.warn(`[migrate] resolve applied failed: code=${applied.code}\n${applied.stderr || applied.stdout}`);
         }
       } else {
-        console.warn('[migrate] migrate diff contains statements; skipping auto --applied');
+        console.error('[migrate] diff contains statements. Refusing to --applied automatically.');
+        process.exit(1);
       }
     } else if (diff && !diff.ok) {
       console.warn(`[migrate] migrate diff failed: code=${diff.code}\n${diff.stderr || diff.stdout}`);
