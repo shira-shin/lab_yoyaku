@@ -3,7 +3,7 @@ export const revalidate = 0
 
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { prisma } from '@/server/db/prisma'
+import { prisma } from '@/server/prisma'
 import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
 import { makeSlug } from '@/lib/slug'
 import { normalizeJoinInput } from '@/lib/text'
@@ -30,28 +30,61 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
       }
       const normalizedEmail = normalizeEmail(me.email)
-      const memberships = await prisma.groupMember.findMany({
-        where: { email: { equals: me.email, mode: 'insensitive' } },
-        select: { groupId: true },
-      })
+      const memberships = await prisma.groupMember
+        .findMany({
+          where: { email: { equals: me.email, mode: 'insensitive' } },
+          select: { groupId: true },
+        })
+        .catch((e: any) => {
+          if (e?.code === 'P2021') {
+            console.warn('[api.groups.GET] table missing; returning empty list')
+            return null
+          }
+          throw e
+        })
+      if (!memberships) {
+        return NextResponse.json({ groups: [] })
+      }
       const groupIds = memberships.map((m) => m.groupId)
-      const groups = await prisma.group.findMany({
-        where: {
-          OR: [
-            { hostEmail: { equals: me.email, mode: 'insensitive' } },
-            ...(groupIds.length ? [{ id: { in: groupIds } }] : []),
-          ],
-        },
-        orderBy: { createdAt: 'desc' },
-        select: { slug: true, name: true },
-      })
+      const groups = await prisma.group
+        .findMany({
+          where: {
+            OR: [
+              { hostEmail: { equals: me.email, mode: 'insensitive' } },
+              ...(groupIds.length ? [{ id: { in: groupIds } }] : []),
+            ],
+          },
+          orderBy: { createdAt: 'desc' },
+          select: { slug: true, name: true },
+        })
+        .catch((e: any) => {
+          if (e?.code === 'P2021') {
+            console.warn('[api.groups.GET] table missing; returning empty list')
+            return null
+          }
+          throw e
+        })
+      if (!groups) {
+        return NextResponse.json({ groups: [] })
+      }
       return NextResponse.json({ groups })
     }
 
-    const groups = await prisma.group.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: { slug: true, name: true },
-    })
+    const groups = await prisma.group
+      .findMany({
+        orderBy: { createdAt: 'desc' },
+        select: { slug: true, name: true },
+      })
+      .catch((e: any) => {
+        if (e?.code === 'P2021') {
+          console.warn('[api.groups.GET] table missing; returning empty list')
+          return null
+        }
+        throw e
+      })
+    if (!groups) {
+      return NextResponse.json({ groups: [] })
+    }
     console.info('[api.groups.GET]', {
       mine: false,
       hasUserId: false,

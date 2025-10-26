@@ -18,19 +18,3 @@ export const prisma =
   });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
-
-let loggedEndpoint = false;
-
-if (process.env.NODE_ENV === 'production' && !loggedEndpoint) {
-  loggedEndpoint = true;
-  prisma
-    .$queryRawUnsafe<{ endpoint: string | null }[]>(
-      `SELECT current_setting('neon.endpoint_id', true) AS endpoint`,
-    )
-    .then((result) => {
-      console.info('[db] endpoint', result?.[0]?.endpoint ?? null);
-    })
-    .catch(() => {
-      /* noop */
-    });
-}
