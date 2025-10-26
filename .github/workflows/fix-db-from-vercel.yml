@@ -1,0 +1,17 @@
+name: Fix DB from Vercel env (from-url diff)
+on: { workflow_dispatch: {} }
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: 'pnpm' }
+      - run: pnpm install
+      - name: Apply DB diff using Vercel env
+        env: { VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }} }
+        run: bash scripts/fix-db-from-vercel.sh
