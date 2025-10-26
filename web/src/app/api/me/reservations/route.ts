@@ -39,65 +39,84 @@ export async function GET(req: Request) {
     orConditions.push({ userId: me.id })
   }
 
-  let reservations: Awaited<ReturnType<typeof prisma.reservation.findMany>>
   try {
-    reservations = await prisma.reservation.findMany({
+    const reservations = await prisma.reservation.findMany({
       where: {
         OR: orConditions,
         ...(from && to ? { AND: [{ start: { lt: to } }, { end: { gt: from } }] } : {}),
       },
       orderBy: { start: 'asc' },
       take,
-      include: {
+      select: {
+        id: true,
+        createdAt: true,
+        userId: true,
+        start: true,
+        end: true,
+        deviceId: true,
+        userEmail: true,
+        userName: true,
+        purpose: true,
+        reminderMinutes: true,
         device: {
           select: {
-            id: true,
             slug: true,
             name: true,
-            group: { select: { id: true, slug: true, name: true } },
+            group: {
+              select: {
+                id: true,
+                slug: true,
+                name: true,
+              },
+            },
           },
         },
-        user: { select: { id: true, name: true, email: true } },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     })
+    const payload = reservations.map((reservation) => ({
+      id: reservation.id,
+      deviceId: reservation.deviceId,
+      deviceSlug: reservation.device?.slug ?? null,
+      deviceName: reservation.device?.name ?? null,
+      groupId: reservation.device?.group?.id ?? null,
+      groupSlug: reservation.device?.group?.slug ?? null,
+      groupName: reservation.device?.group?.name ?? reservation.device?.group?.slug ?? null,
+      startsAtUTC: reservation.start.toISOString(),
+      endsAtUTC: reservation.end.toISOString(),
+      start: reservation.start.toISOString(),
+      end: reservation.end.toISOString(),
+      purpose: reservation.purpose ?? null,
+      reminderMinutes: reservation.reminderMinutes ?? null,
+      userEmail: reservation.userEmail,
+      userId: reservation.userId ?? null,
+      userName: reservation.user?.name ?? me.name ?? null,
+      user: reservation.user
+        ? {
+            id: reservation.user.id,
+            name: reservation.user.name ?? null,
+            email: reservation.user.email ?? null,
+          }
+        : {
+            id: reservation.userId ?? null,
+            name: me.name ?? null,
+            email: reservation.userEmail,
+          },
+      participants: [] as string[],
+    }))
+
+    return NextResponse.json({ ok: true, data: payload, all: payload })
   } catch (e: any) {
     if (e?.code === 'P2021') {
       console.warn('[api.me.reservations.GET] table missing; returning empty []')
-      return NextResponse.json({ ok: true, data: [], all: [] })
+      return NextResponse.json({ ok: true, data: [], all: [], items: [], total: 0 })
     }
     throw e
   }
-
-  const payload = reservations.map((reservation) => ({
-    id: reservation.id,
-    deviceId: reservation.deviceId,
-    deviceSlug: reservation.device.slug,
-    deviceName: reservation.device.name,
-    groupId: reservation.device.group.id,
-    groupSlug: reservation.device.group.slug,
-    groupName: reservation.device.group.name ?? reservation.device.group.slug,
-    startsAtUTC: reservation.start.toISOString(),
-    endsAtUTC: reservation.end.toISOString(),
-    start: reservation.start.toISOString(),
-    end: reservation.end.toISOString(),
-    purpose: reservation.purpose ?? null,
-    reminderMinutes: reservation.reminderMinutes ?? null,
-    userEmail: reservation.userEmail,
-    userId: reservation.userId ?? null,
-    userName: reservation.user?.name ?? me.name ?? null,
-    user: reservation.user
-      ? {
-          id: reservation.user.id,
-          name: reservation.user.name ?? null,
-          email: reservation.user.email ?? null,
-        }
-      : {
-          id: reservation.userId ?? null,
-          name: me.name ?? null,
-          email: reservation.userEmail,
-        },
-    participants: [] as string[],
-  }))
-
-  return NextResponse.json({ ok: true, data: payload, all: payload })
 }
