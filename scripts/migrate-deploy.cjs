@@ -14,7 +14,7 @@ function normalizeEnv(src) {
 
 const env = normalizeEnv(process.env);
 
-// Prisma の migrate 実行時は DIRECT_URL を強制利用
+// migrations は必ず DIRECT_URL を使う
 if (env.DIRECT_URL) {
   env.DATABASE_URL = env.DIRECT_URL;
   console.log('[migrate] using DIRECT_URL as DATABASE_URL for migrations');
@@ -41,20 +41,36 @@ function resolveRolledBack(migrationName) {
   return run('pnpm', ['--filter', 'lab_yoyaku-web', 'exec', 'prisma', 'migrate', 'resolve', '--rolled-back', migrationName]);
 }
 
+function migrateDiagnose() {
+  return run('pnpm', ['--filter', 'lab_yoyaku-web', 'exec', 'prisma', 'migrate', 'diagnose', '--json']);
+}
+
 function parseFailedMigrationName(text) {
-  // 例: The `202409160001_group_enhancements` migration started at ... failed
+  // The `202409160001_group_enhancements` migration ... failed
   const m = /The\s+`([^`]+)`\s+migration\s+started[\s\S]*?failed/i.exec(text);
   return m && m[1] ? m[1] : null;
 }
 
-function hasP3009(text) {
-  return /P3009/.test(text);
+function hasP3009(text) { return /P3009/.test(text); }
+
+// よくある再失敗パターンを検出してヒントを出す（ログ可視化強化）
+function printHints(all) {
+  const lower = all.toLowerCase();
+  if (/already exists/.test(lower)) {
+    console.warn('[hint] 既存オブジェクト重複（テーブル/インデックス/タイプ等）。過去に一部だけ適用された状態か、手動作成がある可能性。該当 DDL を条件付きに直す or 先に drop する補助 migration が必要です。');
+  }
+  if (/not null/.test(lower) && /null value/.test(lower)) {
+    console.warn('[hint] 既存行に値がない列へ NOT NULL を追加し失敗。安全策: 1) 一旦 NULL 許容 + デフォルト付与 → 2) データ埋め → 3) NOT NULL 制約を追加 の 3 段階に分割してください。');
+  }
+  if (/enum/i.test(all) && /(alter type|add value)/i.test(all)) {
+    console.warn('[hint] enum 変更が失敗している可能性。Neon/Postgres では enum 運用手順が必要。ADD VALUE の順序/既存値を確認してください。');
+  }
 }
 
 (function main() {
   const isPreview = env.VERCEL_ENV === 'preview';
 
-  // 1回目: deploy
+  // 1) 1回目 deploy
   let res = deployOnce();
   if (res.ok) {
     console.log('[migrate] deploy: OK');
@@ -63,12 +79,12 @@ function hasP3009(text) {
   }
 
   console.warn('[migrate] deploy failed');
-  const combined = `${res.stdout}\n${res.stderr}`;
-
+  let combined = `${res.stdout}\n${res.stderr}`;
   if (hasP3009(combined)) {
     const failed = parseFailedMigrationName(combined);
     if (!failed) {
       console.warn('[migrate] P3009 detected but failed migration name not found');
+      console.warn(combined.trim());
       process.exit(1);
       return;
     }
@@ -81,7 +97,7 @@ function hasP3009(text) {
       return;
     }
 
-    // 再 deploy
+    // 2) 再 deploy
     res = deployOnce();
     if (res.ok) {
       console.log('[migrate] deploy after repair: OK');
@@ -90,7 +106,18 @@ function hasP3009(text) {
     }
 
     console.warn('[migrate] deploy after repair failed');
-    // preview だけ db push を最後の手段として許容
+    combined = `${res.stdout}\n${res.stderr}`;
+    // 失敗理由を必ず出す
+    console.warn(combined.trim());
+
+    // 追加診断
+    const diag = migrateDiagnose();
+    console.warn('[migrate] diagnose json (exit', diag.code, '):');
+    console.warn((diag.stdout || diag.stderr || '').trim());
+
+    printHints(combined + '\n' + diag.stdout + '\n' + diag.stderr);
+
+    // preview だけ最後に db push を許可（本番はしない）
     if (isPreview) {
       console.warn('[migrate] preview fallback: prisma db push --accept-data-loss');
       const p = run('pnpm', ['--filter', 'lab_yoyaku-web', 'exec', 'prisma', 'db', 'push', '--accept-data-loss']);
@@ -106,7 +133,11 @@ function hasP3009(text) {
     return;
   }
 
-  // P3009 以外の失敗はそのまま失敗で返す
+  // P3009 以外の失敗
   console.warn(combined.trim());
+  const diag = migrateDiagnose();
+  console.warn('[migrate] diagnose json (exit', diag.code, '):');
+  console.warn((diag.stdout || diag.stderr || '').trim());
+  printHints(combined + '\n' + diag.stdout + '\n' + diag.stderr);
   process.exit(1);
 })();
