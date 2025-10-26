@@ -3,7 +3,7 @@ export const revalidate = 0
 
 import { NextResponse } from 'next/server'
 import { readUserFromCookie } from '@/lib/auth-legacy'
-import { prisma } from '@/server/db/prisma'
+import { prisma } from '@/server/prisma'
 
 function parseDate(value: string | null): Date | null {
   if (!value) return null
@@ -39,25 +39,33 @@ export async function GET(req: Request) {
     orConditions.push({ userId: me.id })
   }
 
-  const reservations = await prisma.reservation.findMany({
-    where: {
-      OR: orConditions,
-      ...(from && to ? { AND: [{ start: { lt: to } }, { end: { gt: from } }] } : {}),
-    },
-    orderBy: { start: 'asc' },
-    take,
-    include: {
-      device: {
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          group: { select: { id: true, slug: true, name: true } },
-        },
+  const reservations = await prisma.reservation
+    .findMany({
+      where: {
+        OR: orConditions,
+        ...(from && to ? { AND: [{ start: { lt: to } }, { end: { gt: from } }] } : {}),
       },
-      user: { select: { id: true, name: true, email: true } },
-    },
-  })
+      orderBy: { start: 'asc' },
+      take,
+      include: {
+        device: {
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            group: { select: { id: true, slug: true, name: true } },
+          },
+        },
+        user: { select: { id: true, name: true, email: true } },
+      },
+    })
+    .catch((e: any) => {
+      if (e?.code === 'P2021') {
+        console.warn('[api.me.reservations.GET] table missing; returning empty list')
+        return [] as Awaited<ReturnType<typeof prisma.reservation.findMany>>
+      }
+      throw e
+    })
 
   const payload = reservations.map((reservation) => ({
     id: reservation.id,
