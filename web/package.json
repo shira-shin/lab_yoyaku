@@ -5,7 +5,7 @@
     "check:imports": "eslint --ext .ts,.tsx ./src --max-warnings=0 --rule 'import/no-unresolved:[\"error\",{\"ignore\":[\"server-only\"]}]'",
     "dev": "next dev",
     "prebuild:guard": "node -e \"require('child_process').execSync('pnpm exec tsx scripts/assert-endpoints-match.ts',{stdio:'inherit'})\"",
-    "build": "pnpm run prebuild:guard && node -e \"const {execSync}=require('node:child_process'); const run=c=>execSync(c,{stdio:'inherit',shell:true}); run('pnpm exec tsx scripts/assert-env.ts'); run('prisma generate'); const allowOnVercel=process.env.ALLOW_MIGRATE_ON_VERCEL==='1'; if (process.env.RUN_MIGRATIONS==='1' && (!process.env.VERCEL || allowOnVercel)) { try { run('prisma migrate deploy'); console.log('[migrate] prisma migrate deploy: OK'); } catch (err) { const message=err&&err.message?err.message:String(err); console.warn('[migrate] deploy failed:', message); if (process.env.VERCEL_ENV==='preview') { console.warn('[migrate] fallback to prisma db push (preview only)'); run('prisma db push --accept-data-loss'); console.log('[migrate] prisma db push: OK'); } else { throw err; } } } else { console.log('[migrate] skipped (RUN_MIGRATIONS=%s, VERCEL=%s, ALLOW_MIGRATE_ON_VERCEL=%s)', process.env.RUN_MIGRATIONS, process.env.VERCEL, process.env.ALLOW_MIGRATE_ON_VERCEL); } run('next build');\"",
+    "build": "pnpm run prebuild:guard && node -e \"const {execSync}=require('node:child_process'); const run=c=>execSync(c,{stdio:'inherit',shell:true}); run('pnpm exec tsx scripts/assert-env.ts'); run('prisma generate'); run('pnpm exec tsx ../scripts/migrate-deploy.ts'); run('next build');\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "next start",
     "lint": "next lint",
