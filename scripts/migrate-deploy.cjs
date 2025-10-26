@@ -20,7 +20,34 @@ if (env.DIRECT_URL) {
   console.log('[migrate] using DIRECT_URL as DATABASE_URL for migrations');
 }
 
-function run(cmd, args, opts = {}) {
+function run(cmd, argsOrOpts, maybeOpts = {}) {
+  let args = [];
+  let opts = {};
+
+  if (Array.isArray(argsOrOpts)) {
+    args = argsOrOpts;
+    opts = maybeOpts || {};
+  } else if (argsOrOpts && typeof argsOrOpts === 'object') {
+    opts = argsOrOpts;
+  } else if (typeof argsOrOpts === 'undefined') {
+    args = null;
+    opts = maybeOpts && typeof maybeOpts === 'object' ? maybeOpts : {};
+  } else {
+    throw new TypeError('Invalid arguments passed to run');
+  }
+
+  if (args === null) {
+    const final = { stdio: 'pipe', encoding: 'utf8', env, shell: true, ...opts };
+    console.log('[migrate] run:', cmd);
+    const res = spawnSync(cmd, final);
+    return {
+      code: res.status,
+      stdout: res.stdout || '',
+      stderr: res.stderr || '',
+      ok: res.status === 0,
+    };
+  }
+
   const final = { stdio: 'pipe', encoding: 'utf8', env, shell: false, ...opts };
   console.log('[migrate] run:', [cmd, ...args].join(' '));
   const res = spawnSync(cmd, args, final);
@@ -41,11 +68,6 @@ function resolveApplied(migrationName) {
   return run('pnpm', ['--filter', 'lab_yoyaku-web', 'exec', 'prisma', 'migrate', 'resolve', '--applied', migrationName]);
 }
 
-function resolveApplied(migrationName) {
-  console.warn(`[migrate] resolve --applied ${migrationName}`);
-  return run('pnpm', ['--filter', 'lab_yoyaku-web', 'exec', 'prisma', 'migrate', 'resolve', '--applied', migrationName]);
-}
-
 function migrateDiagnose() {
   return run('pnpm', ['--filter', 'lab_yoyaku-web', 'exec', 'prisma', 'migrate', 'diagnose', '--json']);
 }
@@ -56,23 +78,10 @@ function migrateDiffScript() {
     return null;
   }
 
-  return run('pnpm', [
-    '--filter',
-    'lab_yoyaku-web',
-    'exec',
-    'prisma',
-    'migrate',
-    'diff',
-    '--from-schema-datamodel',
-codex/fix-migration-state-inconsistency-py060o
-    'prisma/schema.prisma',
-=======
-    'web/prisma/schema.prisma',
-main
-    '--to-url',
-    env.DIRECT_URL,
-    '--script',
-  ]);
+  return run(`pnpm --filter lab_yoyaku-web exec prisma migrate diff \
+    --from-schema-datamodel prisma/schema.prisma \
+    --to-url "${process.env.DIRECT_URL}" \
+    --script`);
 }
 
 function parseFailedMigrationName(text) {
@@ -147,7 +156,6 @@ function printHints(all) {
     }
 
     if (!repaired) {
-codex/fix-migration-state-inconsistency-py060o
       console.warn('[migrate] attempting resolve --applied as fallback');
       const applied = resolveApplied(failed);
       if (!applied.ok) {
@@ -156,14 +164,6 @@ codex/fix-migration-state-inconsistency-py060o
         return;
       }
       repaired = true;
-=======
-      const r = resolveRolledBack(failed);
-      if (!r.ok) {
-        console.warn(`[migrate] resolve rolled-back failed: code=${r.code}\n${r.stderr || r.stdout}`);
-        process.exit(1);
-        return;
-      }
-main
     }
 
     // 2) 再 deploy
