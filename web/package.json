@@ -4,7 +4,8 @@
   "scripts": {
     "check:imports": "eslint --ext .ts,.tsx ./src --max-warnings=0 --rule 'import/no-unresolved:[\"error\",{\"ignore\":[\"server-only\"]}]'",
     "dev": "next dev",
-    "build": "node -e \"const {execSync}=require('node:child_process'); const run=c=>execSync(c,{stdio:'inherit',shell:true}); run('pnpm exec tsx scripts/assert-env.ts'); run('prisma generate'); if (process.env.RUN_MIGRATIONS === '1' && process.env.VERCEL !== '1') { run('prisma migrate deploy'); } else { console.log('Skipping prisma migrate deploy (RUN_MIGRATIONS=%s, VERCEL=%s)', process.env.RUN_MIGRATIONS, process.env.VERCEL); } run('next build');\"",
+    "prebuild:guard": "node -e \"require('child_process').execSync('pnpm exec tsx scripts/assert-endpoints-match.ts',{stdio:'inherit'})\"",
+    "build": "pnpm run prebuild:guard && node -e \"const {execSync}=require('node:child_process'); const run=c=>execSync(c,{stdio:'inherit',shell:true}); run('pnpm exec tsx scripts/assert-env.ts'); run('prisma generate'); if (process.env.RUN_MIGRATIONS === '1' && process.env.VERCEL !== '1') { run('prisma migrate deploy'); } else { console.log('Skipping prisma migrate deploy (RUN_MIGRATIONS=%s, VERCEL=%s)', process.env.RUN_MIGRATIONS, process.env.VERCEL); } run('next build');\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "next start",
     "lint": "next lint",
@@ -20,7 +21,8 @@
     "db:bootstrap": "pnpm run db:deploy || pnpm run db:push",
     "db:migrate:resolve-rolled": "prisma migrate resolve --rolled-back 202409160001_group_enhancements",
     "db:migrate:resolve-applied": "prisma migrate resolve --applied 202409160001_group_enhancements",
-    "db:print-url": "node -e \"console.log(process.env.DATABASE_URL || '')\""
+    "db:print-url": "node -e \"console.log(process.env.DATABASE_URL || '')\"",
+    "db:push:direct": "pnpm exec tsx scripts/db-push-direct.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",

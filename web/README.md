@@ -26,6 +26,29 @@ Visit <http://localhost:3000> once the dev server boots.
   ```
   The scripts reject `-pooler` hosts and display a masked URL after exporting `DATABASE_URL` in the current shell.
 
+### Aligning Neon endpoints
+
+Vercel builds now abort when `DATABASE_URL` and `DIRECT_URL` resolve to different Neon endpoints. The guard runs as part of `pnpm build` and prints the validated endpoint ID when they match.
+
+When you need to recreate the tables against the Vercel production environment:
+
+1. Pull the production environment variables (requires a `VERCEL_TOKEN` configured locally):
+   ```bash
+   vercel env pull --environment production .env.vercel
+   ```
+2. Load the pulled variables into the current shell, ensuring `DIRECT_URL` points at the direct connection (non-pooler) host:
+   ```bash
+   set -a; source .env.vercel; set +a
+   ```
+3. Push the schema directly to Neon. This command resets the schema and should only be used while the database is empty:
+   ```bash
+   pnpm -C web run db:push:direct
+   ```
+
+After the push completes, call `/api/health/db` on the production deployment to confirm that the expected tables exist and that the endpoint ID matches the configured environment variables.
+
+If running the command locally is not possible, trigger the "Manual Neon direct push" workflow from GitHub Actions. Configure `NEON_DIRECT_URL` (direct host) and `NEON_DATABASE_URL` (matching pooler host) as repository secrets before launching the workflow; it verifies the endpoint alignment and then executes the same direct `prisma db push` command.
+
 ### Application settings
 
 - `APP_BASE_URL` (optional) — canonical origin used when generating email links (defaults to `http://localhost:3000` in development).
@@ -58,7 +81,7 @@ For the detailed migration playbook see [`docs/db-ops.md`](./docs/db-ops.md).
 ## Diagnostics
 
 - `/api/_diag/env` summarises the resolved environment (base URL, database host, etc.).
-- `/api/health/db` checks database connectivity.
+- `/api/health/db` reveals the connected Neon endpoint ID and whether key tables exist.
 
 ## Preview checks
 
