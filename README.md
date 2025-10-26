@@ -14,6 +14,18 @@ Lab equipment reservation system monorepo.
 > The monorepo is pinned to **Node 20.x** and **pnpm 10.18.2**. Use `nvm use` (the repo ships with a `.nvmrc`) followed by
 > `corepack enable` / `corepack prepare pnpm@10.18.2 --activate` before running any installs to avoid lockfile drift.
 
+### Lockfile maintenance
+
+To reproduce the Vercel lockfile error locally and refresh the workspace metadata, run the following commands from the repo root:
+
+```bash
+corepack prepare pnpm@10.18.2 --activate
+pnpm install --lockfile-only
+git add pnpm-lock.yaml
+```
+
+Commit the regenerated lockfile (e.g., `git commit -m "chore(pnpm): regenerate lockfile to include tsx@workspace:*"`) so `pnpm install --frozen-lockfile` succeeds in CI. Keep `pnpm-workspace.yaml` listing `web`, `tools/*`, and `packages/*` to resolve `tools/tsx-shim` as the workspace implementation of `tsx`.
+
 1. Start services
    ```bash
    docker compose -f infra/docker-compose.yml up -d

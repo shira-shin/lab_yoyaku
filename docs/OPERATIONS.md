@@ -33,3 +33,28 @@ Set the following keys on the Vercel project. Keep `DATABASE_URL` and `DIRECT_UR
 - Use the same Neon endpoint/branch for every Vercel deployment.
 - Avoid changing `ep-*` identifiers per deploy; pin the endpoint in Neon if you need to reuse existing data.
 - Both `DATABASE_URL` and `DIRECT_URL` must point to the same database even for preview builds.
+
+## pnpm and lockfile maintenance
+
+- The repository pins **Node 20.x** and **pnpm 10.18.2**. Always enable Corepack and prepare the pinned pnpm release before installing dependencies to avoid regenerating the lockfile with an unexpected version.
+- Confirm that `pnpm-workspace.yaml` lists `web`, `tools/*`, and `packages/*` so the `tools/tsx-shim` workspace can satisfy `tsx@workspace:*`.
+
+### Regenerating `pnpm-lock.yaml`
+
+Use the following sequence to refresh the lockfile when workspace dependencies change:
+
+```bash
+corepack prepare pnpm@10.18.2 --activate
+pnpm install --lockfile-only
+git add pnpm-lock.yaml
+git commit -m "chore(pnpm): regenerate lockfile to include tsx@workspace:*"
+```
+
+### Temporary Vercel install override
+
+`vercel.json` temporarily defines `"installCommand": "pnpm install --no-frozen-lockfile"` to let preview builds proceed even if the lockfile is stale. Remove this override as soon as the regenerated lockfile is deployed and Vercel succeeds with `--frozen-lockfile` again.
+
+## Database repair tooling
+
+- `GET/POST /api/ops/db/deploy` executes the TypeScript migrate runner (`scripts/migrate-deploy.ts`) so Vercel deployments can trigger `prisma migrate deploy` with the same fallback logic used during builds. Ensure `RUN_MIGRATIONS=1` and `ALLOW_MIGRATE_ON_VERCEL=1` are present in the environment.
+- `POST /api/ops/db/repair` forces the fallback repair path that resolves stuck migrations (e.g., Prisma `P3009`) and, on preview deployments only, finishes with `prisma db push --accept-data-loss` if repeated deploy attempts fail. Use this endpoint when `/api/health/db` reports `db:not-initialized` after a failed build.

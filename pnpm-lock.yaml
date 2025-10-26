@@ -6,7 +6,11 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      tsx:
+        specifier: workspace:*
+        version: link:tools/tsx-shim
 
   tools/tsx-shim: {}
 
