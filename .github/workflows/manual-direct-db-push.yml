@@ -1,0 +1,36 @@
+name: Manual Neon direct push
+
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: 'Optional note describing why the schema push is triggered'
+        required: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+      - run: pnpm -w install
+
+      - name: Verify endpoint alignment
+        working-directory: web
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.NEON_DIRECT_URL }}
+        run: pnpm exec tsx scripts/assert-endpoints-match.ts
+
+      - name: Push schema to Neon direct endpoint
+        working-directory: web
+        env:
+          DIRECT_URL: ${{ secrets.NEON_DIRECT_URL }}
+        run: pnpm run db:push:direct
