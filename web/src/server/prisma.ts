@@ -1,3 +1,4 @@
+import { ensureDbInitialized } from '@/lib/db/safe-init';
 import { prisma } from '@/server/db/prisma';
 
 type GlobalWithDbLog = typeof globalThis & {
@@ -21,5 +22,7 @@ if (process.env.NODE_ENV === 'production') {
       });
   }
 }
+
+void ensureDbInitialized();
 
 export { prisma };
