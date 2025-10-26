@@ -2,20 +2,49 @@ import { execSync } from 'node:child_process';
 import path from 'node:path';
 
 const repoRoot = path.resolve(__dirname, '..');
-const webDir   = path.resolve(repoRoot, 'web');
+const webDir = path.resolve(repoRoot, 'web');
 
-const env = {
-  ...process.env,
-  // Prisma は pooler より DIRECT_URL の直ホストを使う
-  DATABASE_URL: process.env.DIRECT_URL ?? process.env.DATABASE_URL,
-};
+type NormalizedEnv = Record<string, string | undefined>;
+
+function normalizeEnv(input: Record<string, unknown>): NormalizedEnv {
+  const out: NormalizedEnv = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined || value === null) {
+      out[key] = undefined;
+    } else if (typeof value === 'string') {
+      out[key] = value;
+    } else if (typeof value === 'number' || typeof value === 'boolean') {
+      out[key] = String(value);
+    } else {
+      out[key] = undefined;
+    }
+  }
+  return out;
+}
+
+function buildMigrateEnv(): NormalizedEnv {
+  const base = normalizeEnv(process.env);
+  if (base.DIRECT_URL) {
+    base.DATABASE_URL = base.DIRECT_URL;
+  }
+  if (typeof base.NODE_ENV !== 'string') {
+    base.NODE_ENV =
+      typeof process.env.NODE_ENV === 'string' ? process.env.NODE_ENV : 'production';
+  }
+  return base;
+}
 
 function run(cmd: string) {
-  execSync(cmd, { stdio: 'inherit', shell: true, cwd: webDir, env });
+  const env = buildMigrateEnv();
+  execSync(cmd, { stdio: 'inherit', cwd: webDir, env: env as NodeJS.ProcessEnv });
 }
 
 function capture(cmd: string): string {
-  return execSync(cmd, { stdio: ['ignore', 'pipe', 'pipe'], shell: true, cwd: webDir, env }).toString();
+  return execSync(cmd, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    cwd: webDir,
+    env: buildMigrateEnv() as NodeJS.ProcessEnv,
+  }).toString();
 }
 
 function extractFailedMigration(msg: string): string | null {
@@ -26,7 +55,7 @@ function extractFailedMigration(msg: string): string | null {
 
 export async function migrateDeployWithRepair() {
   try {
-    run('prisma migrate deploy');
+    run('pnpm --filter lab_yoyaku-web exec prisma migrate deploy');
     console.log('[migrate:fallback] prisma migrate deploy: OK');
     return;
   } catch (e: any) {
@@ -40,7 +69,7 @@ export async function migrateDeployWithRepair() {
       if (!failed) {
         // 追加情報を取得（stderr に出ない環境向けの保険）
         try {
-          const out = capture('prisma migrate status --json');
+          const out = capture('pnpm --filter lab_yoyaku-web exec prisma migrate status --json');
           const j = JSON.parse(out);
           failed = j?.failedMigrationNames?.[0] ?? null;
         } catch {}
@@ -48,13 +77,13 @@ export async function migrateDeployWithRepair() {
 
       if (failed) {
         console.warn(`[migrate:fallback] resolve --rolled-back "${failed}"`);
-        run(`prisma migrate resolve --rolled-back "${failed}"`);
+        run(`pnpm --filter lab_yoyaku-web exec prisma migrate resolve --rolled-back "${failed}"`);
       } else {
         console.warn('[migrate:fallback] failed migration name not found; continue with deploy retry');
       }
 
       try {
-        run('prisma migrate deploy');
+        run('pnpm --filter lab_yoyaku-web exec prisma migrate deploy');
         console.log('[migrate:fallback] prisma migrate deploy: OK (after resolve)');
         return;
       } catch (e2: any) {
@@ -62,7 +91,7 @@ export async function migrateDeployWithRepair() {
         // preview 環境だけ db push を許可
         if (process.env.VERCEL_ENV === 'preview') {
           console.warn('[migrate:fallback] preview fallback: prisma db push --accept-data-loss');
-          run('prisma db push --accept-data-loss');
+          run('pnpm --filter lab_yoyaku-web exec prisma db push --accept-data-loss');
           console.log('[migrate:fallback] prisma db push: OK');
           return;
         }
