@@ -52,10 +52,14 @@ export async function GET() {
     })
     const groups = await prisma.group.findMany({
       orderBy: { createdAt: 'desc' },
-      select: { id: true, name: true, slug: true, createdAt: true }
+      select: { id: true, name: true, slug: true, createdAt: true },
     })
     return NextResponse.json(groups, { status: 200 })
   } catch (e: any) {
+    if (e?.code === 'P2021') {
+      console.warn('[api.me.groups.GET] table missing; returning empty []')
+      return NextResponse.json([], { status: 200 })
+    }
     console.error('list groups failed', e)
     return NextResponse.json(
       { error: e?.message ?? 'list groups failed' },

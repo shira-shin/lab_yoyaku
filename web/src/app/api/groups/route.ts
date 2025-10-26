@@ -38,12 +38,12 @@ export async function GET(req: Request) {
       } catch (e: any) {
         if (e?.code === 'P2021') {
           console.warn('[api.groups.GET] table missing; returning empty []')
-          return NextResponse.json({ groups: [] })
+          return NextResponse.json({ groups: [] }, { status: 200 })
         }
         throw e
       }
       const groupIds = memberships.map((m) => m.groupId)
-      let groups: Awaited<ReturnType<typeof prisma.group.findMany>>
+      let groups: { slug: string; name: string }[] = []
       try {
         groups = await prisma.group.findMany({
           where: {
@@ -58,14 +58,14 @@ export async function GET(req: Request) {
       } catch (e: any) {
         if (e?.code === 'P2021') {
           console.warn('[api.groups.GET] table missing; returning empty []')
-          return NextResponse.json({ groups: [] })
+          return NextResponse.json({ groups: [] }, { status: 200 })
         }
         throw e
       }
       return NextResponse.json({ groups })
     }
 
-    let groups: Awaited<ReturnType<typeof prisma.group.findMany>>
+    let groups: { slug: string; name: string }[] = []
     try {
       groups = await prisma.group.findMany({
         orderBy: { createdAt: 'desc' },
@@ -74,7 +74,7 @@ export async function GET(req: Request) {
     } catch (e: any) {
       if (e?.code === 'P2021') {
         console.warn('[api.groups.GET] table missing; returning empty []')
-        return NextResponse.json({ groups: [] })
+        return NextResponse.json({ groups: [] }, { status: 200 })
       }
       throw e
     }
