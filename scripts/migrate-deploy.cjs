@@ -230,11 +230,9 @@ if (!residualDiff) {
     const body = txt
       .replace(/^-{3,}.*$/gm, '')
       .replace(/^\s*--.*$/gm, '')
+      .replace(/\s+/g, ' ')
       .trim();
-    if (!body) return false;
-    return /^ALTER TABLE\s+"?Device"?\s+ALTER COLUMN\s+"?qrToken"?\s+SET DEFAULT\s+md5\([\s\S]*\);?$/i.test(
-      body.replace(/\s+/g, ' ')
-    );
+    return /^ALTER TABLE "?Device"? ALTER COLUMN "?qrToken"? SET DEFAULT md5\(.+\);?$/i.test(body);
   }
 
   const preview = excerpt(residualDiffRaw);
@@ -245,12 +243,7 @@ if (!residualDiff) {
       if (preview) {
         console.warn(`---\n${preview}`);
       }
-    } else if (!STRICT) {
-      console.warn('[W006] Residual diff present; proceeding due to MIGRATE_STRICT=0');
-      if (preview) {
-        console.warn(`---\n${preview}`);
-      }
-    } else {
+    } else if (STRICT) {
       logLines(
         [
           'ERROR E006: Residual diff remains after auto-fix.',
@@ -260,6 +253,11 @@ if (!residualDiff) {
         true
       );
       process.exit(1);
+    } else {
+      console.warn('[W006] Residual diff present; proceeding due to MIGRATE_STRICT=0');
+      if (preview) {
+        console.warn(`---\n${preview}`);
+      }
     }
   }
 }
