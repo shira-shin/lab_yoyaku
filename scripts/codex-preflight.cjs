@@ -44,7 +44,9 @@ if (!fs.existsSync(schema)) {
 
 // 3) DB connectivity
 try {
-  run(`psql "${DIRECT}" -c "SELECT 1" -tA`);
+  run(
+    `cd web && pnpm exec prisma migrate status --schema prisma/schema.prisma --url "${DIRECT}" 1>/dev/null`
+  );
 } catch (e) {
   console.error('[preflight] ERROR: DB connectivity failed');
   process.exit(1);

@@ -10,8 +10,9 @@ if (env !== 'production' && process.env.MIGRATE_ON_PREVIEW !== '1') {
   process.exit(0);
 }
 
+run('node scripts/codex-preflight.cjs');
+
 console.log('[migrate] using DIRECT_URL as DATABASE_URL for migrations');
 process.env.DATABASE_URL = process.env.DIRECT_URL;
 
-run('node scripts/codex-preflight.cjs');
 run('pnpm --filter lab_yoyaku-web exec prisma migrate deploy');
