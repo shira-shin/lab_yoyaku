@@ -11,8 +11,10 @@ function run(cmd, opts = {}) {
 }
 
 function epId(url) {
-  const m = String(url || '').match(/\/\/[^@]*@(?:(ep-[a-z0-9-]+))(?:[-.]|)/i);
-  return m ? m[1] : null;
+  // 例: ep-bitter-leaf-a1bq8tp9[-pooler].ap-southeast-1.aws.neon.tech
+  const host = String(url || '').split('@')[1]?.split('/')[0] || '';
+  const firstLabel = host.split('.')[0]; // ep-xxx[-pooler]
+  return firstLabel?.replace(/-pooler$/, '') || null; // -pooler を無視
 }
 
 const env = process.env.VERCEL_ENV || '';
