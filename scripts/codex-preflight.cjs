@@ -11,88 +11,154 @@ function run(cmd, opts = {}) {
 }
 
 function epId(url) {
-  // 例: ep-bitter-leaf-a1bq8tp9[-pooler].ap-southeast-1.aws.neon.tech
   const host = String(url || '').split('@')[1]?.split('/')[0] || '';
-  const firstLabel = host.split('.')[0]; // ep-xxx[-pooler]
-  return firstLabel?.replace(/-pooler$/, '') || null; // -pooler を無視
+  const firstLabel = host.split('.')[0];
+  return firstLabel?.replace(/-pooler$/, '') || null;
+}
+
+function exit(code, messageLines = []) {
+  if (messageLines.length > 0) {
+    console[code === 0 ? 'log' : 'error'](messageLines.join('\n'));
+  }
+  process.exit(code);
 }
 
 const env = process.env.VERCEL_ENV || '';
-const DB = process.env.DATABASE_URL || '';
-const DIRECT = process.env.DIRECT_URL || '';
+const overridePreview = process.env.MIGRATE_ON_PREVIEW === '1';
+const databaseUrl = process.env.DATABASE_URL || '';
+const directUrl = process.env.DIRECT_URL || '';
 
-console.log(`[preflight] VERCEL_ENV=${env}`);
+console.log(`[ENV] VERCEL_ENV=${env}`);
 
-if (env !== 'production' && process.env.MIGRATE_ON_PREVIEW !== '1') {
-  console.log('[preflight] Non-production -> skip');
+if (env !== 'production' && !overridePreview) {
+  console.log('INFO [ENV] Non-production. Skip migrations.');
   process.exit(0);
 }
 
-// 1) endpoint match
-const epDb = epId(DB);
-const epDirect = epId(DIRECT);
-console.log(`[preflight] epDb=${epDb}, epDirect=${epDirect}`);
+const epDb = epId(databaseUrl);
+const epDirect = epId(directUrl);
+
 if (!epDb || !epDirect || epDb !== epDirect) {
-  console.error('[preflight] ERROR: DATABASE_URL and DIRECT_URL ep-id mismatch or missing');
-  process.exit(1);
+  if (env === 'production') {
+    exit(1, [
+      'ERROR E002: DATABASE_URL and DIRECT_URL point to different Neon endpoints.',
+      `db=${epDb || 'n/a'}, direct=${epDirect || 'n/a'}`,
+      'Action:',
+      '  - In Vercel (Production), make these two variables refer to the same ep-id.',
+      '  - DATABASE_URL should be the *-pooler of the same ep-id; DIRECT_URL should be the direct host.',
+    ]);
+  } else {
+    console.log(
+      `WARN [EP] mismatch (db=${epDb || 'n/a'}, direct=${epDirect || 'n/a'})`
+    );
+  }
+} else {
+  console.log(`[EP] epDb=${epDb}, epDirect=${epDirect} (ok)`);
 }
 
-// 2) schema path
-const schema = 'web/prisma/schema.prisma';
-if (!fs.existsSync(schema)) {
-  console.error(`[preflight] ERROR: schema not found: ${schema}`);
-  process.exit(1);
+const schemaPath = 'web/prisma/schema.prisma';
+if (!fs.existsSync(schemaPath)) {
+  exit(1, [
+    'ERROR E003: Prisma schema not found at web/prisma/schema.prisma.',
+    'Action: Ensure the path is correct in repo and build CWD.',
+  ]);
 }
+console.log('[SCHEMA] found web/prisma/schema.prisma (ok)');
 
-// 3) DB connectivity (Prisma 経由、web/ に固定・--schema 明示・URL二重指定)
-const host = (process.env.DIRECT_URL || '').split('@')[1]?.split('/')[0] || '';
-console.log(`[preflight] connecting host=${host}`);
+const directHost = directUrl.split('@')[1]?.split('/')[0] || '';
 try {
-  const envVars = { ...process.env, DATABASE_URL: process.env.DIRECT_URL };
-  run(
-    `pnpm --filter lab_yoyaku-web exec prisma migrate status \
-     --schema prisma/schema.prisma \
-     --url "${process.env.DIRECT_URL}" \
-     1>/dev/null`,
-    { env: envVars }
-  );
-} catch (e) {
-  const out = (e.stdout?.toString() || e.message || '').slice(0, 2000);
-  console.error('[preflight] ERROR: DB connectivity failed\n' + out);
-  process.exit(1);
+  const envVars = { ...process.env, DATABASE_URL: directUrl };
+  const connectivityCmd = [
+    'printf "SELECT 1;" | pnpm --filter lab_yoyaku-web exec prisma db execute',
+    '--stdin --schema prisma/schema.prisma 1>/dev/null',
+  ].join(' \\\n');
+  run(connectivityCmd, { env: envVars });
+  console.log(`[DB] connecting host=${directHost} (ok)`);
+} catch (error) {
+  const out = (
+    error.stderr?.toString() || error.stdout?.toString() || error.message || ''
+  ).slice(0, 2000);
+  exit(1, [
+    'ERROR E004: DB connectivity failed.',
+    `host=${directHost || 'n/a'}`,
+    'Tried: prisma db execute --stdin "SELECT 1;"',
+    'Hints:',
+    '  - Check DIRECT_URL credentials / password.',
+    "  - Ensure '?sslmode=require&channel_binding=require' is intact and quoted.",
+    "  - Verify Neon role 'neondb_owner' allows connections to this branch.",
+    out ? `---\n${out}` : undefined,
+  ].filter(Boolean));
 }
 
-// 4) forbid dangerous DDL in latest migration (optional policy)
+let latestMigrationSql = null;
 try {
-  const latest = run('ls -1d web/prisma/migrations/* | tail -n 1').trim();
-  const sql = `${latest}/migration.sql`;
-  if (fs.existsSync(sql)) {
-    const txt = fs.readFileSync(sql, 'utf8');
-    const danger = /(DROP\s+TABLE|DROP\s+COLUMN|ALTER\s+TYPE\s+.*\sDROP\s+VALUE)/i;
-    if (danger.test(txt) && !/SAFE_DROP_OK/.test(txt)) {
-      console.error(`[preflight] ERROR: dangerous DDL in ${sql} (no SAFE_DROP_OK)`);
-      process.exit(1);
+  const list = run('ls -1d web/prisma/migrations/* 2>/dev/null')
+    .split('\n')
+    .filter(Boolean);
+  const latest = list[list.length - 1];
+  if (latest) {
+    const sql = `${latest}/migration.sql`;
+    if (fs.existsSync(sql)) {
+      latestMigrationSql = sql;
+      const txt = fs.readFileSync(sql, 'utf8');
+      const danger = /(DROP\s+TABLE|DROP\s+COLUMN|ALTER\s+TYPE\s+.*\sDROP\s+VALUE)/i;
+      if (danger.test(txt) && !/SAFE_DROP_OK/.test(txt)) {
+        exit(1, [
+          'ERROR E005: Dangerous DDL detected in latest migration (DROP ...). No SAFE_DROP_OK tag.',
+          `File: ${sql}`,
+          "Action: Add comment '/* SAFE_DROP_OK */' or refactor migration to safe/conditional DDL.",
+        ]);
+      }
     }
   }
-} catch {
-  // ignore if no migrations
+} catch (error) {
+  // ignore listing errors; treated as no migrations
+}
+if (latestMigrationSql) {
+  console.log('[DDL] latest migration safe (ok)');
+} else {
+  console.log('[DDL] no migrations detected (ok)');
 }
 
-// 5) diff (DB -> schema)
+let diffOutput = '';
 try {
-  const diff = run(`cd web && pnpm exec prisma migrate diff \
-    --from-url "${DIRECT}" \
-    --to-schema-datamodel prisma/schema.prisma \
-    --script`);
-  if (diff.trim().length > 0) {
-    console.error('[preflight] diff contains statements. Refusing to proceed.\n---\n' + diff.substring(0, 2000));
-    process.exit(1);
+  diffOutput = run(
+    `pnpm --filter lab_yoyaku-web exec prisma migrate diff \
+--from-url "${directUrl}" \
+--to-schema-datamodel prisma/schema.prisma \
+--script`
+  );
+} catch (error) {
+  const stdout = error.stdout?.toString() || '';
+  if (stdout.trim().length > 0) {
+    diffOutput = stdout;
+  } else {
+    const msg = (error.stderr?.toString() || error.message || '').slice(0, 2000);
+    exit(1, [
+      'ERROR E006: Database state diverges from schema.',
+      'Failed to compute prisma migrate diff output.',
+      msg ? `---\n${msg}` : undefined,
+      'Action (prod DB):',
+      '  1) Run: pnpm -F lab_yoyaku-web exec prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel prisma/schema.prisma --script > repair.sql',
+      '  2) Review repair.sql and apply carefully, then resolve blocking migrations.',
+      '  3) Re-run: pnpm run migrate:deploy',
+    ].filter(Boolean));
   }
-  console.log('[preflight] diff empty ✅');
-} catch (e) {
-  console.error('[preflight] ERROR: prisma migrate diff failed');
-  console.error(String(e.stdout || e.output || e.message || e));
-  process.exit(1);
 }
 
-console.log('[preflight] OK');
+if (diffOutput.trim().length > 0) {
+  fs.writeFileSync('/tmp/repair.sql', diffOutput);
+  const preview = diffOutput.slice(0, 2000);
+  exit(1, [
+    'ERROR E006: Database state diverges from schema.',
+    'A repair script has been written to /tmp/repair.sql (first 2KB echoed below).',
+    `---\n${preview}`,
+    'Action (prod DB):',
+    '  1) Review /tmp/repair.sql for destructive statements.',
+    '  2) Apply it: pnpm -F lab_yoyaku-web exec prisma db execute --file /tmp/repair.sql --url "$DIRECT_URL"',
+    '  3) For each blocking migration, run: prisma migrate resolve --applied <id>',
+    '  4) Re-run: pnpm run migrate:deploy',
+  ]);
+}
+
+console.log('[DIFF] DB→Schema: clean ✅');
