@@ -63,30 +63,8 @@ function excerpt(output, limit = 2000) {
   return output.slice(0, limit);
 }
 
-function isSafeDefaultOnlyDiff(sql) {
-  const cleaned = sql
-    .replace(/--.*$/gm, '')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .trim();
-  if (!cleaned) return true;
-
-  const statements = cleaned
-    .split(/;\s*\n?/)
-    .map((stmt) => stmt.trim())
-    .filter(Boolean);
-
-  const reAlterDefault =
-    /^ALTER\s+TABLE\s+("?[\w.]+"?)\s+ALTER\s+COLUMN\s+("?[\w.]+"?)\s+(SET\s+DEFAULT|DROP\s+DEFAULT)\b/i;
-
-  return statements.every((stmt) => reAlterDefault.test(stmt));
-}
-
 const env = process.env.VERCEL_ENV || '';
 const overridePreview = process.env.MIGRATE_ON_PREVIEW === '1';
-const STRICT = process.env.MIGRATE_STRICT !== '0';
-console.log(
-  `[STRICT] MIGRATE_STRICT=${process.env.MIGRATE_STRICT ?? 'unset'} -> STRICT=${STRICT}`
-);
 
 if (env !== 'production' && !overridePreview) {
   console.log('INFO [ENV] Non-production. Skip migrations.');
@@ -242,49 +220,46 @@ const residualDiff = residualDiffRaw.trim();
 if (!residualDiff) {
   console.log('[MIGRATE] diff clean ✅');
 } else {
-  const preview = excerpt(residualDiffRaw);
-  const normalized = residualDiff.replace(/[\r\n]+/g, ' ').trim();
-  const defaultOnly = /^(-{3}\s*)?(--.*\s*)*ALTER TABLE\s+"?Device"?\s+ALTER COLUMN\s+"?qrToken"?\s+SET DEFAULT\s+md5\(.+?\);?\s*$/i.test(
-    normalized
+  const STRICT = process.env.MIGRATE_STRICT !== '0';
+  console.log(
+    `[STRICT] MIGRATE_STRICT=${process.env.MIGRATE_STRICT ?? 'unset'} -> STRICT=${STRICT}`
   );
 
-  if (!STRICT && defaultOnly) {
-    console.warn(
-      '[W006] Default-only drift for Device.qrToken -> proceed (MIGRATE_STRICT=0)'
+  function isDefaultOnlyDrift(txt) {
+    if (!txt) return false;
+    const body = txt
+      .replace(/^-{3,}.*$/gm, '')
+      .replace(/^\s*--.*$/gm, '')
+      .trim();
+    if (!body) return false;
+    return /^ALTER TABLE\s+"?Device"?\s+ALTER COLUMN\s+"?qrToken"?\s+SET DEFAULT\s+md5\([\s\S]*\);?$/i.test(
+      body.replace(/\s+/g, ' ')
     );
-    if (preview) {
-      console.warn(`---\n${preview}`);
-    }
-  } else if (isSafeDefaultOnlyDiff(residualDiffRaw)) {
-    if (STRICT) {
+  }
+
+  const preview = excerpt(residualDiffRaw);
+
+  if (residualDiff && residualDiff.trim()) {
+    if (!STRICT && isDefaultOnlyDrift(residualDiff)) {
+      console.warn('[W006] Default-only drift for Device.qrToken -> proceed (MIGRATE_STRICT=0)');
+      if (preview) {
+        console.warn(`---\n${preview}`);
+      }
+    } else if (!STRICT) {
+      console.warn('[W006] Residual diff present; proceeding due to MIGRATE_STRICT=0');
+      if (preview) {
+        console.warn(`---\n${preview}`);
+      }
+    } else {
       logLines(
         [
-          'ERROR E006: Residual diff remains after auto-fix (default change only).',
+          'ERROR E006: Residual diff remains after auto-fix.',
           preview ? `---\n${preview}` : undefined,
-          'Set MIGRATE_STRICT=0 to allow deployment temporarily.',
+          'Action: Review drift and repair before re-deploying.',
         ].filter(Boolean),
         true
       );
       process.exit(1);
     }
-    console.warn('[W006] Residual diff detected (default change only) but MIGRATE_STRICT=0 -> proceed.');
-    if (preview) {
-      console.warn(`---\n${preview}`);
-    }
-  } else if (!STRICT) {
-    console.warn('[W006] Residual diff present; proceeding due to MIGRATE_STRICT=0');
-    if (preview) {
-      console.warn(`---\n${preview}`);
-    }
-  } else {
-    logLines(
-      [
-        'ERROR E006: Residual diff remains after auto-fix.',
-        preview ? `---\n${preview}` : undefined,
-        'Action: Review drift and repair before re-deploying.',
-      ].filter(Boolean),
-      true
-    );
-    process.exit(1);
   }
 }
