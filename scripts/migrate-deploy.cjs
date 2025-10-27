@@ -17,7 +17,11 @@ function logLines(lines, isError = false) {
 
 function isEmptyMigration(sql) {
   if (!sql) return false;
-  return /This is an empty migration\./i.test(sql) || /^\s*$/.test(sql);
+  return (
+    /This is an empty migration\./i.test(sql) ||
+    /^\s*$/.test(sql) ||
+    !/\b(ALTER|CREATE|DROP|RENAME|COMMENT|GRANT|REVOKE)\b/i.test(sql)
+  );
 }
 
 function isQrTokenDefaultOnly(sql) {
@@ -235,19 +239,19 @@ console.log(
   `[STRICT] MIGRATE_STRICT=${MIGRATE_STRICT ?? 'unset'} -> STRICT=${STRICT}`
 );
 
-// 1) 空のマイグレーションはスキップ
-if (isEmptyMigration(diffSql)) {
-  console.log('[DIFF] empty migration -> skip (db & schema are in sync)');
+const residual = diffSql;
+const isEmpty = isEmptyMigration(residual);
+
+if (isEmpty) {
+  console.log('[DRIFT] empty residual diff -> continue');
   process.exit(0);
 }
 
-// 2) 非ストリクト時のみ、qrToken のデフォルト式の残差は許容
-if (!STRICT && isQrTokenDefaultOnly(diffSql)) {
-  console.log('[DIFF] allowed residual drift (Device.qrToken default) -> continue');
+if (!STRICT && isQrTokenDefaultOnly(residual)) {
+  console.log('[DRIFT] benign qrToken default drift and STRICT=0 -> continue');
   process.exit(0);
 }
 
-// 3) それ以外は従来通り失敗 / 成功判定
 if (!diffTrimmed) {
   console.log('[MIGRATE] diff clean ✅');
 } else {
@@ -260,5 +264,5 @@ if (!diffTrimmed) {
     ].filter(Boolean),
     true
   );
-  process.exit(1);
+  throw new Error('E006: residual drift remains');
 }
