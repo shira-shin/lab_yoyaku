@@ -149,7 +149,8 @@ model Device {
   name      String
   caution   String?
   code      String?
-  qrToken   String   @db.VarChar(32) @unique @default(dbgenerated("md5((random())::text || clock_timestamp()::text)"))
+  qrToken   String   @db.VarChar(32) @unique
+    @default(dbgenerated("md5(((random())::text || (clock_timestamp())::text))"))
   groupId   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
