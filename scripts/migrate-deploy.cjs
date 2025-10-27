@@ -15,6 +15,18 @@ function logLines(lines, isError = false) {
   out.filter(Boolean).forEach((line) => writer(line));
 }
 
+function isEmptyMigration(sql) {
+  if (!sql) return false;
+  return /This is an empty migration\./i.test(sql) || /^\s*$/.test(sql);
+}
+
+function isQrTokenDefaultOnly(sql) {
+  if (!sql) return false;
+  // Neon が正規化した md5(random() || clock_timestamp()) 形式
+  const pat = /ALTER TABLE\s+"Device"\s+ALTER COLUMN\s+"qrToken"\s+SET DEFAULT\s+md5\(\(random\(\)\)::text\s*\|\|\s*\(clock_timestamp\(\)\)::text\)\);?/i;
+  return pat.test(sql);
+}
+
 function migrationIdFrom(output) {
   const patterns = [
     /Migration\s+"?([0-9A-Za-z_-]+)"?\s+failed/i,
@@ -214,50 +226,39 @@ if (!migrateSucceeded) {
   process.exit(1);
 }
 
-const residualDiffRaw = diffFromDb(envVars);
-const residualDiff = residualDiffRaw.trim();
+const diffSql = diffFromDb(envVars);
+const diffTrimmed = diffSql.trim();
 
-if (!residualDiff) {
+const MIGRATE_STRICT = process.env.MIGRATE_STRICT;
+const STRICT = String(MIGRATE_STRICT ?? '').trim() === '1';
+console.log(
+  `[STRICT] MIGRATE_STRICT=${MIGRATE_STRICT ?? 'unset'} -> STRICT=${STRICT}`
+);
+
+// 1) 空のマイグレーションはスキップ
+if (isEmptyMigration(diffSql)) {
+  console.log('[DIFF] empty migration -> skip (db & schema are in sync)');
+  process.exit(0);
+}
+
+// 2) 非ストリクト時のみ、qrToken のデフォルト式の残差は許容
+if (!STRICT && isQrTokenDefaultOnly(diffSql)) {
+  console.log('[DIFF] allowed residual drift (Device.qrToken default) -> continue');
+  process.exit(0);
+}
+
+// 3) それ以外は従来通り失敗 / 成功判定
+if (!diffTrimmed) {
   console.log('[MIGRATE] diff clean ✅');
 } else {
-  const STRICT = process.env.MIGRATE_STRICT !== '0';
-  console.log(
-    `[STRICT] MIGRATE_STRICT=${process.env.MIGRATE_STRICT ?? 'unset'} -> STRICT=${STRICT}`
+  const preview = excerpt(diffSql);
+  logLines(
+    [
+      'ERROR E006: Residual diff remains after auto-fix.',
+      preview ? `---\n${preview}` : undefined,
+      'Action: Review drift and repair before re-deploying.',
+    ].filter(Boolean),
+    true
   );
-
-  function isDefaultOnlyDrift(txt) {
-    if (!txt) return false;
-    const body = txt
-      .replace(/^-{3,}.*$/gm, '')
-      .replace(/^\s*--.*$/gm, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    return /^ALTER TABLE "?Device"? ALTER COLUMN "?qrToken"? SET DEFAULT md5\(.+\);?$/i.test(body);
-  }
-
-  const preview = excerpt(residualDiffRaw);
-
-  if (residualDiff && residualDiff.trim()) {
-    if (!STRICT && isDefaultOnlyDrift(residualDiff)) {
-      console.warn('[W006] Default-only drift for Device.qrToken -> proceed (MIGRATE_STRICT=0)');
-      if (preview) {
-        console.warn(`---\n${preview}`);
-      }
-    } else if (STRICT) {
-      logLines(
-        [
-          'ERROR E006: Residual diff remains after auto-fix.',
-          preview ? `---\n${preview}` : undefined,
-          'Action: Review drift and repair before re-deploying.',
-        ].filter(Boolean),
-        true
-      );
-      process.exit(1);
-    } else {
-      console.warn('[W006] Residual diff present; proceeding due to MIGRATE_STRICT=0');
-      if (preview) {
-        console.warn(`---\n${preview}`);
-      }
-    }
-  }
+  process.exit(1);
 }
