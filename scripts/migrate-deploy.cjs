@@ -15,15 +15,6 @@ function logLines(lines, isError = false) {
   out.filter(Boolean).forEach((line) => writer(line));
 }
 
-function isEmptyMigration(sql) {
-  if (!sql) return false;
-  return (
-    /This is an empty migration\./i.test(sql) ||
-    /^\s*$/.test(sql) ||
-    !/\b(ALTER|CREATE|DROP|RENAME|COMMENT|GRANT|REVOKE)\b/i.test(sql)
-  );
-}
-
 function isQrTokenDefaultOnly(sql) {
   if (!sql) return false;
   // Neon が正規化した md5(random() || clock_timestamp()) 形式
@@ -239,15 +230,21 @@ console.log(
   `[STRICT] MIGRATE_STRICT=${MIGRATE_STRICT ?? 'unset'} -> STRICT=${STRICT}`
 );
 
-const residual = diffSql;
-const isEmpty = isEmptyMigration(residual);
+const residualText = String(diffSql || '').trim();
 
-if (isEmpty) {
+const isEmptyResidual =
+  /This is an empty migration/i.test(residualText) ||
+  residualText === '' ||
+  !/\b(ALTER|CREATE|DROP|RENAME|COMMENT|GRANT|REVOKE|INSERT|UPDATE|DELETE)\b/i.test(
+    residualText
+  );
+
+if (isEmptyResidual) {
   console.log('[DRIFT] empty residual diff -> continue');
   process.exit(0);
 }
 
-if (!STRICT && isQrTokenDefaultOnly(residual)) {
+if (!STRICT && isQrTokenDefaultOnly(residualText)) {
   console.log('[DRIFT] benign qrToken default drift and STRICT=0 -> continue');
   process.exit(0);
 }
