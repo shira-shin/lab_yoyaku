@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { PASSWORD_HINT, passwordRegex } from '@/utils/password';
 
 type Tab = 'login' | 'register';
+const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@lab-yoyaku.example';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +18,8 @@ export default function LoginPage() {
   const [lpass, setLPass] = useState('');
   const [lerr, setLErr] = useState('');
   const [loadingLogin, setLoadingLogin] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showForgotHelp, setShowForgotHelp] = useState(false);
 
   // register
   const [rname, setRName] = useState('');
@@ -25,16 +28,23 @@ export default function LoginPage() {
   const [rpass2, setRPass2] = useState('');
   const [rerr, setRErr] = useState('');
   const [loadingReg, setLoadingReg] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegPassword2, setShowRegPassword2] = useState(false);
 
   async function submitLogin(e: React.FormEvent) {
     e.preventDefault();
     setLErr('');
     setLoadingLogin(true);
     try {
+      const normalizedEmail = lemail.trim().toLowerCase();
+      const normalizedPassword = lpass.trim();
+      if (!normalizedEmail || !normalizedPassword) {
+        throw new Error('missing');
+      }
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: lemail, password: lpass }),
+        body: JSON.stringify({ email: normalizedEmail, password: normalizedPassword }),
         credentials: 'same-origin',
       });
       if (!res.ok) throw new Error();
@@ -49,11 +59,15 @@ export default function LoginPage() {
   async function submitRegister(e: React.FormEvent) {
     e.preventDefault();
     setRErr('');
-    if (rpass !== rpass2) {
+    const trimmedEmail = remail.trim().toLowerCase();
+    const trimmedPass = rpass.trim();
+    const trimmedPass2 = rpass2.trim();
+    const trimmedName = rname.trim();
+    if (trimmedPass !== trimmedPass2) {
       setRErr('確認用パスワードが一致しません');
       return;
     }
-    if (!passwordRegex.test(rpass)) {
+    if (!passwordRegex.test(trimmedPass)) {
       setRErr(PASSWORD_HINT);
       return;
     }
@@ -62,7 +76,11 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: remail, password: rpass, name: rname }),
+        body: JSON.stringify({
+          email: trimmedEmail,
+          password: trimmedPass,
+          name: trimmedName,
+        }),
         credentials: 'same-origin',
       });
       if (!res.ok) {
@@ -83,6 +101,9 @@ export default function LoginPage() {
     'rounded-xl border border-gray-200 bg-white p-5 shadow-sm';
   const input =
     'w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-800/10';
+  const passwordWrapper = 'relative flex items-center';
+  const toggleButton =
+    'absolute inset-y-0 right-2 flex items-center text-xs text-gray-600 hover:text-gray-900';
 
   return (
     <div className="max-w-6xl mx-auto py-10">
@@ -148,19 +169,37 @@ export default function LoginPage() {
             <form onSubmit={submitLogin} className="space-y-3">
               <input
                 className={input}
+                type="email"
                 placeholder="メールアドレス"
                 value={lemail}
-                onChange={e => setLEmail(e.target.value)}
+                onChange={e => {
+                  setLEmail(e.target.value);
+                  if (lerr) setLErr('');
+                }}
                 required
+                autoComplete="email"
               />
-              <input
-                className={input}
-                type="password"
-                placeholder="パスワード"
-                value={lpass}
-                onChange={e => setLPass(e.target.value)}
-                required
-              />
+              <div className={passwordWrapper}>
+                <input
+                  className={`${input} pr-16`}
+                  type={showLoginPassword ? 'text' : 'password'}
+                  placeholder="パスワード"
+                  value={lpass}
+                  onChange={e => {
+                    setLPass(e.target.value);
+                    if (lerr) setLErr('');
+                  }}
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  className={toggleButton}
+                  onClick={() => setShowLoginPassword(v => !v)}
+                >
+                  {showLoginPassword ? '隠す' : '表示'}
+                </button>
+              </div>
               {lerr && <div className="text-sm text-red-600">{lerr}</div>}
               <button
                 className="w-full rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 px-4 py-2 disabled:opacity-60"
@@ -168,6 +207,26 @@ export default function LoginPage() {
               >
                 {loadingLogin ? 'ログイン中…' : 'ログイン'}
               </button>
+              <button
+                type="button"
+                className="w-full text-center text-sm text-indigo-600 hover:text-indigo-500 underline"
+                onClick={() => setShowForgotHelp(v => !v)}
+              >
+                パスワードをお忘れの方はこちら
+              </button>
+              {showForgotHelp && (
+                <div className="text-xs text-gray-600 rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-2">
+                  <p>
+                    パスワードを忘れてしまった場合は、グループ管理者にリセットを依頼するか、登録時のメールアドレスから以下のサポート宛にご連絡ください。
+                  </p>
+                  <p>
+                    サポート連絡先：
+                    <a className="ml-1 text-indigo-600 hover:text-indigo-500 underline" href={`mailto:${supportEmail}`}>
+                      {supportEmail}
+                    </a>
+                  </p>
+                </div>
+              )}
               <p className="text-xs text-muted text-center">デモ: <b>demo / demo</b> でもログインできます。</p>
             </form>
           )}
@@ -182,27 +241,58 @@ export default function LoginPage() {
               />
               <input
                 className={input}
+                type="email"
                 placeholder="メールアドレス"
                 value={remail}
-                onChange={e => setREmail(e.target.value)}
+                onChange={e => {
+                  setREmail(e.target.value);
+                  if (rerr) setRErr('');
+                }}
                 required
+                autoComplete="email"
               />
-              <input
-              className={input}
-                type="password"
-                placeholder="パスワード"
-                value={rpass}
-                onChange={e => setRPass(e.target.value)}
-                required
-              />
-              <input
-                className={input}
-                type="password"
-                placeholder="パスワード（確認）"
-                value={rpass2}
-                onChange={e => setRPass2(e.target.value)}
-                required
-              />
+              <div className={passwordWrapper}>
+                <input
+                  className={`${input} pr-16`}
+                  type={showRegPassword ? 'text' : 'password'}
+                  placeholder="パスワード"
+                  value={rpass}
+                  onChange={e => {
+                    setRPass(e.target.value);
+                    if (rerr) setRErr('');
+                  }}
+                  required
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className={toggleButton}
+                  onClick={() => setShowRegPassword(v => !v)}
+                >
+                  {showRegPassword ? '隠す' : '表示'}
+                </button>
+              </div>
+              <div className={passwordWrapper}>
+                <input
+                  className={`${input} pr-16`}
+                  type={showRegPassword2 ? 'text' : 'password'}
+                  placeholder="パスワード（確認）"
+                  value={rpass2}
+                  onChange={e => {
+                    setRPass2(e.target.value);
+                    if (rerr) setRErr('');
+                  }}
+                  required
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className={toggleButton}
+                  onClick={() => setShowRegPassword2(v => !v)}
+                >
+                  {showRegPassword2 ? '隠す' : '表示'}
+                </button>
+              </div>
               <p className="text-sm text-muted mt-1">{PASSWORD_HINT}</p>
               {rerr && <div className="text-sm text-red-600">{rerr}</div>}
               <button
