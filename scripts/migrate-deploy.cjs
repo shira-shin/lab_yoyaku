@@ -63,8 +63,27 @@ function excerpt(output, limit = 2000) {
   return output.slice(0, limit);
 }
 
+function isSafeDefaultOnlyDiff(sql) {
+  const cleaned = sql
+    .replace(/--.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .trim();
+  if (!cleaned) return true;
+
+  const statements = cleaned
+    .split(/;\s*\n?/)
+    .map((stmt) => stmt.trim())
+    .filter(Boolean);
+
+  const reAlterDefault =
+    /^ALTER\s+TABLE\s+("?[\w.]+"?)\s+ALTER\s+COLUMN\s+("?[\w.]+"?)\s+(SET\s+DEFAULT|DROP\s+DEFAULT)\b/i;
+
+  return statements.every((stmt) => reAlterDefault.test(stmt));
+}
+
 const env = process.env.VERCEL_ENV || '';
 const overridePreview = process.env.MIGRATE_ON_PREVIEW === '1';
+const STRICT = process.env.MIGRATE_STRICT !== '0';
 
 if (env !== 'production' && !overridePreview) {
   console.log('INFO [ENV] Non-production. Skip migrations.');
@@ -81,9 +100,12 @@ const envVars = { ...process.env, DATABASE_URL: process.env.DIRECT_URL };
 
 console.log('[MIGRATE] deploy...');
 
+let migrateSucceeded = false;
+
 try {
   migrate(envVars);
   console.log('[MIGRATE] done ✅');
+  migrateSucceeded = true;
 } catch (error) {
   const output = [
     error.stdout?.toString(),
@@ -148,6 +170,7 @@ try {
       try {
         migrate(envVars);
         console.log('[MIGRATE] done ✅');
+        migrateSucceeded = true;
       } catch (retryErr) {
         const retryOutput = excerpt(
           [
@@ -172,21 +195,20 @@ try {
         );
         process.exit(1);
       }
-      return;
+    } else {
+      logLines(
+        [
+          `ERROR E007: Migration '${migrationId}' failed and auto-resolve is unsafe (diff not empty).`,
+          'Action:',
+          '  - Generate repair: prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel prisma/schema.prisma --script > repair.sql',
+          '  - Apply: prisma db execute --file repair.sql --url "$DIRECT_URL"',
+          '  - Mark applied: prisma migrate resolve --applied <id>',
+          '  - Then: pnpm run migrate:deploy',
+        ],
+        true
+      );
+      process.exit(1);
     }
-
-    logLines(
-      [
-        `ERROR E007: Migration '${migrationId}' failed and auto-resolve is unsafe (diff not empty).`,
-        'Action:',
-        '  - Generate repair: prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel prisma/schema.prisma --script > repair.sql',
-        '  - Apply: prisma db execute --file repair.sql --url "$DIRECT_URL"',
-        '  - Mark applied: prisma migrate resolve --applied <id>',
-        '  - Then: pnpm run migrate:deploy',
-      ],
-      true
-    );
-    process.exit(1);
   }
 
   const excerptOutput = excerpt(output);
@@ -202,6 +224,44 @@ try {
         .join('\n') || '  <no output>',
       'Action: Inspect failing SQL / permissions / network. Re-run with DEBUG=*.',
     ],
+    true
+  );
+  process.exit(1);
+}
+
+if (!migrateSucceeded) {
+  process.exit(1);
+}
+
+const residualDiff = diffFromDb(envVars).trim();
+
+if (!residualDiff) {
+  console.log('[MIGRATE] diff clean ✅');
+} else if (isSafeDefaultOnlyDiff(residualDiff)) {
+  const preview = excerpt(residualDiff);
+  if (STRICT) {
+    logLines(
+      [
+        'ERROR E006: Residual diff remains after auto-fix (default change only).',
+        preview ? `---\n${preview}` : undefined,
+        'Set MIGRATE_STRICT=0 to allow deployment temporarily.',
+      ].filter(Boolean),
+      true
+    );
+    process.exit(1);
+  }
+  console.warn('[W006] Residual diff detected (default change only) but MIGRATE_STRICT=0 -> proceed.');
+  if (preview) {
+    console.warn(`---\n${preview}`);
+  }
+} else {
+  const preview = excerpt(residualDiff);
+  logLines(
+    [
+      'ERROR E006: Residual diff remains after auto-fix.',
+      preview ? `---\n${preview}` : undefined,
+      'Action: Review drift and repair before re-deploying.',
+    ].filter(Boolean),
     true
   );
   process.exit(1);
