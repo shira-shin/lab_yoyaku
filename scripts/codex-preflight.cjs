@@ -146,19 +146,65 @@ try {
   }
 }
 
-if (diffOutput.trim().length > 0) {
-  fs.writeFileSync('/tmp/repair.sql', diffOutput);
-  const preview = diffOutput.slice(0, 2000);
-  exit(1, [
-    'ERROR E006: Database state diverges from schema.',
-    'A repair script has been written to /tmp/repair.sql (first 2KB echoed below).',
-    `---\n${preview}`,
-    'Action (prod DB):',
-    '  1) Review /tmp/repair.sql for destructive statements.',
-    '  2) Apply it: pnpm -F lab_yoyaku-web exec prisma db execute --file /tmp/repair.sql --url "$DIRECT_URL"',
-    '  3) For each blocking migration, run: prisma migrate resolve --applied <id>',
-    '  4) Re-run: pnpm run migrate:deploy',
-  ]);
+function isSafeDefaultOnlyDiff(sql) {
+  // 許可パターン：SET DEFAULT / DROP DEFAULT 以外が一切含まれないこと
+  const cleaned = sql
+    .replace(/--.*$/mg, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .trim();
+  if (!cleaned) return true;
+
+  // ステートメント単位で評価
+  const stmts = cleaned.split(/;\s*\n?/).map(s => s.trim()).filter(Boolean);
+
+  const reAlterDefault = /^ALTER\s+TABLE\s+("?[\w.]+"?)\s+ALTER\s+COLUMN\s+("?[\w.]+"?)\s+(SET\s+DEFAULT|DROP\s+DEFAULT)\b/i;
+
+  return stmts.every(s => reAlterDefault.test(s));
 }
 
-console.log('[DIFF] DB→Schema: clean ✅');
+function applySqlUnsafe(sql, label = 'repair.sql') {
+  const path = '/tmp/' + label;
+  fs.writeFileSync(path, sql, 'utf8');
+  const env = { ...process.env, DATABASE_URL: process.env.DIRECT_URL };
+  run(`pnpm --filter lab_yoyaku-web exec prisma db execute --file ${path} --schema prisma/schema.prisma`, { env });
+}
+
+if (diffOutput.trim().length > 0) {
+  if (isSafeDefaultOnlyDiff(diffOutput)) {
+    console.log('[DIFF] safe drift detected (default change only) -> auto-fix');
+    try {
+      applySqlUnsafe(diffOutput, 'autofix-default.sql');
+      // 再チェック：クリーンであることを必ず確認
+      const diffAfter = run(`pnpm --filter lab_yoyaku-web exec prisma migrate diff \
+        --from-url "${process.env.DIRECT_URL}" \
+        --to-schema-datamodel prisma/schema.prisma \
+        --script`, { encoding: 'utf8' });
+
+      if (diffAfter.trim().length === 0) {
+        console.log('[DIFF] clean after auto-fix ✅');
+      } else {
+        console.error('ERROR E006: Residual diff remains after auto-fix.\n---\n' + diffAfter.slice(0,2000));
+        process.exit(1);
+      }
+    } catch (e) {
+      const out = (e.stdout?.toString() || e.message || '').slice(0, 2000);
+      console.error('ERROR E006: Auto-fix for safe drift failed.\n' + out);
+      process.exit(1);
+    }
+  } else {
+    // 従来通り E006 で停止（修復手順を出力）
+    const path = '/tmp/repair.sql';
+    fs.writeFileSync(path, diffOutput, 'utf8');
+    console.error('ERROR E006: Database state diverges from schema.');
+    console.error('A repair script has been written to /tmp/repair.sql (first 2KB echoed below).');
+    console.error('---\n' + diffOutput.slice(0,2000));
+    console.error('Action (prod DB):\n' +
+      '  1) Review /tmp/repair.sql for destructive statements.\n' +
+      '  2) Apply it: pnpm -F lab_yoyaku-web exec prisma db execute --file /tmp/repair.sql --url "$DIRECT_URL"\n' +
+      '  3) For each blocking migration, run: prisma migrate resolve --applied <id>\n' +
+      '  4) Re-run: pnpm run migrate:deploy');
+    process.exit(1);
+  }
+} else {
+  console.log('[DIFF] DB→Schema: clean ✅');
+}
