@@ -44,13 +44,21 @@ if (!fs.existsSync(schema)) {
   process.exit(1);
 }
 
-// 3) DB connectivity
+// 3) DB connectivity (Prisma 経由、web/ に固定・--schema 明示・URL二重指定)
+const host = (process.env.DIRECT_URL || '').split('@')[1]?.split('/')[0] || '';
+console.log(`[preflight] connecting host=${host}`);
 try {
+  const envVars = { ...process.env, DATABASE_URL: process.env.DIRECT_URL };
   run(
-    `cd web && pnpm exec prisma migrate status --schema prisma/schema.prisma --url "${DIRECT}" 1>/dev/null`
+    `pnpm --filter lab_yoyaku-web exec prisma migrate status \
+     --schema prisma/schema.prisma \
+     --url "${process.env.DIRECT_URL}" \
+     1>/dev/null`,
+    { env: envVars }
   );
 } catch (e) {
-  console.error('[preflight] ERROR: DB connectivity failed');
+  const out = (e.stdout?.toString() || e.message || '').slice(0, 2000);
+  console.error('[preflight] ERROR: DB connectivity failed\n' + out);
   process.exit(1);
 }
 
