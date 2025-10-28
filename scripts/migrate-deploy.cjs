@@ -3,7 +3,10 @@ const crypto = require('node:crypto');
 const { execSync } = require('node:child_process');
 
 // --- add helpers for robust residual detection ---
-const stripAnsi = (s) => String(s ?? '').replace(/\x1B\[[0-9;]*[A-Za-z]/g, '');
+const stripAnsi = (s) =>
+  String(s ?? '')
+    .replace(/\x1b\[[0-9;]*m/g, '')
+    .replace(/\x1b\[[0-9;]*[A-Za-z]/g, '');
 const normalize = (s) => stripAnsi(String(s ?? '')).replace(/\r/g, '').trim();
 
 const hash = crypto
@@ -16,6 +19,21 @@ console.log(`[STRICT] MIGRATE_STRICT=${process.env.MIGRATE_STRICT ?? 'unset'}`);
 console.log(
   `[BYPASS] DISABLE_DRIFT_CHECK=${process.env.DISABLE_DRIFT_CHECK ?? 'unset'}`
 );
+
+const STRICT = process.env.MIGRATE_STRICT === '1';
+const BYPASS = process.env.DISABLE_DRIFT_CHECK === '1';
+
+function sh(cmd, opts = {}) {
+  return execSync(cmd, { stdio: 'inherit', shell: true, ...opts });
+}
+
+function fail(code, message, detail) {
+  console.error(`ERROR ${code}: ${message}`);
+  if (detail) {
+    console.error(detail);
+  }
+  process.exit(1);
+}
 
 try {
   const list = fs.readdirSync('web/prisma/migrations');
@@ -81,6 +99,32 @@ function migrate(envVars) {
   });
 }
 
+function diffExitCode(envVars) {
+  try {
+    run(
+      `pnpm --filter lab_yoyaku-web exec prisma migrate diff ` +
+        `--from-url "${process.env.DIRECT_URL}" ` +
+        '--to-schema-datamodel prisma/schema.prisma --exit-code',
+      { env: envVars }
+    );
+    return { exitCode: 0, output: '' };
+  } catch (error) {
+    const stdout = error.stdout?.toString() || '';
+    const stderr = error.stderr?.toString() || '';
+    const exitCode = typeof error.status === 'number' ? error.status : 1;
+    return { exitCode, output: stdout || stderr || error.message || '' };
+  }
+}
+
+function isEmptyOrBenignDiff(txt) {
+  const t = stripAnsi(String(txt ?? '')).trim();
+  if (!t) return true;
+  if (/^\s*--\s*This is an empty migration\./i.test(t)) return true;
+  if (/^--.*?empty migration/i.test(t) && !/ALTER|CREATE|DROP|INDEX|SEQUENCE|CONSTRAINT/i.test(t))
+    return true;
+  return false;
+}
+
 function excerpt(output, limit = 2000) {
   return output.slice(0, limit);
 }
@@ -90,6 +134,13 @@ const overridePreview = process.env.MIGRATE_ON_PREVIEW === '1';
 
 if (env !== 'production' && !overridePreview) {
   console.log('INFO [ENV] Non-production. Skip migrations.');
+  process.exit(0);
+}
+
+if (BYPASS) {
+  console.log('[DRIFT] DISABLE_DRIFT_CHECK=1 -> skip drift checks and residual validation');
+  const envVarsBypass = { ...process.env, DATABASE_URL: process.env.DIRECT_URL };
+  sh('pnpm --filter lab_yoyaku-web exec prisma migrate deploy', { env: envVarsBypass });
   process.exit(0);
 }
 
@@ -236,38 +287,30 @@ if (!migrateSucceeded) {
   process.exit(1);
 }
 
-if (process.env.DISABLE_DRIFT_CHECK === '1') {
-  console.log('[DRIFT] disabled by DISABLE_DRIFT_CHECK=1 -> continue');
+const diffExit = diffExitCode(envVars);
+if (diffExit.exitCode === 0) {
+  console.log('[DRIFT] prisma migrate diff --exit-code -> no diff');
   process.exit(0);
+}
+
+if (diffExit.exitCode !== 2) {
+  fail('E005', 'prisma migrate diff --exit-code failed unexpectedly.', diffExit.output);
 }
 
 const diffSql = diffFromDb(envVars);
 const residual = diffSql;
+const residualText = normalize(residual);
+const residualPreview = residualText.slice(0, 200) || '<empty>';
 
-// --- residual diff handling (replace existing block with this) ---
-const STRICT = process.env.MIGRATE_STRICT === '1';
-const residualTextRaw = residual;
-const residualText = normalize(residualTextRaw);
+console.log('[DRIFT] residual.preview=', residualPreview);
 
-console.log('[DRIFT] residual.preview=', residualText.slice(0, 200) || '<empty>');
-
-const isEmptyResidual =
-  residualText === '' ||
-  /This is an empty migration\./i.test(residualText) ||
-  // SQLキーワードが一切ない＝実質空
-  !/\b(ALTER|CREATE|DROP|RENAME|COMMENT|GRANT|REVOKE|INSERT|UPDATE|DELETE|TRIGGER|FUNCTION)\b/i.test(
-    residualText
-  );
-
-if (isEmptyResidual) {
-  console.log('[DRIFT] empty residual -> continue');
+if (isEmptyOrBenignDiff(residual)) {
+  console.log('[DRIFT] residual is empty/benign -> continue');
 } else if (
   !STRICT &&
   /ALTER TABLE\s+"Device".*ALTER COLUMN\s+"qrToken".*SET DEFAULT/i.test(residualText)
 ) {
   console.log('[DRIFT] benign qrToken-default residual and STRICT=0 -> continue');
 } else {
-  console.error('ERROR E006: Residual diff remains after auto-fix.');
-  console.error(residualText);
-  process.exit(1);
+  fail('E006', 'Residual diff remains after auto-fix.', residualText);
 }
