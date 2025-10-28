@@ -78,7 +78,7 @@ function migrationIdFrom(output) {
 function diffFromDb(envVars) {
   try {
     return run(
-      `pnpm --filter lab_yoyaku-web exec prisma migrate diff \
+      `pnpm -w --filter lab_yoyaku-web exec prisma migrate diff \
 --from-url "${process.env.DIRECT_URL}" \
 --to-schema-datamodel prisma/schema.prisma \
 --script`,
@@ -94,7 +94,7 @@ function diffFromDb(envVars) {
 }
 
 function migrate(envVars) {
-  return run('pnpm --filter lab_yoyaku-web exec prisma migrate deploy', {
+  return run('pnpm -w --filter lab_yoyaku-web exec prisma migrate deploy', {
     env: envVars,
   });
 }
@@ -102,7 +102,7 @@ function migrate(envVars) {
 function diffExitCode(envVars) {
   try {
     run(
-      `pnpm --filter lab_yoyaku-web exec prisma migrate diff ` +
+      `pnpm -w --filter lab_yoyaku-web exec prisma migrate diff ` +
         `--from-url "${process.env.DIRECT_URL}" ` +
         '--to-schema-datamodel prisma/schema.prisma --exit-code',
       { env: envVars }
@@ -140,7 +140,7 @@ if (env !== 'production' && !overridePreview) {
 if (BYPASS) {
   console.log('[DRIFT] DISABLE_DRIFT_CHECK=1 -> skip drift checks and residual validation');
   const envVarsBypass = { ...process.env, DATABASE_URL: process.env.DIRECT_URL };
-  sh('pnpm --filter lab_yoyaku-web exec prisma migrate deploy', { env: envVarsBypass });
+  sh('pnpm -w --filter lab_yoyaku-web exec prisma migrate deploy', { env: envVarsBypass });
   process.exit(0);
 }
 
@@ -169,10 +169,78 @@ try {
     .filter(Boolean)
     .join('\n');
 
+  const isP3009 = /P3009/.test(output);
   const isP3018 = /P3018/.test(output);
   const isDup = /(42701|duplicate|already exists)/i.test(output);
 
-  if (isP3018 && isDup) {
+  if (isP3009) {
+    if (STRICT) {
+      console.log('[STRICT] MIGRATE_STRICT=1 -> skip P3009 auto-resolve');
+    } else {
+      const fallbackMigrationId = '202510100900_auth_normalization';
+      const migrationMatch = output.match(
+        /The `([0-9A-Za-z_]+)` migration started[\s\S]*? failed/
+      );
+      const migrationId = migrationMatch?.[1] || fallbackMigrationId;
+
+      console.log(`[P3009] failed migration detected: ${migrationId}`);
+
+      try {
+        sh(
+          `pnpm -w --filter lab_yoyaku-web exec prisma migrate resolve --applied ${migrationId}`,
+          { env: envVars }
+        );
+        console.log(`[P3009] resolve --applied ${migrationId} ... OK`);
+      } catch (resolveErr) {
+        const excerptOutput = excerpt(
+          [
+            resolveErr.stdout?.toString(),
+            resolveErr.stderr?.toString(),
+            resolveErr.message,
+          ]
+            .filter(Boolean)
+            .join('\n')
+        );
+        logLines(
+          [
+            `[P3009] resolve --applied ${migrationId} failed.`,
+            excerptOutput ? `---\n${excerptOutput}` : undefined,
+          ].filter(Boolean),
+          true
+        );
+        process.exit(1);
+      }
+
+      console.log('[P3009] re-run migrate deploy ...');
+      try {
+        migrate(envVars);
+        console.log('[MIGRATE] done ✅');
+        migrateSucceeded = true;
+      } catch (retryErr) {
+        const retryOutput = excerpt(
+          [
+            retryErr.stdout?.toString(),
+            retryErr.stderr?.toString(),
+            retryErr.message,
+          ]
+            .filter(Boolean)
+            .join('\n')
+        );
+        logLines(
+          [
+            `ERROR E009: prisma migrate deploy retry after resolving '${migrationId}' failed.`,
+            retryOutput ? `---\n${retryOutput}` : undefined,
+            'Action:',
+            '  - Investigate migration failure and resolve manually.',
+          ].filter(Boolean),
+          true
+        );
+        process.exit(1);
+      }
+    }
+  }
+
+  if (!migrateSucceeded && isP3018 && isDup) {
     const migrationId = migrationIdFrom(output) || 'unknown';
     const reasonLine =
       output
@@ -189,7 +257,7 @@ try {
       console.log('[SELF-HEAL] diff is empty → safe to mark applied');
       try {
         run(
-          `pnpm --filter lab_yoyaku-web exec prisma migrate resolve --applied ${migrationId}`,
+          `pnpm -w --filter lab_yoyaku-web exec prisma migrate resolve --applied ${migrationId}`,
           { env: envVars }
         );
         console.log(
@@ -265,22 +333,24 @@ try {
     }
   }
 
-  const excerptOutput = excerpt(output);
-  logLines(
-    [
-      'ERROR E008: prisma migrate deploy failed (unknown).',
-      'Excerpt:',
-      excerptOutput
-        .split('\n')
-        .filter(Boolean)
-        .slice(0, 20)
-        .map((line) => `  ${line}`)
-        .join('\n') || '  <no output>',
-      'Action: Inspect failing SQL / permissions / network. Re-run with DEBUG=*.',
-    ],
-    true
-  );
-  process.exit(1);
+  if (!migrateSucceeded) {
+    const excerptOutput = excerpt(output);
+    logLines(
+      [
+        'ERROR E008: prisma migrate deploy failed (unknown).',
+        'Excerpt:',
+        excerptOutput
+          .split('\n')
+          .filter(Boolean)
+          .slice(0, 20)
+          .map((line) => `  ${line}`)
+          .join('\n') || '  <no output>',
+        'Action: Inspect failing SQL / permissions / network. Re-run with DEBUG=*.',
+      ],
+      true
+    );
+    process.exit(1);
+  }
 }
 
 if (!migrateSucceeded) {
