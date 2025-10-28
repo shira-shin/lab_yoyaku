@@ -2,6 +2,10 @@ const fs = require('node:fs');
 const crypto = require('node:crypto');
 const { execSync } = require('node:child_process');
 
+// --- add helpers for robust residual detection ---
+const stripAnsi = (s) => String(s ?? '').replace(/\x1B\[[0-9;]*[A-Za-z]/g, '');
+const normalize = (s) => stripAnsi(String(s ?? '')).replace(/\r/g, '').trim();
+
 const hash = crypto
   .createHash('sha1')
   .update(fs.readFileSync(__filename))
@@ -240,24 +244,30 @@ if (process.env.DISABLE_DRIFT_CHECK === '1') {
 const diffSql = diffFromDb(envVars);
 const residual = diffSql;
 
+// --- residual diff handling (replace existing block with this) ---
 const STRICT = process.env.MIGRATE_STRICT === '1';
-const residualText = String(residual || '').trim();
+const residualTextRaw = residual;
+const residualText = normalize(residualTextRaw);
+
+console.log('[DRIFT] residual.preview=', residualText.slice(0, 200) || '<empty>');
 
 const isEmptyResidual =
-  /This is an empty migration/i.test(residualText) ||
   residualText === '' ||
-  !/\b(ALTER|CREATE|DROP|RENAME|COMMENT|GRANT|REVOKE|INSERT|UPDATE|DELETE)\b/i.test(
+  /This is an empty migration\./i.test(residualText) ||
+  // SQLキーワードが一切ない＝実質空
+  !/\b(ALTER|CREATE|DROP|RENAME|COMMENT|GRANT|REVOKE|INSERT|UPDATE|DELETE|TRIGGER|FUNCTION)\b/i.test(
     residualText
   );
 
 if (isEmptyResidual) {
-  console.log('[DRIFT] empty residual diff -> continue');
+  console.log('[DRIFT] empty residual -> continue');
 } else if (
   !STRICT &&
   /ALTER TABLE\s+"Device".*ALTER COLUMN\s+"qrToken".*SET DEFAULT/i.test(residualText)
 ) {
-  console.log('[DRIFT] benign qrToken default drift and STRICT=0 -> continue');
+  console.log('[DRIFT] benign qrToken-default residual and STRICT=0 -> continue');
 } else {
+  console.error('ERROR E006: Residual diff remains after auto-fix.');
   console.error(residualText);
-  throw new Error('E006: residual drift remains');
+  process.exit(1);
 }
