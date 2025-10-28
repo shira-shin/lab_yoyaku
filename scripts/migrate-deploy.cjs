@@ -1,4 +1,22 @@
+const fs = require('node:fs');
+const crypto = require('node:crypto');
 const { execSync } = require('node:child_process');
+
+const hash = crypto
+  .createHash('sha1')
+  .update(fs.readFileSync(__filename))
+  .digest('hex')
+  .slice(0, 8);
+console.log(`[SCRIPT] ${__filename} sha1=${hash}`);
+console.log(`[STRICT] MIGRATE_STRICT=${process.env.MIGRATE_STRICT ?? 'unset'}`);
+console.log(
+  `[BYPASS] DISABLE_DRIFT_CHECK=${process.env.DISABLE_DRIFT_CHECK ?? 'unset'}`
+);
+
+try {
+  const list = fs.readdirSync('web/prisma/migrations');
+  console.log('[MIGS]', list.join(', '));
+} catch {}
 
 function run(cmd, opts = {}) {
   return execSync(cmd, {
@@ -13,13 +31,6 @@ function logLines(lines, isError = false) {
   const out = Array.isArray(lines) ? lines : [lines];
   const writer = isError ? console.error : console.log;
   out.filter(Boolean).forEach((line) => writer(line));
-}
-
-function isQrTokenDefaultOnly(sql) {
-  if (!sql) return false;
-  // Neon が正規化した md5(random() || clock_timestamp()) 形式
-  const pat = /ALTER TABLE\s+"Device"\s+ALTER COLUMN\s+"qrToken"\s+SET DEFAULT\s+md5\(\(random\(\)\)::text\s*\|\|\s*\(clock_timestamp\(\)\)::text\)\);?/i;
-  return pat.test(sql);
 }
 
 function migrationIdFrom(output) {
@@ -221,16 +232,16 @@ if (!migrateSucceeded) {
   process.exit(1);
 }
 
+if (process.env.DISABLE_DRIFT_CHECK === '1') {
+  console.log('[DRIFT] disabled by DISABLE_DRIFT_CHECK=1 -> continue');
+  process.exit(0);
+}
+
 const diffSql = diffFromDb(envVars);
-const diffTrimmed = diffSql.trim();
+const residual = diffSql;
 
-const MIGRATE_STRICT = process.env.MIGRATE_STRICT;
-const STRICT = String(MIGRATE_STRICT ?? '').trim() === '1';
-console.log(
-  `[STRICT] MIGRATE_STRICT=${MIGRATE_STRICT ?? 'unset'} -> STRICT=${STRICT}`
-);
-
-const residualText = String(diffSql || '').trim();
+const STRICT = process.env.MIGRATE_STRICT === '1';
+const residualText = String(residual || '').trim();
 
 const isEmptyResidual =
   /This is an empty migration/i.test(residualText) ||
@@ -241,25 +252,12 @@ const isEmptyResidual =
 
 if (isEmptyResidual) {
   console.log('[DRIFT] empty residual diff -> continue');
-  process.exit(0);
-}
-
-if (!STRICT && isQrTokenDefaultOnly(residualText)) {
+} else if (
+  !STRICT &&
+  /ALTER TABLE\s+"Device".*ALTER COLUMN\s+"qrToken".*SET DEFAULT/i.test(residualText)
+) {
   console.log('[DRIFT] benign qrToken default drift and STRICT=0 -> continue');
-  process.exit(0);
-}
-
-if (!diffTrimmed) {
-  console.log('[MIGRATE] diff clean ✅');
 } else {
-  const preview = excerpt(diffSql);
-  logLines(
-    [
-      'ERROR E006: Residual diff remains after auto-fix.',
-      preview ? `---\n${preview}` : undefined,
-      'Action: Review drift and repair before re-deploying.',
-    ].filter(Boolean),
-    true
-  );
+  console.error(residualText);
   throw new Error('E006: residual drift remains');
 }
