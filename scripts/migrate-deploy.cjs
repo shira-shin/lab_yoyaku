@@ -3,6 +3,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { execSync } = require('node:child_process');
 
+const ROOT_DIR = path.resolve(__dirname, '..');
 const WEB_DIR = path.resolve(__dirname, '../web');
 const SCHEMA = './prisma/schema.prisma';
 const FAILED_MIG = '202510100900_auth_normalization';
@@ -58,6 +59,40 @@ function run(cmd, opts = {}) {
     shell: true,
   };
   return execSync(cmd, { ...base, ...opts });
+}
+
+function readStatusJSON(envVars) {
+  try {
+    const out = run(`pnpm exec prisma migrate status --schema=${SCHEMA} --json`, {
+      env: envVars,
+      cwd: WEB_DIR,
+    });
+    return JSON.parse(String(out));
+  } catch (error) {
+    const stdout = error?.stdout || '';
+    const stderr = error?.stderr || '';
+    const raw = stdout || stderr;
+    if (raw) {
+      try {
+        return JSON.parse(String(raw));
+      } catch (_) {}
+    }
+    console.log('[STATUS] failed to read JSON:', error?.message || error);
+    return null;
+  }
+}
+
+function hasNormalizedEmailColumn(envVars) {
+  const checkSql = `DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='normalizedEmail') THEN NULL; ELSE RAISE EXCEPTION 'missing'; END IF; END $$;`;
+  try {
+    run(
+      `pnpm exec prisma db execute --schema=${SCHEMA} --stdin <<'SQL'\n${checkSql}\nSQL`,
+      { env: envVars, cwd: WEB_DIR }
+    );
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 function logLines(lines, isError = false) {
@@ -174,16 +209,62 @@ try {
 
 const envVars = { ...process.env, DATABASE_URL: process.env.DIRECT_URL };
 
-try {
-  console.log(`[RESOLVE] mark ${FAILED_MIG} as APPLIED (schema=${SCHEMA})`);
-  sh(
-    `pnpm exec prisma migrate resolve --applied ${FAILED_MIG} --schema=${SCHEMA}`,
-    { env: envVars, cwd: WEB_DIR }
-  );
-  console.log('[RESOLVE] done');
-} catch (e) {
-  const message = e?.message || e;
-  console.log(`[RESOLVE] ignored error (maybe already applied): ${message}`);
+let targetedResolveAttempted = false;
+
+console.log('[STATUS] before resolve');
+const statusBefore = readStatusJSON(envVars);
+if (statusBefore?.failedMigrationNames?.length) {
+  console.log('[STATUS] failed migrations:', statusBefore.failedMigrationNames);
+  if (statusBefore.failedMigrationNames.includes(FAILED_MIG)) {
+    targetedResolveAttempted = true;
+    console.log('[CHECK] normalizedEmail presence in "User" table');
+    const hasColumn = hasNormalizedEmailColumn(envVars);
+    const how = hasColumn ? '--applied' : '--rolled-back';
+    let resolved = false;
+    console.log(`[RESOLVE] ${FAILED_MIG} ${how} (hasColumn=${hasColumn})`);
+    try {
+      sh(`pnpm exec prisma migrate resolve ${how} ${FAILED_MIG} --schema=${SCHEMA}`, {
+        env: envVars,
+        cwd: WEB_DIR,
+      });
+      console.log('[RESOLVE] done');
+      resolved = true;
+    } catch (resolveError) {
+      console.log('[RESOLVE] failed but continue:', resolveError?.message || resolveError);
+      if (hasColumn) {
+        console.log('[RESOLVE-FALLBACK] updating _prisma_migrations via prisma db execute');
+        try {
+          sh(
+            `pnpm exec prisma db execute --schema=${SCHEMA} --file=./scripts/sql/mark_auth_normalization_applied.sql`,
+            { env: envVars, cwd: ROOT_DIR }
+          );
+          resolved = true;
+          console.log('[RESOLVE-FALLBACK] done');
+        } catch (fallbackError) {
+          console.log('[RESOLVE-FALLBACK] failed:', fallbackError?.message || fallbackError);
+        }
+      }
+    }
+    if (!resolved) {
+      console.log('[RESOLVE] unable to clear failed migration automatically');
+    }
+  }
+}
+
+console.log('[STATUS] after resolve');
+const statusAfter = readStatusJSON(envVars);
+if (statusAfter?.failedMigrationNames?.length) {
+  console.log('[STATUS] still failed migrations:', statusAfter.failedMigrationNames);
+}
+if (targetedResolveAttempted) {
+  if (!statusAfter) {
+    console.log('[RESOLVE] status check unavailable after resolve attempt. Abort to avoid repeated failures.');
+    process.exit(1);
+  }
+  if (statusAfter.failedMigrationNames.includes(FAILED_MIG)) {
+    console.log('[RESOLVE] failed migration remains after resolve attempts. Abort.');
+    process.exit(1);
+  }
 }
 
 console.log('[MIGRATE] deploy...');
