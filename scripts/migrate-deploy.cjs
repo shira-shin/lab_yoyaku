@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const { execSync } = require('node:child_process');
 
 const WEB_DIR = path.resolve(__dirname, '../web');
+const SCHEMA = './prisma/schema.prisma';
 
 // --- add helpers for robust residual detection ---
 const stripAnsi = (s) =>
@@ -22,7 +23,7 @@ console.log(`[STRICT] MIGRATE_STRICT=${process.env.MIGRATE_STRICT ?? 'unset'}`);
 console.log(
   `[BYPASS] DISABLE_DRIFT_CHECK=${process.env.DISABLE_DRIFT_CHECK ?? 'unset'}`
 );
-console.log('[SCHEMA]', path.join(WEB_DIR, 'prisma/schema.prisma'));
+console.log('[SCHEMA]', path.join(WEB_DIR, SCHEMA.replace(/^\.\//, '')));
 console.log('[CWD:WEB]', WEB_DIR);
 
 const STRICT = process.env.MIGRATE_STRICT === '1';
@@ -87,8 +88,8 @@ function diffFromDb(envVars) {
       [
         'pnpm exec prisma migrate diff',
         `--from-url "${process.env.DIRECT_URL}"`,
-        '--to-schema-datamodel ./prisma/schema.prisma',
-        '--schema=./prisma/schema.prisma',
+        `--to-schema-datamodel ${SCHEMA}`,
+        `--schema=${SCHEMA}`,
         '--script',
       ].join(' '),
       { env: envVars, cwd: WEB_DIR }
@@ -103,7 +104,7 @@ function diffFromDb(envVars) {
 }
 
 function migrate(envVars) {
-  return run('pnpm exec prisma migrate deploy --schema=./prisma/schema.prisma', {
+  return run(`pnpm exec prisma migrate deploy --schema=${SCHEMA}`, {
     env: envVars,
     cwd: WEB_DIR,
   });
@@ -115,8 +116,8 @@ function diffExitCode(envVars) {
       [
         'pnpm exec prisma migrate diff',
         `--from-url "${process.env.DIRECT_URL}"`,
-        '--to-schema-datamodel ./prisma/schema.prisma',
-        '--schema=./prisma/schema.prisma',
+        `--to-schema-datamodel ${SCHEMA}`,
+        `--schema=${SCHEMA}`,
         '--exit-code',
       ].join(' '),
       { env: envVars, cwd: WEB_DIR }
@@ -154,7 +155,7 @@ if (env !== 'production' && !overridePreview) {
 if (BYPASS) {
   console.log('[DRIFT] DISABLE_DRIFT_CHECK=1 -> skip drift checks and residual validation');
   const envVarsBypass = { ...process.env, DATABASE_URL: process.env.DIRECT_URL };
-  sh('pnpm exec prisma migrate deploy --schema=./prisma/schema.prisma', {
+  sh(`pnpm exec prisma migrate deploy --schema=${SCHEMA}`, {
     env: envVarsBypass,
     cwd: WEB_DIR,
   });
@@ -168,6 +169,17 @@ try {
 }
 
 const envVars = { ...process.env, DATABASE_URL: process.env.DIRECT_URL };
+
+try {
+  console.log('[RESOLVE] mark 202510100900_auth_normalization as rolled back (best-effort)');
+  sh(
+    `pnpm exec prisma migrate resolve --rolled-back 202510100900_auth_normalization --schema=${SCHEMA}`,
+    { env: envVars, cwd: WEB_DIR }
+  );
+} catch (e) {
+  const message = e?.message || e;
+  console.log('[RESOLVE] ignore if already rolled-back/applied:', message);
+}
 
 console.log('[MIGRATE] deploy...');
 
@@ -204,7 +216,7 @@ try {
 
       try {
         sh(
-          `pnpm exec prisma migrate resolve --applied ${migrationId} --schema=./prisma/schema.prisma`,
+          `pnpm exec prisma migrate resolve --applied ${migrationId} --schema=${SCHEMA}`,
           { env: envVars, cwd: WEB_DIR }
         );
         console.log(`[P3009] resolve --applied ${migrationId} ... OK`);
@@ -274,7 +286,7 @@ try {
       console.log('[SELF-HEAL] diff is empty → safe to mark applied');
       try {
         run(
-          `pnpm exec prisma migrate resolve --applied ${migrationId} --schema=./prisma/schema.prisma`,
+          `pnpm exec prisma migrate resolve --applied ${migrationId} --schema=${SCHEMA}`,
           { env: envVars, cwd: WEB_DIR }
         );
         console.log(
