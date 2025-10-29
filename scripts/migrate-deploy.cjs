@@ -5,6 +5,7 @@ const { execSync } = require('node:child_process');
 
 const WEB_DIR = path.resolve(__dirname, '../web');
 const SCHEMA = './prisma/schema.prisma';
+const FAILED_MIG = '202510100900_auth_normalization';
 
 // --- add helpers for robust residual detection ---
 const stripAnsi = (s) =>
@@ -174,14 +175,15 @@ try {
 const envVars = { ...process.env, DATABASE_URL: process.env.DIRECT_URL };
 
 try {
-  console.log('[RESOLVE] marking 202510100900_auth_normalization as APPLIED');
+  console.log(`[RESOLVE] mark ${FAILED_MIG} as APPLIED (schema=${SCHEMA})`);
   sh(
-    `pnpm exec prisma migrate resolve --applied 202510100900_auth_normalization --schema=${SCHEMA}`,
+    `pnpm exec prisma migrate resolve --applied ${FAILED_MIG} --schema=${SCHEMA}`,
     { env: envVars, cwd: WEB_DIR }
   );
+  console.log('[RESOLVE] done');
 } catch (e) {
   const message = e?.message || e;
-  console.log('[RESOLVE] ignore error (possibly already applied):', message);
+  console.log(`[RESOLVE] ignored error (maybe already applied): ${message}`);
 }
 
 console.log('[MIGRATE] deploy...');
