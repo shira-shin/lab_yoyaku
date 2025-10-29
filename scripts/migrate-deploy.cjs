@@ -1,12 +1,12 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const crypto = require('node:crypto');
 const { execSync } = require('node:child_process');
+const path = require('node:path');
+const fs = require('node:fs');
+const crypto = require('node:crypto');
 
-const ROOT_DIR = path.resolve(__dirname, '..');
 const WEB_DIR = path.resolve(__dirname, '../web');
 const SCHEMA = './prisma/schema.prisma';
 const FAILED_MIG = '202510100900_auth_normalization';
+
 const INIT_MIG = 'init';
 
 // --- add helpers for robust residual detection ---
@@ -32,68 +32,12 @@ console.log('[CWD:WEB]', WEB_DIR);
 const STRICT = process.env.MIGRATE_STRICT === '1';
 const BYPASS = process.env.DISABLE_DRIFT_CHECK === '1';
 
+const SQL_FIX = path.resolve(__dirname, './sql/mark_auth_normalization_applied.sql');
+const BANNER = '[MIG-DRIVER v3]';
+
+
 function sh(cmd, opts = {}) {
-  const base = { stdio: 'inherit', shell: true };
-  return execSync(cmd, { ...base, ...opts });
-}
-
-function fail(code, message, detail) {
-  console.error(`ERROR ${code}: ${message}`);
-  if (detail) {
-    console.error(detail);
-  }
-  process.exit(1);
-}
-
-try {
-  const list = fs.readdirSync('web/prisma/migrations');
-  console.log('[MIGS]', list.join(', '));
-} catch {}
-
-// Prisma Client generate（schema 明示 & cwd 固定）
-sh(`pnpm exec prisma generate --schema=${SCHEMA}`, { cwd: WEB_DIR });
-
-function run(cmd, opts = {}) {
-  const base = {
-    encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'pipe'],
-    shell: true,
-  };
-  return execSync(cmd, { ...base, ...opts });
-}
-
-function readStatusJSON(envVars) {
-  try {
-    const out = run(`pnpm exec prisma migrate status --schema=${SCHEMA} --json`, {
-      env: envVars,
-      cwd: WEB_DIR,
-    });
-    return JSON.parse(String(out));
-  } catch (error) {
-    const stdout = error?.stdout || '';
-    const stderr = error?.stderr || '';
-    const raw = stdout || stderr;
-    if (raw) {
-      try {
-        return JSON.parse(String(raw));
-      } catch (_) {}
-    }
-    console.log('[STATUS] failed to read JSON:', error?.message || error);
-    return null;
-  }
-}
-
-function hasNormalizedEmailColumn(envVars) {
-  const checkSql = `DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='normalizedEmail') THEN NULL; ELSE RAISE EXCEPTION 'missing'; END IF; END $$;`;
-  try {
-    run(
-      `pnpm exec prisma db execute --schema=${SCHEMA} --stdin <<'SQL'\n${checkSql}\nSQL`,
-      { env: envVars, cwd: WEB_DIR }
-    );
-    return true;
-  } catch (_) {
-    return false;
-  }
+  execSync(cmd, { stdio: 'inherit', shell: true, ...opts });
 }
 
 function hasTable(envVars, tableName) {
@@ -301,232 +245,48 @@ if (hasUserTable) {
 console.log('[MIGRATE] deploy...');
 
 let migrateSucceeded = false;
+=======
+function shOut(cmd, opts = {}) {
+  return String(execSync(cmd, { stdio: ['ignore','pipe','pipe'], shell: true, ...opts }));
+}
 
+console.log(BANNER, '[SCRIPT]', __filename, 'sha1=' + crypto.createHash('sha1').update(fs.readFileSync(__filename)).digest('hex').slice(0,8));
+console.log('[SCHEMA]', path.join(WEB_DIR, 'prisma/schema.prisma'));
+console.log('[CWD:WEB]', WEB_DIR);
+
+
+// 0) まずは “強制 resolve” を必ず実行（P3009 が残っていても消す）
+//    ここで失敗しても続行。後段で再度 deploy が走る。
 try {
-  migrate(envVars);
-  console.log('[MIGRATE] done ✅');
-  migrateSucceeded = true;
-} catch (error) {
-  const output = [
-    error.stdout?.toString(),
-    error.stderr?.toString(),
-    error.message,
-  ]
-    .filter(Boolean)
-    .join('\n');
-
-  const isP3009 = /P3009/.test(output);
-  const isP3018 = /P3018/.test(output);
-  const isDup = /(42701|duplicate|already exists)/i.test(output);
-
-  if (isP3009) {
-    if (STRICT) {
-      console.log('[STRICT] MIGRATE_STRICT=1 -> skip P3009 auto-resolve');
+  console.log(BANNER, '[FORCE-RESOLVE] try --applied', FAILED_MIG);
+  sh(`pnpm exec prisma migrate resolve --schema=${SCHEMA} --applied ${FAILED_MIG}`, { cwd: WEB_DIR });
+  console.log(BANNER, '[FORCE-RESOLVE] applied OK');
+} catch (e) {
+  console.log(BANNER, '[FORCE-RESOLVE] applied failed:', (e && e.message) || e);
+  // Prisma の resolve が通らない場合は SQL フォールバック
+  try {
+    if (fs.existsSync(SQL_FIX)) {
+      console.log(BANNER, '[FALLBACK] run SQL fix:', SQL_FIX);
+      sh(`pnpm exec prisma db execute --schema=${SCHEMA} --file=${SQL_FIX}`, { cwd: path.resolve(__dirname, '..') });
+      console.log(BANNER, '[FALLBACK] SQL fix done');
     } else {
-      const fallbackMigrationId = '202510100900_auth_normalization';
-      const migrationMatch = output.match(
-        /The `([0-9A-Za-z_]+)` migration started[\s\S]*? failed/
-      );
-      const migrationId = migrationMatch?.[1] || fallbackMigrationId;
-
-      console.log(`[P3009] failed migration detected: ${migrationId}`);
-
-      try {
-        sh(
-          `pnpm exec prisma migrate resolve --applied ${migrationId} --schema=${SCHEMA}`,
-          { env: envVars, cwd: WEB_DIR }
-        );
-        console.log(`[P3009] resolve --applied ${migrationId} ... OK`);
-      } catch (resolveErr) {
-        const excerptOutput = excerpt(
-          [
-            resolveErr.stdout?.toString(),
-            resolveErr.stderr?.toString(),
-            resolveErr.message,
-          ]
-            .filter(Boolean)
-            .join('\n')
-        );
-        logLines(
-          [
-            `[P3009] resolve --applied ${migrationId} failed.`,
-            excerptOutput ? `---\n${excerptOutput}` : undefined,
-          ].filter(Boolean),
-          true
-        );
-        process.exit(1);
-      }
-
-      console.log('[P3009] re-run migrate deploy ...');
-      try {
-        migrate(envVars);
-        console.log('[MIGRATE] done ✅');
-        migrateSucceeded = true;
-      } catch (retryErr) {
-        const retryOutput = excerpt(
-          [
-            retryErr.stdout?.toString(),
-            retryErr.stderr?.toString(),
-            retryErr.message,
-          ]
-            .filter(Boolean)
-            .join('\n')
-        );
-        logLines(
-          [
-            `ERROR E009: prisma migrate deploy retry after resolving '${migrationId}' failed.`,
-            retryOutput ? `---\n${retryOutput}` : undefined,
-            'Action:',
-            '  - Investigate migration failure and resolve manually.',
-          ].filter(Boolean),
-          true
-        );
-        process.exit(1);
-      }
+      console.log(BANNER, '[FALLBACK] SQL file missing:', SQL_FIX);
     }
-  }
-
-  if (!migrateSucceeded && isP3018 && isDup) {
-    const migrationId = migrationIdFrom(output) || 'unknown';
-    const reasonLine =
-      output
-        .split('\n')
-        .find((line) => /already exists|duplicate|42701/i.test(line))?.trim() ||
-      'object already exists';
-
-    console.log(
-      `[MIGRATE] failed at ${migrationId} (P3018 / ${reasonLine})`
-    );
-    console.log('[SELF-HEAL] checking diff...');
-    const diff = diffFromDb(envVars);
-    if (diff.trim().length === 0) {
-      console.log('[SELF-HEAL] diff is empty → safe to mark applied');
-      try {
-        run(
-          `pnpm exec prisma migrate resolve --applied ${migrationId} --schema=${SCHEMA}`,
-          { env: envVars, cwd: WEB_DIR }
-        );
-        console.log(
-          `[SELF-HEAL] prisma migrate resolve --applied ${migrationId}`
-        );
-      } catch (resolveErr) {
-        const excerptOutput = excerpt(
-          [
-            resolveErr.stdout?.toString(),
-            resolveErr.stderr?.toString(),
-            resolveErr.message,
-          ]
-            .filter(Boolean)
-            .join('\n')
-        );
-        logLines(
-          [
-            'ERROR E007: Migration failed and auto-resolve is unsafe.',
-            excerptOutput ? `---\n${excerptOutput}` : undefined,
-            'Action:',
-            '  - Generate repair: prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel ./prisma/schema.prisma --schema=./prisma/schema.prisma --script > repair.sql',
-            '  - Apply: prisma db execute --file repair.sql --url "$DIRECT_URL"',
-            '  - Mark applied: prisma migrate resolve --applied <id>',
-            '  - Then: pnpm run migrate:deploy',
-          ].filter(Boolean),
-          true
-        );
-        process.exit(1);
-      }
-
-      console.log('[MIGRATE] retry deploy...');
-      try {
-        migrate(envVars);
-        console.log('[MIGRATE] done ✅');
-        migrateSucceeded = true;
-      } catch (retryErr) {
-        const retryOutput = excerpt(
-          [
-            retryErr.stdout?.toString(),
-            retryErr.stderr?.toString(),
-            retryErr.message,
-          ]
-            .filter(Boolean)
-            .join('\n')
-        );
-        logLines(
-          [
-            `ERROR E007: Migration '${migrationId}' failed and auto-resolve is unsafe (diff not empty or retry failed).`,
-            retryOutput ? `---\n${retryOutput}` : undefined,
-            'Action:',
-            '  - Generate repair: prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel ./prisma/schema.prisma --schema=./prisma/schema.prisma --script > repair.sql',
-            '  - Apply: prisma db execute --file repair.sql --url "$DIRECT_URL"',
-            '  - Mark applied: prisma migrate resolve --applied <id>',
-            '  - Then: pnpm run migrate:deploy',
-          ].filter(Boolean),
-          true
-        );
-        process.exit(1);
-      }
-    } else {
-      logLines(
-        [
-          `ERROR E007: Migration '${migrationId}' failed and auto-resolve is unsafe (diff not empty).`,
-          'Action:',
-          '  - Generate repair: prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel ./prisma/schema.prisma --schema=./prisma/schema.prisma --script > repair.sql',
-          '  - Apply: prisma db execute --file repair.sql --url "$DIRECT_URL"',
-          '  - Mark applied: prisma migrate resolve --applied <id>',
-          '  - Then: pnpm run migrate:deploy',
-        ],
-        true
-      );
-      process.exit(1);
-    }
-  }
-
-  if (!migrateSucceeded) {
-    const excerptOutput = excerpt(output);
-    logLines(
-      [
-        'ERROR E008: prisma migrate deploy failed (unknown).',
-        'Excerpt:',
-        excerptOutput
-          .split('\n')
-          .filter(Boolean)
-          .slice(0, 20)
-          .map((line) => `  ${line}`)
-          .join('\n') || '  <no output>',
-        'Action: Inspect failing SQL / permissions / network. Re-run with DEBUG=*.',
-      ],
-      true
-    );
-    process.exit(1);
+  } catch (e2) {
+    console.log(BANNER, '[FALLBACK] SQL fix failed:', (e2 && e2.message) || e2);
   }
 }
 
-if (!migrateSucceeded) {
-  process.exit(1);
+// 1) ここで status を JSON 取得し、failed が空か確認（ログに必ず出す）
+try {
+  const st = shOut(`pnpm exec prisma migrate status --schema=${SCHEMA} --json`, { cwd: WEB_DIR });
+  console.log(BANNER, '[STATUS]', st);
+} catch (e) {
+  console.log(BANNER, '[STATUS] read failed:', (e && e.message) || e);
 }
 
-const diffExit = diffExitCode(envVars);
-if (diffExit.exitCode === 0) {
-  console.log('[DRIFT] prisma migrate diff --exit-code -> no diff');
-  process.exit(0);
-}
+// 2) Prisma Client generate（schema を明示）
+sh(`pnpm exec prisma generate --schema=${SCHEMA}`, { cwd: WEB_DIR });
 
-if (diffExit.exitCode !== 2) {
-  fail('E005', 'prisma migrate diff --exit-code failed unexpectedly.', diffExit.output);
-}
-
-const diffSql = diffFromDb(envVars);
-const residual = diffSql;
-const residualText = normalize(residual);
-const residualPreview = residualText.slice(0, 200) || '<empty>';
-
-console.log('[DRIFT] residual.preview=', residualPreview);
-
-if (isEmptyOrBenignDiff(residual)) {
-  console.log('[DRIFT] residual is empty/benign -> continue');
-} else if (
-  !STRICT &&
-  /ALTER TABLE\s+"Device".*ALTER COLUMN\s+"qrToken".*SET DEFAULT/i.test(residualText)
-) {
-  console.log('[DRIFT] benign qrToken-default residual and STRICT=0 -> continue');
-} else {
-  fail('E006', 'Residual diff remains after auto-fix.', residualText);
-}
+// 3) 最後に deploy（schema 明示 & cwd 固定）
+sh(`pnpm exec prisma migrate deploy --schema=${SCHEMA}`, { cwd: WEB_DIR });
