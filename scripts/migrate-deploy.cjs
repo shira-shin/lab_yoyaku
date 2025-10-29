@@ -1,6 +1,9 @@
 const fs = require('node:fs');
+const path = require('node:path');
 const crypto = require('node:crypto');
 const { execSync } = require('node:child_process');
+
+const WEB_DIR = path.resolve(__dirname, '../web');
 
 // --- add helpers for robust residual detection ---
 const stripAnsi = (s) =>
@@ -19,12 +22,15 @@ console.log(`[STRICT] MIGRATE_STRICT=${process.env.MIGRATE_STRICT ?? 'unset'}`);
 console.log(
   `[BYPASS] DISABLE_DRIFT_CHECK=${process.env.DISABLE_DRIFT_CHECK ?? 'unset'}`
 );
+console.log('[SCHEMA]', path.join(WEB_DIR, 'prisma/schema.prisma'));
+console.log('[CWD:WEB]', WEB_DIR);
 
 const STRICT = process.env.MIGRATE_STRICT === '1';
 const BYPASS = process.env.DISABLE_DRIFT_CHECK === '1';
 
 function sh(cmd, opts = {}) {
-  return execSync(cmd, { stdio: 'inherit', shell: true, ...opts });
+  const base = { stdio: 'inherit', shell: true };
+  return execSync(cmd, { ...base, ...opts });
 }
 
 function fail(code, message, detail) {
@@ -41,12 +47,12 @@ try {
 } catch {}
 
 function run(cmd, opts = {}) {
-  return execSync(cmd, {
+  const base = {
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
     shell: true,
-    ...opts,
-  });
+  };
+  return execSync(cmd, { ...base, ...opts });
 }
 
 function logLines(lines, isError = false) {
@@ -78,11 +84,14 @@ function migrationIdFrom(output) {
 function diffFromDb(envVars) {
   try {
     return run(
-      `pnpm -w --filter lab_yoyaku-web exec prisma migrate diff \
---from-url "${process.env.DIRECT_URL}" \
---to-schema-datamodel prisma/schema.prisma \
---script`,
-      { env: envVars }
+      [
+        'pnpm exec prisma migrate diff',
+        `--from-url "${process.env.DIRECT_URL}"`,
+        '--to-schema-datamodel ./prisma/schema.prisma',
+        '--schema=./prisma/schema.prisma',
+        '--script',
+      ].join(' '),
+      { env: envVars, cwd: WEB_DIR }
     );
   } catch (error) {
     const stdout = error.stdout?.toString() || '';
@@ -94,18 +103,23 @@ function diffFromDb(envVars) {
 }
 
 function migrate(envVars) {
-  return run('pnpm -w --filter lab_yoyaku-web exec prisma migrate deploy', {
+  return run('pnpm exec prisma migrate deploy --schema=./prisma/schema.prisma', {
     env: envVars,
+    cwd: WEB_DIR,
   });
 }
 
 function diffExitCode(envVars) {
   try {
     run(
-      `pnpm -w --filter lab_yoyaku-web exec prisma migrate diff ` +
-        `--from-url "${process.env.DIRECT_URL}" ` +
-        '--to-schema-datamodel prisma/schema.prisma --exit-code',
-      { env: envVars }
+      [
+        'pnpm exec prisma migrate diff',
+        `--from-url "${process.env.DIRECT_URL}"`,
+        '--to-schema-datamodel ./prisma/schema.prisma',
+        '--schema=./prisma/schema.prisma',
+        '--exit-code',
+      ].join(' '),
+      { env: envVars, cwd: WEB_DIR }
     );
     return { exitCode: 0, output: '' };
   } catch (error) {
@@ -140,7 +154,10 @@ if (env !== 'production' && !overridePreview) {
 if (BYPASS) {
   console.log('[DRIFT] DISABLE_DRIFT_CHECK=1 -> skip drift checks and residual validation');
   const envVarsBypass = { ...process.env, DATABASE_URL: process.env.DIRECT_URL };
-  sh('pnpm -w --filter lab_yoyaku-web exec prisma migrate deploy', { env: envVarsBypass });
+  sh('pnpm exec prisma migrate deploy --schema=./prisma/schema.prisma', {
+    env: envVarsBypass,
+    cwd: WEB_DIR,
+  });
   process.exit(0);
 }
 
@@ -187,8 +204,8 @@ try {
 
       try {
         sh(
-          `pnpm -w --filter lab_yoyaku-web exec prisma migrate resolve --applied ${migrationId}`,
-          { env: envVars }
+          `pnpm exec prisma migrate resolve --applied ${migrationId} --schema=./prisma/schema.prisma`,
+          { env: envVars, cwd: WEB_DIR }
         );
         console.log(`[P3009] resolve --applied ${migrationId} ... OK`);
       } catch (resolveErr) {
@@ -257,8 +274,8 @@ try {
       console.log('[SELF-HEAL] diff is empty → safe to mark applied');
       try {
         run(
-          `pnpm -w --filter lab_yoyaku-web exec prisma migrate resolve --applied ${migrationId}`,
-          { env: envVars }
+          `pnpm exec prisma migrate resolve --applied ${migrationId} --schema=./prisma/schema.prisma`,
+          { env: envVars, cwd: WEB_DIR }
         );
         console.log(
           `[SELF-HEAL] prisma migrate resolve --applied ${migrationId}`
@@ -278,7 +295,7 @@ try {
             'ERROR E007: Migration failed and auto-resolve is unsafe.',
             excerptOutput ? `---\n${excerptOutput}` : undefined,
             'Action:',
-            '  - Generate repair: prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel prisma/schema.prisma --script > repair.sql',
+            '  - Generate repair: prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel ./prisma/schema.prisma --schema=./prisma/schema.prisma --script > repair.sql',
             '  - Apply: prisma db execute --file repair.sql --url "$DIRECT_URL"',
             '  - Mark applied: prisma migrate resolve --applied <id>',
             '  - Then: pnpm run migrate:deploy',
@@ -308,7 +325,7 @@ try {
             `ERROR E007: Migration '${migrationId}' failed and auto-resolve is unsafe (diff not empty or retry failed).`,
             retryOutput ? `---\n${retryOutput}` : undefined,
             'Action:',
-            '  - Generate repair: prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel prisma/schema.prisma --script > repair.sql',
+            '  - Generate repair: prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel ./prisma/schema.prisma --schema=./prisma/schema.prisma --script > repair.sql',
             '  - Apply: prisma db execute --file repair.sql --url "$DIRECT_URL"',
             '  - Mark applied: prisma migrate resolve --applied <id>',
             '  - Then: pnpm run migrate:deploy',
@@ -322,7 +339,7 @@ try {
         [
           `ERROR E007: Migration '${migrationId}' failed and auto-resolve is unsafe (diff not empty).`,
           'Action:',
-          '  - Generate repair: prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel prisma/schema.prisma --script > repair.sql',
+          '  - Generate repair: prisma migrate diff --from-url "$DIRECT_URL" --to-schema-datamodel ./prisma/schema.prisma --schema=./prisma/schema.prisma --script > repair.sql',
           '  - Apply: prisma db execute --file repair.sql --url "$DIRECT_URL"',
           '  - Mark applied: prisma migrate resolve --applied <id>',
           '  - Then: pnpm run migrate:deploy',
