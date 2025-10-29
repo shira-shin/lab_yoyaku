@@ -47,6 +47,9 @@ try {
   console.log('[MIGS]', list.join(', '));
 } catch {}
 
+// Prisma Client generate（schema 明示 & cwd 固定）
+sh(`pnpm exec prisma generate --schema=${SCHEMA}`, { cwd: WEB_DIR });
+
 function run(cmd, opts = {}) {
   const base = {
     encoding: 'utf8',
@@ -171,14 +174,14 @@ try {
 const envVars = { ...process.env, DATABASE_URL: process.env.DIRECT_URL };
 
 try {
-  console.log('[RESOLVE] mark 202510100900_auth_normalization as rolled back (best-effort)');
+  console.log('[RESOLVE] marking 202510100900_auth_normalization as APPLIED');
   sh(
-    `pnpm exec prisma migrate resolve --rolled-back 202510100900_auth_normalization --schema=${SCHEMA}`,
+    `pnpm exec prisma migrate resolve --applied 202510100900_auth_normalization --schema=${SCHEMA}`,
     { env: envVars, cwd: WEB_DIR }
   );
 } catch (e) {
   const message = e?.message || e;
-  console.log('[RESOLVE] ignore if already rolled-back/applied:', message);
+  console.log('[RESOLVE] ignore error (possibly already applied):', message);
 }
 
 console.log('[MIGRATE] deploy...');
