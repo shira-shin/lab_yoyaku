@@ -7,6 +7,7 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const WEB_DIR = path.resolve(__dirname, '../web');
 const SCHEMA = './prisma/schema.prisma';
 const FAILED_MIG = '202510100900_auth_normalization';
+const INIT_MIG = 'init';
 
 // --- add helpers for robust residual detection ---
 const stripAnsi = (s) =>
@@ -84,6 +85,19 @@ function readStatusJSON(envVars) {
 
 function hasNormalizedEmailColumn(envVars) {
   const checkSql = `DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='User' AND column_name='normalizedEmail') THEN NULL; ELSE RAISE EXCEPTION 'missing'; END IF; END $$;`;
+  try {
+    run(
+      `pnpm exec prisma db execute --schema=${SCHEMA} --stdin <<'SQL'\n${checkSql}\nSQL`,
+      { env: envVars, cwd: WEB_DIR }
+    );
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function hasTable(envVars, tableName) {
+  const checkSql = `DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='${tableName}') THEN NULL; ELSE RAISE EXCEPTION 'missing'; END IF; END $$;`;
   try {
     run(
       `pnpm exec prisma db execute --schema=${SCHEMA} --stdin <<'SQL'\n${checkSql}\nSQL`,
@@ -265,6 +279,23 @@ if (targetedResolveAttempted) {
     console.log('[RESOLVE] failed migration remains after resolve attempts. Abort.');
     process.exit(1);
   }
+}
+
+console.log('[INIT] baseline migration check');
+const hasUserTable = hasTable(envVars, 'User');
+if (hasUserTable) {
+  console.log(`[INIT] detected existing table "User" -> mark ${INIT_MIG} as applied`);
+  try {
+    sh(`pnpm exec prisma migrate resolve --applied ${INIT_MIG} --schema=${SCHEMA}`, {
+      env: envVars,
+      cwd: WEB_DIR,
+    });
+    console.log('[INIT] forced mark applied succeeded');
+  } catch (error) {
+    console.log('[INIT] failed to mark init as applied (continuing):', error?.message || error);
+  }
+} else {
+  console.log('[INIT] table "User" not found -> skip forced mark');
 }
 
 console.log('[MIGRATE] deploy...');
