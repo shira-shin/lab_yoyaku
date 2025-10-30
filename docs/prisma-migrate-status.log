@@ -1,0 +1,15 @@
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database
+Error: Prisma schema validation - (get-config wasm)
+Error code: P1012
+error: Environment variable not found: DIRECT_URL.
+  -->  prisma/schema.prisma:8
+   | 
+ 7 |   url       = env("DATABASE_URL") // runtime（pooler 可）
+ 8 |   directUrl = env("DIRECT_URL") // migrate/generate（Direct 必須）
+   | 
+
+Validation Error Count: 1
+[Context: getConfig]
+
+Prisma CLI Version : 5.22.0
