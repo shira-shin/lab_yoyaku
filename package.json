@@ -15,6 +15,7 @@
     "node": "20.x"
   },
   "scripts": {
+    "prisma:gen:web": "cd web && prisma generate --schema=./prisma/schema.prisma",
     "migrate:deploy": "node scripts/migrate-deploy.cjs"
   },
   "devDependencies": {

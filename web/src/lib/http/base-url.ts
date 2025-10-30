@@ -5,6 +5,7 @@ const fallbackFromVercel = process.env.VERCEL_URL
   : undefined;
 
 const envBaseUrl =
+  process.env.AUTH_BASE_URL ??
   process.env.APP_URL ??
   process.env.NEXT_PUBLIC_APP_URL ??
   process.env.APP_BASE_URL ??

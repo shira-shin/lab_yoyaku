@@ -11,6 +11,7 @@ import {
   normalizeEmail,
 } from "@/lib/auth";
 import { respondDbNotInitializedWithLog } from "@/server/api/db-not-initialized";
+import { getBaseUrl } from "@/lib/get-base-url";
 
 function isP2021UserTable(err: unknown): err is PrismaClientKnownRequestError {
   return (
@@ -37,26 +38,42 @@ export async function POST(req: Request) {
     const email = typeof body?.email === "string" ? body.email.trim() : null;
     const password = typeof body?.password === "string" ? body.password : null;
 
+    const baseUrl = getBaseUrl();
+    console.log("[auth/login] baseUrl=", baseUrl);
+    console.log("[auth/login] body.email=", email);
+
     if (!email || !password) {
+      console.warn("[auth/login] invalid payload (email or password missing)");
       return NextResponse.json({ error: "invalid payload" }, { status: 400 });
     }
 
     const normalizedEmail = normalizeEmail(email);
+    console.log("[auth/login] normalizedEmail=", normalizedEmail);
     const user = await prisma.user.findUnique({
       where: { normalizedEmail },
     });
 
     if (!user || !user.passwordHash) {
+      if (!user) {
+        console.warn(
+          "[auth/login] user not found for normalizedEmail=",
+          normalizedEmail
+        );
+      } else {
+        console.warn("[auth/login] user missing passwordHash, id=", user.id);
+      }
       return NextResponse.json({ error: "invalid credentials" }, { status: 401 });
     }
 
     const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) {
+      console.warn("[auth/login] password mismatch for user id=", user.id);
       return NextResponse.json({ error: "invalid credentials" }, { status: 401 });
     }
 
     if (needsRehash(user.passwordHash)) {
       const passwordHash = await hashPassword(password);
+      console.log("[auth/login] rehashing password for user id=", user.id);
       await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
     }
 
