@@ -5,7 +5,7 @@
     "check:imports": "eslint --ext .ts,.tsx ./src --max-warnings=0 --rule 'import/no-unresolved:[\"error\",{\"ignore\":[\"server-only\"]}]'",
     "dev": "next dev",
     "prebuild:guard": "node -e \"require('child_process').execSync('pnpm exec tsx scripts/assert-endpoints-match.ts',{stdio:'inherit'})\"",
-    "build": "pnpm run prebuild:guard && node -e \"const {execSync}=require('node:child_process'); const run=c=>execSync(c,{stdio:'inherit',shell:true}); run('pnpm exec tsx scripts/assert-env.ts'); run('next build');\"",
+    "build": "pnpm run prebuild:guard && node -e \"const {execSync}=require('node:child_process'); const run=c=>execSync(c,{stdio:'inherit',shell:true}); run('pnpm exec tsx scripts/assert-env.ts'); run('pnpm --workspace-root run prisma:gen:web'); run('next build');\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "next start",
     "lint": "next lint",
