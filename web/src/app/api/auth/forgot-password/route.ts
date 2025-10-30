@@ -5,6 +5,7 @@ import { prisma } from "@/server/db/prisma";
 import { createPasswordResetToken } from "@/lib/reset-token";
 import { findUserByEmailNormalized } from "@/lib/users";
 import { getBaseUrl } from "@/lib/get-base-url";
+import { sendAuthMail } from "@/lib/auth/send-mail";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -23,24 +24,28 @@ export async function POST(req: Request) {
     const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
     console.log("[RESET LINK]", resetUrl);
 
-    const hasMailProvider = Boolean(
-      process.env.SMTP_HOST ||
-        process.env.RESEND_API_KEY ||
-        process.env.SENDGRID_API_KEY
-    );
+    const mailResult = await sendAuthMail({
+      to: user.email ?? email,
+      subject: "パスワード再設定", // Password reset
+      text: `パスワード再設定はこちら: ${resetUrl}`,
+      html: `<p>パスワード再設定はこちらから行ってください。</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
+    });
 
-    if (!hasMailProvider) {
+    if (!mailResult.delivered) {
+      const note =
+        mailResult.error === "no-provider"
+          ? "email not sent, provider not configured"
+          : `email not sent (${mailResult.error ?? "delivery failed"})`;
+
       return NextResponse.json(
         {
           ok: true,
           resetUrl,
-          note: "email not sent, provider not configured",
+          note,
         },
         { status: 200 }
       );
     }
-
-    // TODO: connect to configured mail provider.
   }
 
   return NextResponse.json({ ok: true });
