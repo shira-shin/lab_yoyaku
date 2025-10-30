@@ -10,15 +10,26 @@ import { cookies } from "next/headers";
 
 import { prisma } from "@/server/db/prisma";
 
-import { hashPassword as hashWithCost, verifyPassword, needsRehash } from "./password";
+import {
+  hashPassword as hashWithCost,
+  verifyPassword,
+  needsRehash,
+  detectPasswordHashType,
+  DEFAULT_BCRYPT_COST,
+} from "./password";
 import { normalizeEmail } from "./users";
 import { SESSION_COOKIE_NAME } from "./auth/cookies";
-import { deleteCookie } from "@/lib/cookies-client";
 
 const SESSION_COOKIE = SESSION_COOKIE_NAME;
 const SESSION_TTL_DAYS = 30;
 
-export { normalizeEmail, verifyPassword, needsRehash };
+export {
+  normalizeEmail,
+  verifyPassword,
+  needsRehash,
+  detectPasswordHashType,
+  DEFAULT_BCRYPT_COST,
+};
 
 export async function hashPassword(raw: string) {
   return hashWithCost(raw);
@@ -52,7 +63,7 @@ export async function getAuthUser() {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     try {
-      await deleteCookie(SESSION_COOKIE);
+      cookieStore.delete(SESSION_COOKIE);
     } catch (error) {
       console.error("[auth] failed to delete invalid session cookie", error);
     }
