@@ -49,7 +49,9 @@ If running the command locally is not possible, trigger the "Manual Neon direct 
 
 ### Application settings
 
-- `APP_BASE_URL` (optional) — canonical origin used when generating email links (defaults to `http://localhost:3000` in development).
+- `APP_URL` — canonical origin used when generating email links and performing server-side fetches. **Set to `https://labyoyaku.vercel.app` in Vercel Production/Preview.**
+- `NEXT_PUBLIC_APP_URL` — same origin exposed to client-side code. **Set to `https://labyoyaku.vercel.app` in Vercel Production/Preview.**
+- `APP_BASE_URL` (legacy fallback) — older name kept for backward compatibility; prefer `APP_URL` moving forward.
 - `APP_SESSION_COOKIE_NAME` (optional) — overrides the session cookie name (default: `lab_session`).
 - `USE_MOCK` — set to `true` to serve mock API responses during local testing without touching the database.
 - `NEXT_PUBLIC_API_BASE` — client-side base URL override for API calls.

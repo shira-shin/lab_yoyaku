@@ -20,14 +20,8 @@ export async function POST(req: Request) {
 
   const normalizedEmail = normalizeEmail(email);
 
-  const existing = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { normalizedEmail },
-        { email: { equals: normalizedEmail, mode: "insensitive" } },
-        { email: { equals: email, mode: "insensitive" } },
-      ],
-    },
+  const existing = await prisma.user.findUnique({
+    where: { normalizedEmail },
   });
 
   if (existing) {
