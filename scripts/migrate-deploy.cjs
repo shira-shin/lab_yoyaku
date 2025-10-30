@@ -46,6 +46,8 @@ async function main() {
   await backfillNormalizedEmails();
   // 3. migrate
   run("pnpm exec prisma migrate deploy --schema=./prisma/schema.prisma", { cwd });
+  // 4. ensure bootstrap admin user when configured
+  run("pnpm exec tsx scripts/ensure-admin.ts", { cwd });
 }
 
 main().catch((error) => {
