@@ -22,7 +22,25 @@ export async function POST(req: Request) {
     const baseUrl = getBaseUrl();
     const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
     console.log("[RESET LINK]", resetUrl);
-    // NOTE: 本番環境では Resend や SMTP などのメールプロバイダを必ず設定してください。
+
+    const hasMailProvider = Boolean(
+      process.env.SMTP_HOST ||
+        process.env.RESEND_API_KEY ||
+        process.env.SENDGRID_API_KEY
+    );
+
+    if (!hasMailProvider) {
+      return NextResponse.json(
+        {
+          ok: true,
+          resetUrl,
+          note: "email not sent, provider not configured",
+        },
+        { status: 200 }
+      );
+    }
+
+    // TODO: connect to configured mail provider.
   }
 
   return NextResponse.json({ ok: true });
