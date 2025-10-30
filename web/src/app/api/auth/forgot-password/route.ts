@@ -4,6 +4,7 @@ import { prisma } from "@/server/db/prisma";
 
 import { createPasswordResetToken } from "@/lib/reset-token";
 import { findUserByEmailNormalized } from "@/lib/users";
+import { getBaseUrl } from "@/lib/get-base-url";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -18,9 +19,10 @@ export async function POST(req: Request) {
   if (user) {
     await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
     const token = await createPasswordResetToken(user.id, 60);
-    const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
+    const baseUrl = getBaseUrl();
     const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
     console.log("[RESET LINK]", resetUrl);
+    // NOTE: 本番環境では Resend や SMTP などのメールプロバイダを必ず設定してください。
   }
 
   return NextResponse.json({ ok: true });

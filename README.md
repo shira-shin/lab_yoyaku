@@ -150,7 +150,8 @@ pnpm -C web prisma migrate deploy
   - `DIRECT_URL` — Neon direct host URL with `sslmode=require` and URL-encoded password (no `-pooler`).
   - `RUN_MIGRATIONS=1`
   - `ALLOW_MIGRATE_ON_VERCEL=1`
-  - `APP_BASE_URL` — canonical origin used in emails (e.g. `https://<your-domain>`).
+  - `APP_URL` — canonical origin used in emails and server-side fetches (e.g. `https://<your-domain>`). Set to `https://labyoyaku.vercel.app` for both Production and Preview.
+  - `NEXT_PUBLIC_APP_URL` — same origin exposed to the client bundle. Set to `https://labyoyaku.vercel.app` for both Production and Preview.
   - `APP_SESSION_COOKIE_NAME` — optional override, defaults to `lab_session`.
   - Preview deployments only: `USE_MOCK=true` if you need to disable live database writes temporarily.
 - **Database migrations**: run manually from a trusted shell or CI job using the one-off workflow or following [`web/docs/db-ops.md`](web/docs/db-ops.md).

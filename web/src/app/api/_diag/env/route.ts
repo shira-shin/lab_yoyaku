@@ -53,10 +53,14 @@ const summarizeDatabaseUrl = (value?: string | null): DatabaseSummary => {
 };
 
 export async function GET() {
-  const configuredAppBaseUrl = summarizeUrl(process.env.APP_BASE_URL);
+  const appUrl = summarizeUrl(process.env.APP_URL);
+  const publicAppUrl = summarizeUrl(process.env.NEXT_PUBLIC_APP_URL);
+  const legacyAppBaseUrl = summarizeUrl(process.env.APP_BASE_URL);
 
   return NextResponse.json({
-    APP_BASE_URL: configuredAppBaseUrl,
+    APP_URL: appUrl,
+    NEXT_PUBLIC_APP_URL: publicAppUrl,
+    APP_BASE_URL: legacyAppBaseUrl,
     RESOLVED_APP_BASE_URL: summarizeUrl(appBaseUrl),
     DATABASE_URL: summarizeDatabaseUrl(process.env.DATABASE_URL),
     RUN_MIGRATIONS: process.env.RUN_MIGRATIONS ?? null,
