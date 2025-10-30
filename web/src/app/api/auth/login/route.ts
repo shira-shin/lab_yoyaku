@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 import { prisma } from "@/server/db/prisma";
@@ -9,6 +10,7 @@ import {
   needsRehash,
   hashPassword,
   normalizeEmail,
+  detectPasswordHashType,
 } from "@/lib/auth";
 import { respondDbNotInitializedWithLog } from "@/server/api/db-not-initialized";
 import { getBaseUrl } from "@/lib/get-base-url";
@@ -60,15 +62,77 @@ export async function POST(req: Request) {
           normalizedEmail
         );
       } else {
-        console.warn("[auth/login] user missing passwordHash, id=", user.id);
+        console.warn("[auth/login] user has no passwordHash", {
+          id: user.id,
+          email: user.email,
+          normalizedEmail: user.normalizedEmail,
+        });
       }
       return NextResponse.json({ error: "invalid credentials" }, { status: 401 });
     }
 
-    const ok = await verifyPassword(password, user.passwordHash);
-    if (!ok) {
-      console.warn("[auth/login] password mismatch for user id=", user.id);
+    const hashPreview = user.passwordHash.slice(0, 15) + "...";
+    const hashLength = user.passwordHash.length;
+    const hashType = detectPasswordHashType(user.passwordHash);
+
+    if (hashType === "unknown") {
+      console.warn("[auth/login] unsupported password hash format", {
+        id: user.id,
+        email: user.email,
+        normalizedEmail: user.normalizedEmail,
+        hashPreview,
+        hashLength,
+      });
       return NextResponse.json({ error: "invalid credentials" }, { status: 401 });
+    }
+
+    if (hashType === "bcrypt") {
+      try {
+        const ok = await bcrypt.compare(password, user.passwordHash);
+        if (!ok) {
+          console.warn("[auth/login] bcrypt.compare failed", {
+            id: user.id,
+            email: user.email,
+            normalizedEmail: user.normalizedEmail,
+            hashPreview,
+            hashLength,
+            bcryptLib: "bcryptjs",
+          });
+          return NextResponse.json(
+            { error: "invalid credentials" },
+            { status: 401 }
+          );
+        }
+      } catch (err) {
+        console.error("[auth/login] bcrypt.compare threw", {
+          id: user.id,
+          err,
+        });
+        return NextResponse.json({ error: "invalid credentials" }, { status: 401 });
+      }
+    } else {
+      let ok = false;
+      try {
+        ok = await verifyPassword(password, user.passwordHash);
+      } catch (err) {
+        console.error("[auth/login] verifyPassword threw", {
+          id: user.id,
+          err,
+        });
+        return NextResponse.json({ error: "invalid credentials" }, { status: 401 });
+      }
+
+      if (!ok) {
+        console.warn("[auth/login] legacy password mismatch", {
+          id: user.id,
+          email: user.email,
+          normalizedEmail: user.normalizedEmail,
+          hashPreview,
+          hashLength,
+          hashType,
+        });
+        return NextResponse.json({ error: "invalid credentials" }, { status: 401 });
+      }
     }
 
     if (needsRehash(user.passwordHash)) {
