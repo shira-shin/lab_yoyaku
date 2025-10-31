@@ -10,17 +10,22 @@ import { sendAuthMail } from "@/lib/auth/send-mail";
 type MailProvider = "resend" | "sendgrid" | "smtp" | "none";
 
 function detectMailProvider(): MailProvider {
+  if (process.env.RESEND_API_KEY) return "resend";
+  if (process.env.SENDGRID_API_KEY) return "sendgrid";
+  if (process.env.SMTP_HOST) return "smtp";
+  return "none";
+}
+
+function resolveMailProvider(): MailProvider {
   if (process.env.AUTH_MAIL_PROVIDER) {
     const normalized = process.env.AUTH_MAIL_PROVIDER.toLowerCase();
+    if (normalized === "none") return "none";
     if (normalized === "resend" || normalized === "sendgrid" || normalized === "smtp") {
       return normalized as MailProvider;
     }
     return "none";
   }
-  if (process.env.RESEND_API_KEY) return "resend";
-  if (process.env.SENDGRID_API_KEY) return "sendgrid";
-  if (process.env.SMTP_HOST) return "smtp";
-  return "none";
+  return detectMailProvider();
 }
 
 export async function POST(req: Request) {
@@ -44,7 +49,7 @@ export async function POST(req: Request) {
     const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
     console.log("[RESET LINK]", resetUrl);
 
-    const provider = detectMailProvider();
+    const provider = resolveMailProvider();
 
     if (provider === "none") {
       return NextResponse.json(

@@ -94,9 +94,11 @@ export async function POST(req: Request) {
             id: user.id,
             email: user.email,
             normalizedEmail: user.normalizedEmail,
+            attemptedPasswordLength: password ? password.length : 0,
             hashPreview,
             hashLength,
             bcryptLib: "bcryptjs",
+            hashPrefix: user.passwordHash.slice(0, 7),
           });
           return NextResponse.json(
             { error: "invalid credentials" },
