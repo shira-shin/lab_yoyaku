@@ -26,8 +26,6 @@ export async function GET(req: Request) {
       email: true,
       normalizedEmail: true,
       passwordHash: true,
-      createdAt: true,
-      updatedAt: true,
     },
   });
 
