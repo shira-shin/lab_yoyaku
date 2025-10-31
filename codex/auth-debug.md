@@ -5,6 +5,7 @@ This document captures the temporary diagnostics and fixes that need to land to 
 ## Temporary debug endpoint
 - Add `web/src/app/api/debug/auth-state/route.ts` that returns core user info (id/email/normalizedEmail/passwordHashLength/createdAt/updatedAt) and runtime env details (APP_URL/NEXT_PUBLIC_APP_URL/VERCEL_URL).
 - Guard it with a token query parameter (`token=`) that must match `process.env.AUTH_DEBUG_TOKEN`. Return `500` if the env var is missing and `403` if the token mismatches. Never log or expose the raw password hash length other than length.
+- Add `web/src/app/api/debug/auth-force-set-password/route.ts` so we can forcibly reset a user's password hash with a known value. The handler must require the same `AUTH_DEBUG_TOKEN`, reuse the production email normalization, and hash with `bcryptjs` cost 12.
 
 ## Auth/login logging
 - Update `web/src/app/api/auth/login/route.ts` to log:
@@ -26,6 +27,11 @@ This document captures the temporary diagnostics and fixes that need to land to 
 
 ## Cookie deletion fetches
 - Audit all places calling `/api/cookies/delete` on the server and ensure they use the shared helper. If the fetch still fails (e.g. 401) log a warning but let the outer request succeed.
+
+## Environment configuration updates
+- Set `AUTH_DEBUG_TOKEN` in Vercel Project → Settings → Environment Variables for both preview and production. This unlocks the debug endpoints.
+- Add `AUTH_BASE_URL=https://labyoyaku.vercel.app` so reset links and cookie helper fetches always target the production host.
+- Keep `AUTH_MAIL_PROVIDER=none` until a real mail provider is configured. The forgot-password API will surface the reset URL in the JSON response while mail is disabled.
 
 ## Post-deploy verification
 Include these manual checks in the PR description:

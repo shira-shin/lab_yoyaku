@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [resetLink, setResetLink] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function LoginPage() {
 
   const resetFeedback = useCallback(() => {
     setFeedback(null);
+    setResetLink(null);
   }, []);
 
   const handleLogin = useCallback(
@@ -28,6 +30,7 @@ export default function LoginPage() {
       e.preventDefault();
       setLoading(true);
       setFeedback(null);
+      setResetLink(null);
       try {
         const res = await fetch("/api/auth/login", {
           method: "POST",
@@ -58,6 +61,7 @@ export default function LoginPage() {
 
       setLoading(true);
       setFeedback(null);
+      setResetLink(null);
       try {
         const res = await fetch("/api/auth/register", {
           method: "POST",
@@ -83,18 +87,32 @@ export default function LoginPage() {
       e.preventDefault();
       setLoading(true);
       setFeedback(null);
+      setResetLink(null);
       try {
         const res = await fetch("/api/auth/forgot-password", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
         });
+        const data = (await res.json().catch(() => null)) as
+          | { error?: string; resetUrl?: string; token?: string; note?: string }
+          | null;
         if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
           setFeedback(data?.error ?? "送信に失敗しました");
+          setResetLink(null);
           return;
         }
-        setFeedback("パスワード再設定メールを送信しました（届かない場合は迷惑メールをご確認ください）");
+        if (data?.resetUrl) {
+          setFeedback(
+            "パスワード再設定用のリンクを取得しました。以下からアクセスできます。",
+          );
+          setResetLink(data.resetUrl);
+        } else {
+          setFeedback(
+            "パスワード再設定メールを送信しました（届かない場合は迷惑メールをご確認ください）",
+          );
+          setResetLink(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -187,8 +205,20 @@ export default function LoginPage() {
 
             <div className="p-6 space-y-4">
               {feedback ? (
-                <div className="rounded-md border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
-                  {feedback}
+                <div className="rounded-md border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground space-y-2">
+                  <p>{feedback}</p>
+                  {resetLink ? (
+                    <p>
+                      <a
+                        href={resetLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 underline"
+                      >
+                        パスワード再設定ページを開く
+                      </a>
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
 

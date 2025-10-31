@@ -10,6 +10,8 @@ import { cookies } from "next/headers";
 
 import { prisma } from "@/server/db/prisma";
 
+import { getBaseUrl } from "@/lib/get-base-url";
+
 import {
   hashPassword as hashWithCost,
   verifyPassword,
@@ -22,6 +24,25 @@ import { SESSION_COOKIE_NAME } from "./auth/cookies";
 
 const SESSION_COOKIE = SESSION_COOKIE_NAME;
 const SESSION_TTL_DAYS = 30;
+
+async function deleteSessionCookieViaRoute() {
+  try {
+    const res = await fetch(`${getBaseUrl()}/api/cookies/delete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: SESSION_COOKIE,
+        options: { path: "/" },
+      }),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.warn("[auth] cookie delete route returned non-200", res.status);
+    }
+  } catch (error) {
+    console.warn("[auth] failed to delete invalid session cookie via route", error);
+  }
+}
 
 export {
   normalizeEmail,
@@ -62,11 +83,7 @@ export async function getAuthUser() {
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
-    try {
-      cookieStore.delete(SESSION_COOKIE);
-    } catch (error) {
-      console.error("[auth] failed to delete invalid session cookie", error);
-    }
+    await deleteSessionCookieViaRoute();
     return null;
   }
 
