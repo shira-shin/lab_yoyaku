@@ -39,6 +39,18 @@ function extractHost(value: string | undefined | null) {
 
 async function deleteSessionCookieViaRoute() {
   const baseUrl = getBaseUrl();
+
+  if (typeof window !== "undefined") {
+    const windowHost = extractHost(window.location.origin);
+    const configuredClientBase =
+      process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? null;
+    const allowedHost = extractHost(configuredClientBase ?? baseUrl);
+
+    if (allowedHost && windowHost && allowedHost !== windowHost) {
+      return;
+    }
+  }
+
   const targetHost = extractHost(baseUrl);
   if (!targetHost) {
     return;
