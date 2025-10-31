@@ -1,11 +1,20 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/server/db/prisma";
 
-import { createPasswordResetToken } from "@/lib/reset-token";
-import { findUserByEmailNormalized } from "@/lib/users";
 import { getBaseUrl } from "@/lib/get-base-url";
 import { sendAuthMail } from "@/lib/auth/send-mail";
+
+const TOKEN_TTL_MINUTES = 30;
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function hashToken(token: string) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
 
 type MailProvider = "resend" | "sendgrid" | "smtp" | "none";
 
@@ -36,33 +45,45 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid payload" }, { status: 400 });
   }
 
-  const user = await findUserByEmailNormalized(email);
+  const normalizedEmail = normalizeEmail(email);
+  const user = await prisma.user.findUnique({
+    where: { normalizedEmail },
+    select: { id: true, email: true },
+  });
+
+  const token = crypto.randomBytes(32).toString("base64url");
+  const baseUrl =
+    process.env.AUTH_BASE_URL ??
+    process.env.NEXT_PUBLIC_BASE_URL ??
+    getBaseUrl();
+  const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
   if (user) {
     await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
-    const token = await createPasswordResetToken(user.id, 60);
-    const baseUrl =
-      process.env.AUTH_BASE_URL ??
-      (process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : getBaseUrl());
-    const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
-    console.log("[RESET LINK]", resetUrl);
+    await prisma.passwordResetToken.create({
+      data: {
+        tokenHash: hashToken(token),
+        userId: user.id,
+        expiresAt: new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000),
+      },
+    });
+  }
 
-    const provider = resolveMailProvider();
+  const provider = resolveMailProvider();
 
-    if (provider === "none") {
-      return NextResponse.json(
-        {
-          ok: true,
-          reason: "no-provider",
-          resetUrl,
-          token,
-        },
-        { status: 200 }
-      );
-    }
+  if (provider === "none") {
+    return NextResponse.json(
+      {
+        ok: true,
+        reason: "no-provider",
+        token,
+        resetUrl,
+      },
+      { status: 200 }
+    );
+  }
 
+  if (user) {
     const mailResult = await sendAuthMail({
       to: user.email ?? email,
       subject: "パスワード再設定", // Password reset
@@ -88,5 +109,5 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true }, { status: 200 });
 }

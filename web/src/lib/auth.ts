@@ -25,9 +25,38 @@ import { SESSION_COOKIE_NAME } from "./auth/cookies";
 const SESSION_COOKIE = SESSION_COOKIE_NAME;
 const SESSION_TTL_DAYS = 30;
 
-async function deleteSessionCookieViaRoute() {
+function extractHost(value: string | undefined | null) {
+  if (!value) return null;
   try {
-    const res = await fetch(`${getBaseUrl()}/api/cookies/delete`, {
+    if (value.includes("://")) {
+      return new URL(value).host;
+    }
+    return new URL(`https://${value}`).host;
+  } catch {
+    return null;
+  }
+}
+
+async function deleteSessionCookieViaRoute() {
+  const baseUrl = getBaseUrl();
+  const targetHost = extractHost(baseUrl);
+  if (!targetHost) {
+    return;
+  }
+
+  const deploymentHost =
+    extractHost(process.env.VERCEL_URL ?? null) ??
+    extractHost(process.env.AUTH_BASE_URL ?? null) ??
+    extractHost(process.env.APP_URL ?? null) ??
+    extractHost(process.env.NEXT_PUBLIC_APP_URL ?? null) ??
+    extractHost(process.env.APP_BASE_URL ?? null);
+
+  if (deploymentHost && deploymentHost !== targetHost) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`${baseUrl}/api/cookies/delete`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
