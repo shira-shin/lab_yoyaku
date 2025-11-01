@@ -20,6 +20,7 @@ const PUBLIC_PATHS = [
   "/api/debug/",
   "/api/debug/auth-user",
   "/api/debug/auth-force-set-password",
+  "/api/debug/auth-upsert-user",
   "/favicon.ico",
 ];
 
@@ -48,7 +49,7 @@ export function middleware(req: NextRequest) {
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
   const vercelEnv = process.env.VERCEL_ENV;
-  if (baseUrl && vercelEnv === "production") {
+  if (!isPublicPath(pathname) && baseUrl && vercelEnv === "production") {
     const base = new URL(baseUrl);
     if (host !== base.host) {
       const url = req.nextUrl.clone();
