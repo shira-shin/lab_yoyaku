@@ -14,6 +14,8 @@ importers:
 
   tools/tsx-shim: {}
 
+  packages/nodemailer: {}
+
   web:
     dependencies:
       '@prisma/client':
@@ -34,6 +36,9 @@ importers:
       next:
         specifier: 14.1.0
         version: 14.1.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      nodemailer:
+        specifier: ^6.9.15
+        version: link:../packages/nodemailer
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
