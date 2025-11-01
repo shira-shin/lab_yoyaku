@@ -1,30 +1,17 @@
 import { PrismaClient } from "@prisma/client";
 
-const databaseUrl =
-  process.env.DIRECT_URL && process.env.DIRECT_URL.trim().length > 0
-    ? process.env.DIRECT_URL
-    : process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error(
-    "[prisma] neither DIRECT_URL nor DATABASE_URL is set – cannot init prisma",
-  );
+declare global {
+  // eslint-disable-next-line no-var
+  var prismaGlobal: PrismaClient | undefined;
 }
 
-const globalForPrisma = globalThis as unknown as {
-  prisma?: PrismaClient;
-};
+if (process.env.DIRECT_URL) {
+  process.env.DATABASE_URL = process.env.DIRECT_URL;
+}
 
 export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    datasources: {
-      db: {
-        url: databaseUrl,
-      },
-    },
-  });
+  globalThis.prismaGlobal ?? new PrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  globalThis.prismaGlobal = prisma;
 }

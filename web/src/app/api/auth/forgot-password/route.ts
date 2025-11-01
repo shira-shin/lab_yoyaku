@@ -69,15 +69,21 @@ export async function POST(req: Request) {
     });
   }
 
-  const provider = resolveMailProvider();
+  const envProvider = process.env.MAIL_PROVIDER?.toLowerCase();
+  const provider =
+    envProvider === "resend" ||
+    envProvider === "sendgrid" ||
+    envProvider === "smtp" ||
+    envProvider === "none"
+      ? (envProvider as MailProvider)
+      : resolveMailProvider();
 
   if (provider === "none") {
     return NextResponse.json(
       {
         ok: true,
-        delivered: false,
-        reason: "no-provider",
         resetUrl,
+        delivery: "skipped:no-provider" as const,
       },
       { status: 200 },
     );
@@ -92,17 +98,11 @@ export async function POST(req: Request) {
     });
 
     if (!mailResult.delivered) {
-      const note =
-        mailResult.error === "no-provider"
-          ? "email not sent, provider not configured"
-          : `email not sent (${mailResult.error ?? "delivery failed"})`;
-
       return NextResponse.json(
         {
           ok: true,
           resetUrl,
-          note,
-          token,
+          delivery: `skipped:${mailResult.error ?? "delivery-failed"}`,
         },
         { status: 200 },
       );
