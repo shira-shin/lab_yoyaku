@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/server/db/prisma";
+import { prisma } from "@/lib/prisma";
 
 const DEBUG_TOKEN = process.env.AUTH_DEBUG_TOKEN;
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const email = searchParams.get("email");
-  const token = searchParams.get("token");
+type RequestBody = {
+  token?: string;
+  email?: string;
+};
+
+export async function POST(req: Request) {
+  const body = (await req.json().catch(() => ({}))) as RequestBody;
+  const { token, email } = body;
 
   if (!DEBUG_TOKEN || token !== DEBUG_TOKEN) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
@@ -29,5 +33,5 @@ export async function GET(req: Request) {
     },
   });
 
-  return NextResponse.json({ ok: true, user }, { status: 200 });
+  return NextResponse.json({ ok: true, user });
 }

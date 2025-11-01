@@ -1,45 +1,55 @@
-import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/prisma";
 
-const AUTH_DEBUG_TOKEN = process.env.AUTH_DEBUG_TOKEN;
+const DEBUG_TOKEN = process.env.AUTH_DEBUG_TOKEN;
+const SALT_ROUNDS = 12;
 
 type RequestBody = {
   token?: string;
   email?: string;
-  newPassword?: string;
+  password?: string;
 };
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as RequestBody;
-  const { token, email, newPassword } = body;
+  const { token, email, password } = body;
 
-  if (!AUTH_DEBUG_TOKEN || token !== AUTH_DEBUG_TOKEN) {
+  if (!DEBUG_TOKEN || token !== DEBUG_TOKEN) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  if (!email || !newPassword) {
-    return NextResponse.json({ ok: false, error: "email and newPassword required" }, { status: 400 });
+  if (!email || !password) {
+    return NextResponse.json({ ok: false, error: "email and password required" }, { status: 400 });
   }
 
   const normalizedEmail = email.trim().toLowerCase();
 
-  const user = await prisma.user.findFirst({
+  let user = await prisma.user.findFirst({
     where: { normalizedEmail },
     select: { id: true },
   });
 
-  if (!user) {
-    return NextResponse.json({ ok: false, error: "user not found" }, { status: 404 });
-  }
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-  const passwordHash = await bcrypt.hash(newPassword, 12);
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email,
+        normalizedEmail,
+        passwordHash,
+      },
+      select: { id: true },
+    });
+
+    return NextResponse.json({ ok: true, created: true, id: user.id });
+  }
 
   await prisma.user.update({
     where: { id: user.id },
     data: { passwordHash },
   });
 
-  return NextResponse.json({ ok: true, email: normalizedEmail });
+  return NextResponse.json({ ok: true, created: false, id: user.id });
 }
