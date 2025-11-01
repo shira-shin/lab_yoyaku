@@ -16,7 +16,7 @@
   },
   "scripts": {
     "migrate:deploy": "node scripts/migrate-deploy.cjs",
-    "prisma:gen:web": "cd web && prisma generate --schema=./prisma/schema.prisma"
+    "prisma:gen:web": "pnpm --filter lab_yoyaku-web run prisma:generate"
   },
   "devDependencies": {
     "tsx": "workspace:*"
