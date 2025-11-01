@@ -75,8 +75,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         ok: true,
-        reason: "no-provider",
-        token,
+        delivered: false,
         resetUrl,
       },
       { status: 200 }
