@@ -18,6 +18,8 @@ export async function POST(req: Request) {
     );
   }
 
+  console.log("[auth/login] using db url", process.env.DATABASE_URL);
+
   const user = await prisma.user.findUnique({
     where: { normalizedEmail: email },
     select: {

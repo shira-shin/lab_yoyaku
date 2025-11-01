@@ -25,13 +25,13 @@ function detectMailProvider(): MailProvider {
 }
 
 function resolveMailProvider(): MailProvider {
-  if (process.env.AUTH_MAIL_PROVIDER) {
-    const normalized = process.env.AUTH_MAIL_PROVIDER.toLowerCase();
-    if (normalized === "none") return "none";
-    if (normalized === "resend" || normalized === "sendgrid" || normalized === "smtp") {
-      return normalized as MailProvider;
-    }
-    return "none";
+  const envProvider = process.env.MAIL_PROVIDER?.toLowerCase();
+  if (!envProvider) {
+    return detectMailProvider();
+  }
+  if (envProvider === "none") return "none";
+  if (envProvider === "resend" || envProvider === "sendgrid" || envProvider === "smtp") {
+    return envProvider as MailProvider;
   }
   return detectMailProvider();
 }
@@ -50,35 +50,49 @@ export async function POST(req: Request) {
     select: { id: true, email: true },
   });
 
-  const token = crypto.randomBytes(32).toString("base64url");
-  const baseUrl = process.env.BASE_URL || "https://labyoyaku.vercel.app";
-  const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
-  const envProvider = process.env.MAIL_PROVIDER?.toLowerCase();
+  const resetToken = crypto.randomBytes(32).toString("base64url");
 
   if (user) {
     await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
     await prisma.passwordResetToken.create({
       data: {
-        tokenHash: hashToken(token),
+        tokenHash: hashToken(resetToken),
         userId: user.id,
         expiresAt: new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000),
       },
     });
   }
 
-  const provider =
-    envProvider === "resend" || envProvider === "sendgrid" || envProvider === "smtp"
-      ? (envProvider as MailProvider)
-      : envProvider === "none"
-        ? "none"
-        : resolveMailProvider();
+  const host = req.headers.get("host");
+  const baseUrl = process.env.BASE_URL || (host ? `https://${host}` : "http://localhost:3000");
+  const resetUrl = `${baseUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(resetToken)}`;
+  const provider = resolveMailProvider();
 
   if (provider === "none") {
     return NextResponse.json({
       ok: true,
       delivery: "skipped:no-provider" as const,
       resetUrl,
+      reason: "MAIL_PROVIDER is none, so email was not sent.",
     });
+  }
+
+  if (provider === "smtp") {
+    const hasSmtp =
+      !!process.env.SMTP_HOST &&
+      !!process.env.SMTP_USER &&
+      !!process.env.SMTP_PASS;
+    if (!hasSmtp) {
+      return NextResponse.json(
+        {
+          ok: false,
+          delivery: "skipped:missing-smtp-config" as const,
+          resetUrl,
+          reason: "SMTP configuration is incomplete, so email was not sent.",
+        },
+        { status: 500 }
+      );
+    }
   }
 
   if (user) {
@@ -90,11 +104,18 @@ export async function POST(req: Request) {
     });
 
     if (!mailResult.delivered) {
-      return NextResponse.json({
-        ok: true,
-        resetUrl,
-        delivery: `skipped:${mailResult.error ?? "delivery-failed"}`,
-      });
+      return NextResponse.json(
+        {
+          ok: true,
+          resetUrl,
+          delivery: `skipped:${mailResult.error ?? "delivery-failed"}` as const,
+          reason:
+            mailResult.error === "no-provider"
+              ? "MAIL_PROVIDER is none, so email was not sent."
+              : mailResult.error ?? "Mail delivery failed.",
+        },
+        mailResult.error === "no-provider" ? undefined : { status: 500 }
+      );
     }
   }
 
