@@ -39,9 +39,6 @@ export async function POST(req: Request) {
       id: true,
       email: true,
       normalizedEmail: true,
-      passwordHash: true,
-      createdAt: true,
-      updatedAt: true,
     },
   });
 
