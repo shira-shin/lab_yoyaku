@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   const token = crypto.randomBytes(32).toString("base64url");
   const baseUrl = process.env.BASE_URL || "https://labyoyaku.vercel.app";
   const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
-  const envProvider = (process.env.MAIL_PROVIDER || "none").toLowerCase();
+  const envProvider = process.env.MAIL_PROVIDER?.toLowerCase();
 
   if (user) {
     await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
@@ -66,18 +66,12 @@ export async function POST(req: Request) {
     });
   }
 
-  if (envProvider === "none") {
-    return NextResponse.json({
-      ok: true,
-      delivery: "skipped:no-provider" as const,
-      resetUrl,
-    });
-  }
-
   const provider =
     envProvider === "resend" || envProvider === "sendgrid" || envProvider === "smtp"
       ? (envProvider as MailProvider)
-      : resolveMailProvider();
+      : envProvider === "none"
+        ? "none"
+        : resolveMailProvider();
 
   if (provider === "none") {
     return NextResponse.json({
