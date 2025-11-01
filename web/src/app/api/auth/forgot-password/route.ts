@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/server/db/prisma";
+import { prisma } from "@/lib/prisma";
 
 import { getBaseUrl } from "@/lib/get-base-url";
 import { sendAuthMail } from "@/lib/auth/send-mail";
@@ -107,7 +107,23 @@ export async function POST(req: Request) {
         { status: 200 },
       );
     }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        resetUrl,
+        delivery: "queued",
+      },
+      { status: 200 },
+    );
   }
 
-  return NextResponse.json({ ok: true }, { status: 200 });
+  return NextResponse.json(
+    {
+      ok: true,
+      resetUrl,
+      delivery: "skipped:user-not-found",
+    },
+    { status: 200 },
+  );
 }
