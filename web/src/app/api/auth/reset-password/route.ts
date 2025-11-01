@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/server/db/prisma";
 
+export const runtime = "nodejs";
+
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }

@@ -21,11 +21,18 @@ const PUBLIC_PATHS = [
   "/api/debug/auth-user",
   "/api/debug/auth-force-set-password",
   "/api/debug/auth-upsert-user",
+  "/api/debug/email-config",
   "/favicon.ico",
 ];
 
 function isPublicPath(pathname: string) {
   if (pathname === "/reset-password" || pathname.startsWith("/reset-password")) {
+    return true;
+  }
+  if (
+    pathname === "/api/auth/forgot-password" ||
+    pathname === "/api/auth/reset-password"
+  ) {
     return true;
   }
   if (pathname.startsWith("/api/auth/")) {
