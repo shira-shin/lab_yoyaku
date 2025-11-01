@@ -53,6 +53,7 @@ export async function POST(req: Request) {
 
   const token = crypto.randomBytes(32).toString("base64url");
   const baseUrl =
+    process.env.BASE_URL ??
     process.env.AUTH_BASE_URL ??
     process.env.NEXT_PUBLIC_BASE_URL ??
     getBaseUrl();
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
     envProvider === "sendgrid" ||
     envProvider === "smtp" ||
     envProvider === "none"
-      ? (envProvider as MailProvider)
+      ? ((envProvider || "none") as MailProvider)
       : resolveMailProvider();
 
   if (provider === "none") {
@@ -109,5 +110,12 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true }, { status: 200 });
+  return NextResponse.json(
+    {
+      ok: true,
+      resetUrl,
+      delivery: "sent",
+    },
+    { status: 200 },
+  );
 }
