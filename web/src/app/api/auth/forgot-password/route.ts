@@ -1,13 +1,12 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
+import { getSmtpConfig, isSmtpUsable, sendPasswordResetMail } from "@/lib/mailer";
 import { prisma } from "@/lib/prisma";
 
-import { sendAuthMail } from "@/lib/auth/send-mail";
+export const runtime = "nodejs";
 
 const TOKEN_TTL_MINUTES = 30;
-
-type MailProvider = "resend" | "sendgrid" | "smtp" | "none";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -15,25 +14,6 @@ function normalizeEmail(email: string) {
 
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
-}
-
-function detectMailProvider(): MailProvider {
-  if (process.env.RESEND_API_KEY) return "resend";
-  if (process.env.SENDGRID_API_KEY) return "sendgrid";
-  if (process.env.SMTP_HOST) return "smtp";
-  return "none";
-}
-
-function resolveMailProvider(): MailProvider {
-  if (process.env.AUTH_MAIL_PROVIDER) {
-    const normalized = process.env.AUTH_MAIL_PROVIDER.toLowerCase();
-    if (normalized === "none") return "none";
-    if (normalized === "resend" || normalized === "sendgrid" || normalized === "smtp") {
-      return normalized as MailProvider;
-    }
-    return "none";
-  }
-  return detectMailProvider();
 }
 
 export async function POST(req: Request) {
@@ -50,57 +30,61 @@ export async function POST(req: Request) {
     select: { id: true, email: true },
   });
 
-  const token = crypto.randomBytes(32).toString("base64url");
-  const baseUrl = process.env.BASE_URL || "https://labyoyaku.vercel.app";
-  const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
-  const envProvider = process.env.MAIL_PROVIDER?.toLowerCase();
+  if (!user) {
+    return NextResponse.json({
+      ok: true,
+      delivery: "skipped:user-not-found" as const,
+      resetUrl: null,
+    });
+  }
 
-  if (user) {
-    await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
-    await prisma.passwordResetToken.create({
-      data: {
-        tokenHash: hashToken(token),
-        userId: user.id,
-        expiresAt: new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000),
+  const token = crypto.randomBytes(32).toString("base64url");
+  const baseUrl =
+    process.env.BASE_URL ||
+    `https://${req.headers.get("host") ?? "labyoyaku.vercel.app"}`;
+  const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
+
+  await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
+  await prisma.passwordResetToken.create({
+    data: {
+      tokenHash: hashToken(token),
+      userId: user.id,
+      expiresAt: new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000),
+    },
+  });
+
+  if (!isSmtpUsable()) {
+    const cfg = getSmtpConfig();
+    console.warn("[auth/forgot-password] smtp not usable", cfg);
+    return NextResponse.json({
+      ok: false,
+      delivery: "skipped:missing-smtp" as const,
+      resetUrl,
+      smtp: {
+        provider: cfg.provider,
+        hasHost: !!cfg.host,
+        hasUser: !!cfg.user,
+        hasPass: !!cfg.pass,
       },
     });
   }
 
-  const provider =
-    envProvider === "resend" || envProvider === "sendgrid" || envProvider === "smtp"
-      ? (envProvider as MailProvider)
-      : envProvider === "none"
-        ? "none"
-        : resolveMailProvider();
-
-  if (provider === "none") {
+  try {
+    await sendPasswordResetMail(normalizedEmail, resetUrl);
     return NextResponse.json({
       ok: true,
-      delivery: "skipped:no-provider" as const,
+      delivery: "sent" as const,
       resetUrl,
     });
-  }
-
-  if (user) {
-    const mailResult = await sendAuthMail({
-      to: user.email ?? email,
-      subject: "パスワード再設定", // Password reset
-      text: `パスワード再設定はこちら: ${resetUrl}`,
-      html: `<p>パスワード再設定はこちらから行ってください。</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
-    });
-
-    if (!mailResult.delivered) {
-      return NextResponse.json({
-        ok: true,
+  } catch (err) {
+    console.error("[auth/forgot-password] send error", err);
+    return NextResponse.json(
+      {
+        ok: false,
+        delivery: "failed:send-error" as const,
         resetUrl,
-        delivery: `skipped:${mailResult.error ?? "delivery-failed"}`,
-      });
-    }
+      },
+      { status: 200 },
+    );
   }
-
-  return NextResponse.json({
-    ok: true,
-    resetUrl,
-    delivery: "sent" as const,
-  });
 }
