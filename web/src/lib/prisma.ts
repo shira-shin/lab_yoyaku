@@ -5,13 +5,17 @@ declare global {
   var prismaGlobal: PrismaClient | undefined;
 }
 
-// Vercel preview環境では DATABASE_URL が pooler で、DIRECT_URL が実書き込みなので
-// Prisma に渡す前に runtime で DATABASE_URL を DIRECT_URL に寄せる
+// Vercel env gives us both DATABASE_URL (pooler) and DIRECT_URL (direct).
+// We always want direct for Prisma.
 if (process.env.DIRECT_URL) {
   process.env.DATABASE_URL = process.env.DIRECT_URL;
 }
 
-const prisma = globalThis.prismaGlobal ?? new PrismaClient();
+const prisma =
+  globalThis.prismaGlobal ??
+  new PrismaClient({
+    log: ["warn", "error"],
+  });
 
 if (process.env.NODE_ENV !== "production") {
   globalThis.prismaGlobal = prisma;

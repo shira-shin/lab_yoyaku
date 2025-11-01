@@ -1,12 +1,13 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/server/db/prisma";
+import { prisma } from "@/lib/prisma";
 
-import { getBaseUrl } from "@/lib/get-base-url";
 import { sendAuthMail } from "@/lib/auth/send-mail";
 
 const TOKEN_TTL_MINUTES = 30;
+
+type MailProvider = "resend" | "sendgrid" | "smtp" | "none";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -15,8 +16,6 @@ function normalizeEmail(email: string) {
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
-
-type MailProvider = "resend" | "sendgrid" | "smtp" | "none";
 
 function detectMailProvider(): MailProvider {
   if (process.env.RESEND_API_KEY) return "resend";
@@ -52,12 +51,9 @@ export async function POST(req: Request) {
   });
 
   const token = crypto.randomBytes(32).toString("base64url");
-  const baseUrl =
-    process.env.BASE_URL ??
-    process.env.AUTH_BASE_URL ??
-    process.env.NEXT_PUBLIC_BASE_URL ??
-    getBaseUrl();
+  const baseUrl = process.env.BASE_URL || "https://labyoyaku.vercel.app";
   const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
+  const envProvider = (process.env.MAIL_PROVIDER || "none").toLowerCase();
 
   if (user) {
     await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
@@ -70,24 +66,25 @@ export async function POST(req: Request) {
     });
   }
 
-  const envProvider = process.env.MAIL_PROVIDER?.toLowerCase();
+  if (envProvider === "none") {
+    return NextResponse.json({
+      ok: true,
+      delivery: "skipped:no-provider" as const,
+      resetUrl,
+    });
+  }
+
   const provider =
-    envProvider === "resend" ||
-    envProvider === "sendgrid" ||
-    envProvider === "smtp" ||
-    envProvider === "none"
-      ? ((envProvider || "none") as MailProvider)
+    envProvider === "resend" || envProvider === "sendgrid" || envProvider === "smtp"
+      ? (envProvider as MailProvider)
       : resolveMailProvider();
 
   if (provider === "none") {
-    return NextResponse.json(
-      {
-        ok: true,
-        resetUrl,
-        delivery: "skipped:no-provider" as const,
-      },
-      { status: 200 },
-    );
+    return NextResponse.json({
+      ok: true,
+      delivery: "skipped:no-provider" as const,
+      resetUrl,
+    });
   }
 
   if (user) {
@@ -99,23 +96,17 @@ export async function POST(req: Request) {
     });
 
     if (!mailResult.delivered) {
-      return NextResponse.json(
-        {
-          ok: true,
-          resetUrl,
-          delivery: `skipped:${mailResult.error ?? "delivery-failed"}`,
-        },
-        { status: 200 },
-      );
+      return NextResponse.json({
+        ok: true,
+        resetUrl,
+        delivery: `skipped:${mailResult.error ?? "delivery-failed"}`,
+      });
     }
   }
 
-  return NextResponse.json(
-    {
-      ok: true,
-      resetUrl,
-      delivery: "sent",
-    },
-    { status: 200 },
-  );
+  return NextResponse.json({
+    ok: true,
+    resetUrl,
+    delivery: "sent" as const,
+  });
 }
