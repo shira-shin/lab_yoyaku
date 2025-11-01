@@ -1,60 +1,69 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-import { SESSION_COOKIE_NAME } from './src/lib/auth/cookies';
+import { SESSION_COOKIE_NAME } from "./src/lib/auth/cookies";
 
 const SESSION_COOKIE = SESSION_COOKIE_NAME;
 const PUBLIC_PATHS = [
-  '/',
-  '/login',
-  '/register',
-  '/signup',
-  '/reset-password',
-  '/api/auth/login',
-  '/api/auth/register',
-  '/api/auth/forgot-password',
-  '/api/auth/reset-password',
-  '/api/debug',
-  '/api/debug/',
-  '/api/cookies/delete',
-  '/api/health',
-  '/favicon.ico',
+  "/",
+  "/login",
+  "/register",
+  "/signup",
+  "/reset-password",
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+  "/api/cookies/delete",
+  "/api/health",
+  "/api/debug",
+  "/api/debug/",
+  "/api/debug/auth-user",
+  "/api/debug/auth-force-set-password",
+  "/favicon.ico",
 ];
-const CANONICAL_HOST = 'labyoyaku.vercel.app';
 
 function isPublicPath(pathname: string) {
+  if (pathname === "/reset-password" || pathname.startsWith("/reset-password")) {
+    return true;
+  }
+  if (pathname.startsWith("/api/auth/")) {
+    return true;
+  }
   return PUBLIC_PATHS.some((path) => {
     if (pathname === path) return true;
-    if (path.endsWith('/')) {
+    if (path.endsWith("/")) {
       return pathname.startsWith(path);
     }
     return pathname.startsWith(`${path}/`);
   });
 }
 
-export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-
-  if (process.env.NODE_ENV === 'production') {
-    const host = req.headers.get('host');
-    if (host && host !== CANONICAL_HOST) {
-      const url = new URL(req.url);
-      url.host = CANONICAL_HOST;
-      url.protocol = 'https:';
-      return NextResponse.redirect(url);
-    }
-  }
+export function middleware(req: NextRequest) {
+  const { pathname, host } = req.nextUrl;
 
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const vercelEnv = process.env.VERCEL_ENV;
+  if (baseUrl && vercelEnv === "production") {
+    const base = new URL(baseUrl);
+    if (host !== base.host) {
+      const url = req.nextUrl.clone();
+      url.host = base.host;
+      url.protocol = base.protocol;
+      return NextResponse.redirect(url, 307);
+    }
+  }
+
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   if (!token) {
     const url = req.nextUrl.clone();
-    url.pathname = '/login';
-    url.search = '';
-    url.searchParams.set('next', pathname + req.nextUrl.search);
+    url.pathname = "/login";
+    url.search = "";
+    url.searchParams.set("next", pathname + req.nextUrl.search);
     return NextResponse.redirect(url);
   }
 
@@ -62,5 +71,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/|static/|public/|favicon\\.).*)'],
+  matcher: ["/((?!_next/|static/|public/|favicon\\.).*)"],
 };
