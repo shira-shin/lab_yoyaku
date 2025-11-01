@@ -2,23 +2,25 @@ import { PrismaClient } from "@prisma/client";
 
 declare global {
   // eslint-disable-next-line no-var
-  var prismaGlobal: PrismaClient | undefined;
+  var prisma: PrismaClient | undefined;
 }
 
-// Vercel env gives us both DATABASE_URL (pooler) and DIRECT_URL (direct).
-// We always want direct for Prisma.
-if (process.env.DIRECT_URL) {
-  process.env.DATABASE_URL = process.env.DIRECT_URL;
+// Always prefer DIRECT_URL (Vercel preview URLs are not stable)
+const url = process.env.DIRECT_URL || process.env.DATABASE_URL;
+if (!url) {
+  console.warn("[prisma] no DATABASE_URL/DIRECT_URL defined at runtime");
+} else {
+  process.env.DATABASE_URL = url;
 }
 
-const prisma =
-  globalThis.prismaGlobal ??
+const client =
+  global.prisma ??
   new PrismaClient({
-    log: ["warn", "error"],
+    log: ["error", "warn"],
   });
 
 if (process.env.NODE_ENV !== "production") {
-  globalThis.prismaGlobal = prisma;
+  global.prisma = client;
 }
 
-export { prisma };
+export { client as prisma };
