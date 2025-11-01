@@ -51,9 +51,8 @@ export function middleware(req: NextRequest) {
   const vercelEnv = process.env.VERCEL_ENV;
   if (!isPublicPath(pathname) && baseUrl && vercelEnv === "production") {
     const base = new URL(baseUrl);
-    if (host !== base.host) {
+    if (host === base.host && req.nextUrl.protocol !== base.protocol) {
       const url = req.nextUrl.clone();
-      url.host = base.host;
       url.protocol = base.protocol;
       return NextResponse.redirect(url, 307);
     }
