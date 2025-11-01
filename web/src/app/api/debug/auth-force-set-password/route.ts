@@ -1,22 +1,26 @@
-import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { NextResponse } from "next/server";
 
-import { prisma } from "@/server/db/prisma";
+import { prisma } from "@/lib/prisma";
 
-const DEBUG_TOKEN = process.env.AUTH_DEBUG_TOKEN;
+const AUTH_DEBUG_TOKEN = process.env.AUTH_DEBUG_TOKEN;
+
+type RequestBody = {
+  token?: string;
+  email?: string;
+  newPassword?: string;
+};
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null);
-  const email = typeof body?.email === "string" ? body.email : null;
-  const newPassword = typeof body?.newPassword === "string" ? body.newPassword : null;
-  const token = typeof body?.token === "string" ? body.token : null;
+  const body = (await req.json().catch(() => ({}))) as RequestBody;
+  const { token, email, newPassword } = body;
 
-  if (!DEBUG_TOKEN || token !== DEBUG_TOKEN) {
+  if (!AUTH_DEBUG_TOKEN || token !== AUTH_DEBUG_TOKEN) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
   if (!email || !newPassword) {
-    return NextResponse.json({ ok: false, error: "email and newPassword are required" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "email and newPassword required" }, { status: 400 });
   }
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -30,13 +34,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "user not found" }, { status: 404 });
   }
 
-  const hash = await bcrypt.hash(newPassword, 12);
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+
   await prisma.user.update({
     where: { id: user.id },
-    data: {
-      passwordHash: hash,
-    },
+    data: { passwordHash },
   });
 
-  return NextResponse.json({ ok: true, id: user.id }, { status: 200 });
+  return NextResponse.json({ ok: true, email: normalizedEmail });
 }
