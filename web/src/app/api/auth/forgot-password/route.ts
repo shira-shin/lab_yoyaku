@@ -76,9 +76,10 @@ export async function POST(req: Request) {
       {
         ok: true,
         delivered: false,
+        reason: "no-provider",
         resetUrl,
       },
-      { status: 200 }
+      { status: 200 },
     );
   }
 
@@ -103,7 +104,7 @@ export async function POST(req: Request) {
           note,
           token,
         },
-        { status: 200 }
+        { status: 200 },
       );
     }
   }

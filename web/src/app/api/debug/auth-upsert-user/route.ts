@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-// must be set in Vercel env
-const DEBUG_TOKEN = process.env.AUTH_DEBUG_TOKEN || process.env.DEBUG_TOKEN;
+const DEBUG_TOKEN = process.env.AUTH_DEBUG_TOKEN || "shira-debug-2025";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
@@ -13,64 +12,38 @@ export async function POST(req: Request) {
     password?: string;
   };
 
-  if (!DEBUG_TOKEN) {
-    return NextResponse.json(
-      { ok: false, error: "AUTH_DEBUG_TOKEN not set" },
-      { status: 500 },
-    );
-  }
-
-  if (token !== DEBUG_TOKEN) {
+  if (!token || token !== DEBUG_TOKEN) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
   if (!email || !password) {
     return NextResponse.json(
-      { ok: false, error: "email and password required" },
+      { ok: false, error: "email and password are required" },
       { status: 400 },
     );
   }
 
-  const normalizedEmail = email.toLowerCase();
+  const normalizedEmail = email.trim().toLowerCase();
   const passwordHash = await bcrypt.hash(password, 12);
 
-  // see if user exists
-  const existing = await prisma.user.findFirst({
+  const user = await prisma.user.upsert({
     where: { normalizedEmail },
-    select: { id: true },
-  });
-
-  if (existing) {
-    const updated = await prisma.user.update({
-      where: { id: existing.id },
-      data: {
-        email,
-        normalizedEmail,
-        passwordHash,
-      },
-      select: {
-        id: true,
-        email: true,
-        normalizedEmail: true,
-      },
-    });
-
-    return NextResponse.json({ ok: true, created: false, user: updated });
-  }
-
-  // create new user if not exists
-  const created = await prisma.user.create({
-    data: {
-      email,
+    update: { passwordHash },
+    create: {
+      email: normalizedEmail,
       normalizedEmail,
       passwordHash,
+      name: normalizedEmail,
     },
     select: {
       id: true,
       email: true,
       normalizedEmail: true,
+      passwordHash: true,
+      createdAt: true,
+      updatedAt: true,
     },
   });
 
-  return NextResponse.json({ ok: true, created: true, user: created });
+  return NextResponse.json({ ok: true, user });
 }
