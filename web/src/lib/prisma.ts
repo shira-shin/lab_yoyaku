@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -14,15 +14,12 @@ if (process.env.NODE_ENV === "production" && directUrl) {
   process.env.DATABASE_URL = directUrl;
 }
 
-const prismaConfig: Prisma.PrismaClientOptions = {
-  log: ["warn", "error"],
-};
-
-if (runtimeUrl) {
-  prismaConfig.datasources = { db: { url: runtimeUrl } };
-}
-
-const prisma = globalThis.prismaGlobal ?? new PrismaClient(prismaConfig);
+const prisma =
+  globalThis.prismaGlobal ??
+  new PrismaClient({
+    log: ["warn", "error"],
+    ...(runtimeUrl ? { datasources: { db: { url: runtimeUrl } } } : {}),
+  });
 
 if (process.env.NODE_ENV !== "production") {
   globalThis.prismaGlobal = prisma;

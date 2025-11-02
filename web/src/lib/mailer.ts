@@ -1,4 +1,4 @@
-import nodemailer, { type SendMailOptions, type Transporter } from "nodemailer";
+import nodemailer, { type MailOptions, type Transporter } from "nodemailer";
 
 export type SmtpConfig = {
   host: string | null;
@@ -86,7 +86,7 @@ export function isSmtpConfigured() {
 }
 
 export async function sendMail(
-  options: Omit<SendMailOptions, "from"> & { from?: string },
+  options: Omit<MailOptions, "from"> & { from?: string },
 ): Promise<MailSendResult> {
   const cfg = getSmtpConfig();
   const transporter = ensureTransporter(cfg);
@@ -94,7 +94,7 @@ export async function sendMail(
     return { ok: false, reason: "missing-config" } as const;
   }
 
-  const payload: SendMailOptions = {
+  const payload: MailOptions = {
     ...options,
     from: options.from ?? cfg.from,
   };

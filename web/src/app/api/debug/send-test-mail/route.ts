@@ -42,40 +42,41 @@ export async function POST() {
     html: `<p>このメールが届けば、SMTP 設定は動作しています。</p>`,
   });
 
-  if (result.ok) {
-    console.info("[debug/send-test-mail] sent", { to: viewer.email });
-    return NextResponse.json({ ok: true });
-  }
+  if (result.ok === false) {
+    const { reason, error } = result;
+    const cfg = getSmtpConfig();
+    const mappedReason = reason === "missing-config" ? "smtp-not-configured" : "smtp-failed";
 
-  const cfg = getSmtpConfig();
-  const reason = result.reason === "missing-config" ? "smtp-not-configured" : "smtp-failed";
-
-  if (result.reason === "missing-config") {
-    console.warn("[debug/send-test-mail] smtp missing config", {
-      hasHost: !!cfg.host,
-      hasPort: !!cfg.port,
-      secure: cfg.secure,
-      hasUser: !!cfg.user,
-      hasPass: !!cfg.pass,
-      hasFrom: !!cfg.from,
-    });
-  } else {
-    console.error("[debug/send-test-mail] send error", result.error);
-  }
-
-  return NextResponse.json(
-    {
-      ok: false,
-      reason,
-      smtp: {
-        host: cfg.host,
-        port: cfg.port,
+    if (reason === "missing-config") {
+      console.warn("[debug/send-test-mail] smtp missing config", {
+        hasHost: !!cfg.host,
+        hasPort: !!cfg.port,
         secure: cfg.secure,
         hasUser: !!cfg.user,
         hasPass: !!cfg.pass,
         hasFrom: !!cfg.from,
+      });
+    } else {
+      console.error("[debug/send-test-mail] send error", error);
+    }
+
+    return NextResponse.json(
+      {
+        ok: false,
+        reason: mappedReason,
+        smtp: {
+          host: cfg.host,
+          port: cfg.port,
+          secure: cfg.secure,
+          hasUser: !!cfg.user,
+          hasPass: !!cfg.pass,
+          hasFrom: !!cfg.from,
+        },
       },
-    },
-    { status: 200 },
-  );
+      { status: 200 },
+    );
+  }
+
+  console.info("[debug/send-test-mail] sent", { to: viewer.email });
+  return NextResponse.json({ ok: true });
 }
