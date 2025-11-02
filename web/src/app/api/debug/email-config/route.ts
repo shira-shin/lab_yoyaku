@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
 
-import { getSmtpConfig, isSmtpUsable } from "@/lib/mailer";
+import { getSmtpConfig, isSmtpConfigured } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   const cfg = getSmtpConfig();
   return NextResponse.json({
-    mailProvider: cfg.provider,
-    smtpUsable: isSmtpUsable(),
-    host: cfg.host ? true : false,
-    user: cfg.user ? true : false,
-    pass: cfg.pass ? true : false,
+    smtpConfigured: isSmtpConfigured(),
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.secure,
+    hasUser: Boolean(cfg.user),
+    hasPass: Boolean(cfg.pass),
+    hasFrom: Boolean(cfg.from),
     mailFrom: cfg.from,
   });
 }
