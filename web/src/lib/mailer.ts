@@ -2,7 +2,7 @@ import nodemailer, { type Transporter } from "nodemailer";
 
 const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
-const SMTP_SECURE_ENV = process.env.SMTP_SECURE;
+const SMTP_SECURE = process.env.SMTP_SECURE; // "true" | "false" | undefined
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || "";
@@ -17,12 +17,12 @@ type MailerConfig = {
 };
 
 function decideSecure(host: string, port: number, secureEnv?: string) {
-  if (secureEnv === "true") return true;
+  // env が明示してる場合は基本的に従う
+  if (secureEnv === "true") return port === 465 ? true : false;
   if (secureEnv === "false") return false;
 
-  if (host === "smtp.gmail.com" && port === 587) {
-    return false;
-  }
+  // Gmail 587 は STARTTLS 前提なので false
+  if (host === "smtp.gmail.com" && port === 587) return false;
 
   if (port === 465) return true;
 
@@ -30,11 +30,13 @@ function decideSecure(host: string, port: number, secureEnv?: string) {
 }
 
 function buildMailerConfig(): MailerConfig {
-  let secure = decideSecure(SMTP_HOST, SMTP_PORT, SMTP_SECURE_ENV);
+  let secure = decideSecure(SMTP_HOST, SMTP_PORT, SMTP_SECURE);
 
-  if (SMTP_PORT === 587 && secure) {
+  const isGmail587 = SMTP_HOST === "smtp.gmail.com" && SMTP_PORT === 587;
+
+  if (isGmail587 && secure) {
     console.log(
-      "[mailer] port=587 but secure=true was requested; forcing secure=false for STARTTLS",
+      "[mailer] port=587 on Gmail, forcing secure=false for STARTTLS",
     );
     secure = false;
   }
@@ -52,17 +54,15 @@ function buildMailerConfig(): MailerConfig {
 export function makeTransport() {
   const config = buildMailerConfig();
 
-  console.log("[mailer] config", config);
-
   if (!SMTP_USER || !SMTP_PASS) {
     throw new Error("SMTP_USER or SMTP_PASS is missing in environment");
   }
 
-  const tlsOptions = config.host === "smtp.gmail.com"
-    ? { minVersion: "TLSv1.2" as const, servername: config.host }
-    : undefined;
+  const isGmail587 =
+    config.host === "smtp.gmail.com" && Number(config.port) === 587;
 
-  const transporter = nodemailer.createTransport({
+  // nodemailer に渡す基本オプション
+  const transportOptions: nodemailer.TransportOptions = {
     host: config.host,
     port: config.port,
     secure: config.secure,
@@ -70,8 +70,28 @@ export function makeTransport() {
       user: SMTP_USER,
       pass: SMTP_PASS,
     },
-    requireTLS: config.port === 587,
-    tls: tlsOptions,
+    // TLS自体のオプションはここに寄せる（これは型にある）
+    tls: {
+      minVersion: "TLSv1.2",
+      servername: config.host,
+    },
+  };
+
+  // ★ nodemailer の型にはないが Gmail 587 で強く STARTTLS を要求したい場合だけ後から付ける
+  if (isGmail587) {
+    (transportOptions as any).requireTLS = true;
+  }
+
+  const transporter = nodemailer.createTransport(transportOptions);
+
+  console.log("[mailer] config", {
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    user: config.user,
+    hasPass: config.hasPass,
+    from: config.from,
+    gmail587: isGmail587,
   });
 
   return { transporter, from: config.from };
