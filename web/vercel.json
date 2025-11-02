@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --workspace-root run prisma:migrate:deploy && pnpm build",
+  "buildCommand": "pnpm --workspace-root run migrate:deploy && pnpm build",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": "nextjs"
 }

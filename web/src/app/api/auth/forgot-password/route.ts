@@ -81,11 +81,10 @@ export async function POST(req: Request) {
   }
 
   console.info(
-    "[auth/forgot-password] manual reset URL available",
+    "[auth/forgot-password] manual reset required",
     {
       email: targetEmail,
-      resetUrl,
-      message: "このURLをブラウザで開けばリセットできます",
+      message: "レスキュー対応として、返却された resetUrl を信頼できる経路で送付してください",
     },
   );
 

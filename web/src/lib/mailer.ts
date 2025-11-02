@@ -19,8 +19,10 @@ function parsePort(raw: string | undefined | null): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function parseSecure(raw: string | undefined | null): boolean {
-  if (!raw) return true;
+function parseSecure(raw: string | undefined | null, port: number | null): boolean {
+  if (!raw) {
+    return port === 465;
+  }
   const normalized = raw.trim().toLowerCase();
   if (["0", "false", "no", "off"].includes(normalized)) {
     return false;
@@ -31,7 +33,7 @@ function parseSecure(raw: string | undefined | null): boolean {
 function readEnvConfig(): SmtpConfig {
   const host = process.env.SMTP_HOST ?? "smtp.gmail.com";
   const port = parsePort(process.env.SMTP_PORT);
-  const secure = parseSecure(process.env.SMTP_SECURE);
+  const secure = parseSecure(process.env.SMTP_SECURE, port);
   const user = process.env.SMTP_USER ?? null;
   const pass = process.env.SMTP_PASS ?? null;
   const from = process.env.MAIL_FROM ?? null;
