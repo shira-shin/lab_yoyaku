@@ -20,17 +20,24 @@ function decideSecure(host: string, port: number, secureEnv?: string) {
   if (secureEnv === "true") return true;
   if (secureEnv === "false") return false;
 
-  if (host === "smtp.gmail.com") {
-    if (port === 465) return true;
+  if (host === "smtp.gmail.com" && port === 587) {
     return false;
   }
 
   if (port === 465) return true;
+
   return false;
 }
 
 function buildMailerConfig(): MailerConfig {
-  const secure = decideSecure(SMTP_HOST, SMTP_PORT, SMTP_SECURE_ENV);
+  let secure = decideSecure(SMTP_HOST, SMTP_PORT, SMTP_SECURE_ENV);
+
+  if (SMTP_PORT === 587 && secure) {
+    console.log(
+      "[mailer] port=587 but secure=true was requested; forcing secure=false for STARTTLS",
+    );
+    secure = false;
+  }
 
   return {
     host: SMTP_HOST,
@@ -51,6 +58,10 @@ export function makeTransport() {
     throw new Error("SMTP_USER or SMTP_PASS is missing in environment");
   }
 
+  const tlsOptions = config.host === "smtp.gmail.com"
+    ? { minVersion: "TLSv1.2" as const, servername: config.host }
+    : undefined;
+
   const transporter = nodemailer.createTransport({
     host: config.host,
     port: config.port,
@@ -59,6 +70,8 @@ export function makeTransport() {
       user: SMTP_USER,
       pass: SMTP_PASS,
     },
+    requireTLS: config.port === 587,
+    tls: tlsOptions,
   });
 
   return { transporter, from: config.from };
