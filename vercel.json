@@ -1,4 +1,6 @@
 {
+  "version": 2,
   "buildCommand": "pnpm --workspace-root run migrate:deploy && pnpm build",
-  "installCommand": "pnpm install --no-frozen-lockfile"
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "framework": "nextjs"
 }
