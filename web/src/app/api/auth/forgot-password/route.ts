@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
-import { getSmtpConfig, isSmtpUsable, sendPasswordResetMail } from "@/lib/mailer";
+import { getSmtpConfig, isSmtpConfigured, sendPasswordResetMail } from "@/lib/mailer";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -53,38 +53,55 @@ export async function POST(req: Request) {
     },
   });
 
-  if (!isSmtpUsable()) {
-    const cfg = getSmtpConfig();
-    console.warn("[auth/forgot-password] smtp not usable", cfg);
-    return NextResponse.json({
-      ok: false,
-      delivery: "skipped:missing-smtp" as const,
-      resetUrl,
-      smtp: {
-        provider: cfg.provider,
-        hasHost: !!cfg.host,
-        hasUser: !!cfg.user,
-        hasPass: !!cfg.pass,
-      },
-    });
-  }
+  const targetEmail = user.email ?? normalizedEmail;
+  const mailResult = await sendPasswordResetMail(targetEmail, resetUrl);
 
-  try {
-    await sendPasswordResetMail(normalizedEmail, resetUrl);
+  if (mailResult.ok) {
     return NextResponse.json({
       ok: true,
       delivery: "sent" as const,
       resetUrl,
     });
-  } catch (err) {
-    console.error("[auth/forgot-password] send error", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        delivery: "failed:send-error" as const,
-        resetUrl,
-      },
-      { status: 200 },
-    );
   }
+
+  const cfg = getSmtpConfig();
+  const reason = mailResult.reason === "missing-config" ? "smtp-not-configured" : "smtp-failed";
+
+  if (mailResult.reason === "missing-config") {
+    console.warn("[auth/forgot-password] smtp not configured", {
+      hasHost: !!cfg.host,
+      hasPort: !!cfg.port,
+      secure: cfg.secure,
+      hasUser: !!cfg.user,
+      hasPass: !!cfg.pass,
+      hasFrom: !!cfg.from,
+    });
+  } else {
+    console.error("[auth/forgot-password] send error", mailResult.error);
+  }
+
+  console.info(
+    "[auth/forgot-password] manual reset URL available",
+    {
+      email: targetEmail,
+      resetUrl,
+      message: "このURLをブラウザで開けばリセットできます",
+    },
+  );
+
+  return NextResponse.json({
+    ok: false,
+    reason,
+    delivery: mailResult.reason === "missing-config" ? "skipped:missing-smtp" : "failed:send-error",
+    resetUrl,
+    smtp: {
+      host: cfg.host,
+      port: cfg.port,
+      secure: cfg.secure,
+      hasUser: !!cfg.user,
+      hasPass: !!cfg.pass,
+      hasFrom: !!cfg.from,
+      configured: isSmtpConfigured(),
+    },
+  });
 }
