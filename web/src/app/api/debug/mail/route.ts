@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { sendAppMail } from "@/lib/mailer";
+import { sendMail } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 
@@ -16,11 +16,7 @@ export async function POST(req: Request) {
       );
     }
 
-    await sendAppMail({
-      to,
-      subject: "SMTP debug",
-      text: "This is a debug mail from lab_yoyaku.",
-    });
+    await sendMail(to, "SMTP debug", "This is a debug mail from lab_yoyaku.");
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {

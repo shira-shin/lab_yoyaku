@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 
 import { auth, normalizeEmail } from "@/lib/auth-legacy";
-import { getMailerConfig, isSmtpConfigured, sendAppMail } from "@/lib/mailer";
+import { getMailerConfig, isSmtpConfigured, sendMail } from "@/lib/mailer";
 import { prisma } from "@/lib/prisma";
 
 function normalize(value: string | null | undefined) {
@@ -36,12 +36,12 @@ export async function POST() {
   }
 
   try {
-    await sendAppMail({
-      to: viewer.email,
-      subject: "Lab Yoyaku SMTP テストメール",
-      text: `このメールが届けば、SMTP 設定は動作しています。`,
-      html: `<p>このメールが届けば、SMTP 設定は動作しています。</p>`,
-    });
+    await sendMail(
+      viewer.email,
+      "Lab Yoyaku SMTP テストメール",
+      `<p>このメールが届けば、SMTP 設定は動作しています。</p>`,
+      "このメールが届けば、SMTP 設定は動作しています。",
+    );
 
     console.info("[debug/send-test-mail] sent", { to: viewer.email });
     return NextResponse.json({ ok: true });

@@ -1,80 +1,47 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
-import { sendAppMail } from "@/lib/mailer";
-import { prisma } from "@/lib/prisma";
+import { sendMail } from "@/lib/mailer";
 
 export const runtime = "nodejs";
 
-const TOKEN_TTL_MINUTES = 30;
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://labyoyaku.vercel.app";
+const RESET_SECRET = process.env.PASSWORD_RESET_SECRET || "dev-secret-change-me";
+const TOKEN_TTL_SEC = 60 * 30;
 
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
-}
-
-function hashToken(token: string) {
-  return crypto.createHash("sha256").update(token).digest("hex");
+function makeResetToken(email: string) {
+  const exp = Math.floor(Date.now() / 1000) + TOKEN_TTL_SEC;
+  const payload = `${email}:${exp}`;
+  const sig = crypto.createHmac("sha256", RESET_SECRET).update(payload).digest("hex");
+  const raw = JSON.stringify({ email, exp, sig });
+  return Buffer.from(raw).toString("base64url");
 }
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null);
-  const email = typeof body?.email === "string" ? body.email.trim() : null;
-
-  if (!email) {
-    return NextResponse.json({ error: "invalid payload" }, { status: 400 });
-  }
-
-  const normalizedEmail = normalizeEmail(email);
-  const user = await prisma.user.findUnique({
-    where: { normalizedEmail },
-    select: { id: true, email: true },
-  });
-
-  if (!user) {
-    return NextResponse.json({
-      ok: true,
-      delivery: "skipped:user-not-found" as const,
-      resetUrl: null,
-    });
-  }
-
-  const token = crypto.randomBytes(32).toString("base64url");
-  const baseUrl =
-    process.env.BASE_URL ||
-    `https://${req.headers.get("host") ?? "labyoyaku.vercel.app"}`;
-  const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
-
-  await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
-  await prisma.passwordResetToken.create({
-    data: {
-      tokenHash: hashToken(token),
-      userId: user.id,
-      expiresAt: new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000),
-    },
-  });
-
-  const targetEmail = user.email ?? normalizedEmail;
   try {
-    console.log("[forgot-password] sending mail to", targetEmail, "with url", resetUrl);
+    const { email } = await req.json();
 
-    await sendAppMail({
-      to: targetEmail,
-      subject: "Password reset",
-      text: `Reset your password: ${resetUrl}`,
-      html: `<p>Reset your password:</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
-    });
+    if (!email || typeof email !== "string") {
+      return NextResponse.json({ ok: false, error: "EMAIL_REQUIRED" }, { status: 400 });
+    }
 
-    return NextResponse.json({
-      ok: true,
-    });
+    const targetEmail = email.trim();
+    const token = makeResetToken(targetEmail);
+    const resetUrl = `${APP_URL}/reset-password?token=${token}`;
+
+    console.log("[forgot-password] will send mail", { email: targetEmail, resetUrl });
+
+    await sendMail(
+      targetEmail,
+      "Password reset",
+      `<p>To reset your password, click the link below (valid 30min):</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
+    );
+
+    return NextResponse.json({ ok: true });
   } catch (err: any) {
     console.error("[forgot-password] ERROR", err?.message || err);
     return NextResponse.json(
-      {
-        ok: false,
-        error: "MAIL_SEND_FAILED",
-        detail: err?.message || String(err),
-      },
+      { ok: false, error: err?.message || String(err) },
       { status: 500 },
     );
   }

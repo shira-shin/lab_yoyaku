@@ -1,18 +1,13 @@
 import nodemailer from "nodemailer";
 
-const host = process.env.SMTP_HOST || "smtp.gmail.com";
-const port = Number(process.env.SMTP_PORT || 587);
-const secure = process.env.SMTP_SECURE === "true" ? true : false;
-const user = process.env.SMTP_USER;
-const pass = process.env.SMTP_PASS;
-const from = process.env.SMTP_FROM || process.env.SMTP_USER || "";
+const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_SECURE = process.env.SMTP_SECURE === "true" ? true : false;
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
+const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || "";
 
-if (!user || !pass) {
-  // ここでthrowはしない。API側で検出する。
-  console.warn("[mailer] SMTP_USER or SMTP_PASS is missing");
-}
-
-export type MailerConfig = {
+type MailerConfig = {
   host: string;
   port: number;
   secure: boolean;
@@ -22,26 +17,59 @@ export type MailerConfig = {
 };
 
 const mailerConfig: MailerConfig = {
-  host,
-  port,
-  secure,
-  user,
-  hasPass: !!pass,
-  from,
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+  secure: SMTP_SECURE,
+  user: SMTP_USER,
+  hasPass: !!SMTP_PASS,
+  from: SMTP_FROM,
 };
 
-export function getTransport() {
+export function makeTransport() {
+  console.log("[mailer] config", {
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE,
+    user: SMTP_USER,
+    hasPass: !!SMTP_PASS,
+    from: SMTP_FROM,
+  });
+
+  if (!SMTP_USER || !SMTP_PASS) {
+    throw new Error("SMTP_USER or SMTP_PASS is missing in environment");
+  }
+
   const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE,
     auth: {
-      user,
-      pass,
+      user: SMTP_USER,
+      pass: SMTP_PASS,
     },
   });
 
-  return { transporter, from, config: { host, port, secure, user, hasPass: !!pass } };
+  return { transporter, from: SMTP_FROM };
+}
+
+export async function sendMail(
+  to: string,
+  subject: string,
+  html: string,
+  text?: string,
+) {
+  const { transporter, from } = makeTransport();
+
+  const info = await transporter.sendMail({
+    from,
+    to,
+    subject,
+    html,
+    text: text || html,
+  });
+
+  console.log("[mailer] sent", { messageId: info.messageId, to });
+  return info;
 }
 
 export function getMailerConfig(): MailerConfig {
@@ -49,34 +77,14 @@ export function getMailerConfig(): MailerConfig {
 }
 
 export function isSmtpConfigured() {
-  return Boolean(mailerConfig.user && mailerConfig.hasPass);
+  return Boolean(SMTP_USER && SMTP_PASS);
 }
 
-export async function sendAppMail(opts: { to: string; subject: string; text?: string; html?: string }) {
-  const { transporter, from, config } = getTransport();
-
-  // デプロイでなにが入ってるか見たいのでlogする（passは出さない）
-  console.log("[mailer] using config", {
-    host: config.host,
-    port: config.port,
-    secure: config.secure,
-    user: config.user,
-    hasPass: config.hasPass,
-    from,
-  });
-
-  if (!config.user || !config.hasPass) {
-    throw new Error("SMTP is not configured (missing user/pass)");
-  }
-
-  const info = await transporter.sendMail({
-    from,
-    to: opts.to,
-    subject: opts.subject,
-    text: opts.text,
-    html: opts.html,
-  });
-
-  console.log("[mailer] sendMail result", info.messageId || info);
-  return info;
+export async function sendAppMail(opts: {
+  to: string;
+  subject: string;
+  text?: string;
+  html?: string;
+}) {
+  return sendMail(opts.to, opts.subject, opts.html ?? opts.text ?? "", opts.text);
 }
