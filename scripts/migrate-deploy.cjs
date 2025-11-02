@@ -1,6 +1,12 @@
 const path = require("node:path");
-const fs = require("node:fs/promises");
+const fs = require("node:fs");
 const { spawnSync } = require("node:child_process");
+
+const cwd = path.resolve(__dirname, "../web");
+const sqlPath = path.resolve(
+  __dirname,
+  "../web/scripts/sql/backfill_normalized_email.sql",
+);
 
 const run = (cmd, { cwd = process.cwd(), env = process.env } = {}) => {
   console.log("[migrate] run:", cmd);
@@ -34,14 +40,18 @@ const getCommandOutput = (error) => {
   return `${stdout}\n${stderr}`;
 };
 
-const findInitMigration = async () => {
+const findInitMigration = () => {
   const migrationsPath = path.resolve(cwd, "prisma/migrations");
-  const entries = await fs.readdir(migrationsPath, { withFileTypes: true });
+  if (!fs.existsSync(migrationsPath)) {
+    return null;
+  }
+
+  const entries = fs.readdirSync(migrationsPath, { withFileTypes: true });
   const initMigration = entries.find(
     (entry) => entry.isDirectory() && entry.name.endsWith("_init")
   );
 
-  return initMigration?.name;
+  return initMigration?.name ?? null;
 };
 
 const migrateCommand =
@@ -53,17 +63,13 @@ const runMigrateWithSelfHeal = async () => {
     return;
   } catch (error) {
     const output = getCommandOutput(error);
-    if (!output.includes("P3009") || !output.includes("The `init` migration started at")) {
-      throw error;
-    }
-
-    const initMigration = await findInitMigration();
-    if (!initMigration) {
+    const initMigration = findInitMigration();
+    if (!output.includes("P3009") || !initMigration) {
       throw error;
     }
 
     console.log(
-      "[migrate] detected P3009 for init, attempting prisma migrate resolve --rolled-back ..."
+      `[migrate] detected P3009, trying to resolve failed init: ${initMigration}`
     );
     run(
       `pnpm exec prisma migrate resolve --schema=./prisma/schema.prisma --rolled-back ${initMigration}`,
@@ -83,12 +89,6 @@ const runMigrateWithSelfHeal = async () => {
   }
 };
 
-const cwd = path.resolve(__dirname, "../web");
-const sqlPath = path.resolve(
-  __dirname,
-  "../web/scripts/sql/backfill_normalized_email.sql"
-);
-
 async function backfillNormalizedEmails() {
   const directUrl = process.env.DIRECT_URL;
   if (!directUrl) {
@@ -98,10 +98,8 @@ async function backfillNormalizedEmails() {
     return;
   }
 
-  try {
-    await fs.access(sqlPath);
-  } catch (error) {
-    console.warn("[migrate] backfill SQL not found", error);
+  if (!fs.existsSync(sqlPath)) {
+    console.warn("[migrate] backfill SQL not found");
     return;
   }
 

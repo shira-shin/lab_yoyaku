@@ -54,54 +54,85 @@ export async function POST(req: Request) {
   });
 
   const targetEmail = user.email ?? normalizedEmail;
-  const mailResult = await sendPasswordResetMail(targetEmail, resetUrl);
+  const smtpConfig = getSmtpConfig();
+  const smtpConfigured = isSmtpConfigured();
+  const smtpSnapshot = {
+    host: smtpConfig.host,
+    port: smtpConfig.port,
+    secure: smtpConfig.secure,
+    hasHost: !!smtpConfig.host,
+    hasPort: !!smtpConfig.port,
+    hasUser: !!smtpConfig.user,
+    hasPass: !!smtpConfig.pass,
+    hasFrom: !!smtpConfig.from,
+    configured: smtpConfigured,
+  };
+  const manualResetLog = {
+    email: targetEmail,
+    resetUrl,
+    message: "このURLをブラウザで開けばリセットできます",
+  };
 
-  if (mailResult.ok) {
+  if (!smtpConfigured) {
+    console.warn("[auth/forgot-password] SMTP not configured, skipping actual send", {
+      hasHost: !!smtpConfig.host,
+      hasPort: !!smtpConfig.port,
+      secure: smtpConfig.secure,
+      hasUser: !!smtpConfig.user,
+      hasPass: !!smtpConfig.pass,
+      hasFrom: !!smtpConfig.from,
+      configured: smtpConfigured,
+    });
+    console.info("[auth/forgot-password] manual reset URL available", manualResetLog);
     return NextResponse.json({
       ok: true,
-      delivery: "sent" as const,
+      delivery: "skipped:missing-smtp" as const,
       resetUrl,
+      sent: false,
     });
   }
 
-  const cfg = getSmtpConfig();
-  const reason = mailResult.reason === "missing-config" ? "smtp-not-configured" : "smtp-failed";
+  const mailResult = await sendPasswordResetMail(targetEmail, resetUrl);
 
-  if (mailResult.reason === "missing-config") {
-    console.warn("[auth/forgot-password] smtp not configured", {
-      hasHost: !!cfg.host,
-      hasPort: !!cfg.port,
-      secure: cfg.secure,
-      hasUser: !!cfg.user,
-      hasPass: !!cfg.pass,
-      hasFrom: !!cfg.from,
-    });
-  } else {
-    console.error("[auth/forgot-password] send error", mailResult.error);
-  }
+  if (mailResult.ok === false) {
+    const { reason, error } = mailResult;
 
-  console.info(
-    "[auth/forgot-password] manual reset URL available",
-    {
-      email: targetEmail,
+    if (reason === "missing-config") {
+      console.warn("[auth/forgot-password] SMTP reported missing config at send time", {
+        hasHost: !!smtpConfig.host,
+        hasPort: !!smtpConfig.port,
+        secure: smtpConfig.secure,
+        hasUser: !!smtpConfig.user,
+        hasPass: !!smtpConfig.pass,
+        hasFrom: !!smtpConfig.from,
+        configured: smtpConfigured,
+      });
+      console.info("[auth/forgot-password] manual reset URL available", manualResetLog);
+      return NextResponse.json({
+        ok: true,
+        delivery: "skipped:missing-smtp" as const,
+        resetUrl,
+        sent: false,
+      });
+    }
+
+    console.error("[auth/forgot-password] send error", error);
+    console.info("[auth/forgot-password] manual reset URL available", manualResetLog);
+
+    return NextResponse.json({
+      ok: false,
+      reason: "smtp-failed" as const,
+      delivery: "failed:send-error" as const,
       resetUrl,
-      message: "このURLをブラウザで開けばリセットできます",
-    },
-  );
+      sent: false,
+      smtp: smtpSnapshot,
+    });
+  }
 
   return NextResponse.json({
-    ok: false,
-    reason,
-    delivery: mailResult.reason === "missing-config" ? "skipped:missing-smtp" : "failed:send-error",
+    ok: true,
+    delivery: "sent" as const,
     resetUrl,
-    smtp: {
-      host: cfg.host,
-      port: cfg.port,
-      secure: cfg.secure,
-      hasUser: !!cfg.user,
-      hasPass: !!cfg.pass,
-      hasFrom: !!cfg.from,
-      configured: isSmtpConfigured(),
-    },
+    sent: true,
   });
 }
