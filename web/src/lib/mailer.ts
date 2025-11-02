@@ -1,112 +1,81 @@
-import nodemailer, { type Transporter } from "nodemailer";
+// web/src/lib/mailer.ts
+import nodemailer from "nodemailer";
 
-const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
-const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
-const SMTP_SECURE = process.env.SMTP_SECURE; // "true" | "false" | undefined
-const SMTP_USER = process.env.SMTP_USER;
-const SMTP_PASS = process.env.SMTP_PASS;
-const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || "";
+const SMTP_HOST = process.env.SMTP_HOST ?? "smtp.gmail.com";
+const SMTP_PORT = Number(process.env.SMTP_PORT ?? "587");
+const SMTP_USER = process.env.SMTP_USER ?? "";
+const SMTP_PASS = process.env.SMTP_PASS ?? "";
+const SMTP_FROM =
+  process.env.SMTP_FROM ?? (SMTP_USER ? SMTP_USER : "noreply@example.com");
 
-type MailerConfig = {
-  host: string;
-  port: number;
-  secure: boolean;
-  user: string | undefined;
-  hasPass: boolean;
-  from: string;
-};
-
-function decideSecure(host: string, port: number, secureEnv?: string) {
-  // env が明示してる場合は基本的に従う
-  if (secureEnv === "true") return port === 465 ? true : false;
-  if (secureEnv === "false") return false;
-
-  // Gmail 587 は STARTTLS 前提なので false
+/**
+ * Gmail 587 のときは secure=false にして STARTTLS に寄せる。
+ * 465 のときだけ secure=true (implicit TLS)。
+ */
+function decideSecure(host: string, port: number): boolean {
   if (host === "smtp.gmail.com" && port === 587) return false;
-
   if (port === 465) return true;
-
   return false;
 }
 
-function buildMailerConfig(): MailerConfig {
-  let secure = decideSecure(SMTP_HOST, SMTP_PORT, SMTP_SECURE);
+export function makeTransport() {
+  if (!SMTP_USER || !SMTP_PASS) {
+    throw new Error(
+      "[mailer] SMTP_USER / SMTP_PASS が設定されていません (env を確認してください)"
+    );
+  }
 
   const isGmail587 = SMTP_HOST === "smtp.gmail.com" && SMTP_PORT === 587;
 
-  if (isGmail587 && secure) {
-    console.log(
-      "[mailer] port=587 on Gmail, forcing secure=false for STARTTLS",
-    );
-    secure = false;
-  }
-
-  return {
+  const transportOptions = {
     host: SMTP_HOST,
     port: SMTP_PORT,
-    secure,
-    user: SMTP_USER,
-    hasPass: !!SMTP_PASS,
-    from: SMTP_FROM,
-  };
-}
-
-export function makeTransport() {
-  const config = buildMailerConfig();
-
-  if (!SMTP_USER || !SMTP_PASS) {
-    throw new Error("SMTP_USER or SMTP_PASS is missing in environment");
-  }
-
-  const isGmail587 =
-    config.host === "smtp.gmail.com" && Number(config.port) === 587;
-
-  // nodemailer に渡す基本オプション
-  const transportOptions: nodemailer.TransportOptions = {
-    host: config.host,
-    port: config.port,
-    secure: config.secure,
+    secure: decideSecure(SMTP_HOST, SMTP_PORT),
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,
     },
-    // TLS自体のオプションはここに寄せる（これは型にある）
     tls: {
+      // Vercel ↔ Gmail でよく出た SSL routines:... を避けるために最低限 TLS1.2 にする
       minVersion: "TLSv1.2",
-      servername: config.host,
+      servername: SMTP_HOST,
     },
-  };
+  } as any;
 
-  // ★ nodemailer の型にはないが Gmail 587 で強く STARTTLS を要求したい場合だけ後から付ける
+  // nodemailer の型にないけど、Gmail:587 のときだけ requireTLS を付ける
   if (isGmail587) {
+    transportOptions.secure = false;
+    transportOptions.tls = {
+      ...(transportOptions.tls || {}),
+      rejectUnauthorized: true,
+    };
     (transportOptions as any).requireTLS = true;
   }
 
   const transporter = nodemailer.createTransport(transportOptions);
 
   console.log("[mailer] config", {
-    host: config.host,
-    port: config.port,
-    secure: config.secure,
-    user: config.user,
-    hasPass: config.hasPass,
-    from: config.from,
-    gmail587: isGmail587,
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: transportOptions.secure,
+    user: SMTP_USER,
+    hasPass: true,
+    from: SMTP_FROM,
+    isGmail587,
   });
 
-  return { transporter, from: config.from };
+  return { transporter, from: SMTP_FROM };
 }
 
-async function safeVerify(transporter: Transporter) {
-  const maybeVerify = (transporter as any).verify;
-  if (typeof maybeVerify === "function") {
+async function safeVerify(transporter: any) {
+  if (typeof transporter.verify === "function") {
     try {
-      await maybeVerify.call(transporter);
+      await transporter.verify();
     } catch (err) {
       console.warn("[mailer] verify failed but continue:", err);
     }
   } else {
-    console.log("[mailer] verify() not available on this transporter; skipping");
+    console.log("[mailer] verify() not available, skipping");
   }
 }
 
@@ -114,10 +83,9 @@ export async function sendMail(
   to: string,
   subject: string,
   html: string,
-  text?: string,
+  text?: string
 ) {
   const { transporter, from } = makeTransport();
-
   await safeVerify(transporter);
 
   const info = await transporter.sendMail({
@@ -125,26 +93,9 @@ export async function sendMail(
     to,
     subject,
     html,
-    text: text || html,
+    text: text ?? html,
   });
 
-  console.log("[mailer] sent", { messageId: info.messageId, to });
+  console.log("[mailer] sent", { to, messageId: info.messageId });
   return info;
-}
-
-export function getMailerConfig(): MailerConfig {
-  return buildMailerConfig();
-}
-
-export function isSmtpConfigured() {
-  return Boolean(SMTP_USER && SMTP_PASS);
-}
-
-export async function sendAppMail(opts: {
-  to: string;
-  subject: string;
-  text?: string;
-  html?: string;
-}) {
-  return sendMail(opts.to, opts.subject, opts.html ?? opts.text ?? "", opts.text);
 }
