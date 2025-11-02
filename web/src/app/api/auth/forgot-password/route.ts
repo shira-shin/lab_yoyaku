@@ -35,14 +35,18 @@ export async function POST(req: Request) {
     );
 
     return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    console.error("[forgot-password] ERROR", err);
-    return NextResponse.json(
-      {
+  } catch (err) {
+    console.error("[forgot-password] mail send failed", err);
+    return new NextResponse(
+      JSON.stringify({
         ok: false,
-        error: err?.message || String(err),
+        error: "MAIL_SEND_FAILED",
+        detail: (err as any)?.message ?? String(err),
+      }),
+      {
+        status: 500,
+        headers: { "content-type": "application/json" },
       },
-      { status: 500 },
     );
   }
 }
