@@ -16,6 +16,7 @@
   },
   "scripts": {
     "migrate:deploy": "node scripts/migrate-deploy.cjs",
+    "prisma:migrate:deploy": "pnpm run migrate:deploy",
     "prisma:gen:web": "cd web && prisma generate --schema=./prisma/schema.prisma",
     "build": "pnpm --filter web build"
   },
