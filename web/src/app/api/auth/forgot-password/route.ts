@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
-import { getSmtpConfig, isSmtpConfigured, sendPasswordResetMail } from "@/lib/mailer";
+import { sendAppMail } from "@/lib/mailer";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -54,85 +54,28 @@ export async function POST(req: Request) {
   });
 
   const targetEmail = user.email ?? normalizedEmail;
-  const smtpConfig = getSmtpConfig();
-  const smtpConfigured = isSmtpConfigured();
-  const smtpSnapshot = {
-    host: smtpConfig.host,
-    port: smtpConfig.port,
-    secure: smtpConfig.secure,
-    hasHost: !!smtpConfig.host,
-    hasPort: !!smtpConfig.port,
-    hasUser: !!smtpConfig.user,
-    hasPass: !!smtpConfig.pass,
-    hasFrom: !!smtpConfig.from,
-    configured: smtpConfigured,
-  };
-  const manualResetLog = {
-    email: targetEmail,
-    resetUrl,
-    message: "このURLをブラウザで開けばリセットできます",
-  };
+  try {
+    console.log("[forgot-password] sending mail to", targetEmail, "with url", resetUrl);
 
-  if (!smtpConfigured) {
-    console.warn("[auth/forgot-password] SMTP not configured, skipping actual send", {
-      hasHost: !!smtpConfig.host,
-      hasPort: !!smtpConfig.port,
-      secure: smtpConfig.secure,
-      hasUser: !!smtpConfig.user,
-      hasPass: !!smtpConfig.pass,
-      hasFrom: !!smtpConfig.from,
-      configured: smtpConfigured,
+    await sendAppMail({
+      to: targetEmail,
+      subject: "Password reset",
+      text: `Reset your password: ${resetUrl}`,
+      html: `<p>Reset your password:</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
     });
-    console.info("[auth/forgot-password] manual reset URL available", manualResetLog);
+
     return NextResponse.json({
       ok: true,
-      delivery: "skipped:missing-smtp" as const,
-      resetUrl,
-      sent: false,
     });
+  } catch (err: any) {
+    console.error("[forgot-password] ERROR", err?.message || err);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "MAIL_SEND_FAILED",
+        detail: err?.message || String(err),
+      },
+      { status: 500 },
+    );
   }
-
-  const mailResult = await sendPasswordResetMail(targetEmail, resetUrl);
-
-  if (mailResult.ok === false) {
-    const { reason, error } = mailResult;
-
-    if (reason === "missing-config") {
-      console.warn("[auth/forgot-password] SMTP reported missing config at send time", {
-        hasHost: !!smtpConfig.host,
-        hasPort: !!smtpConfig.port,
-        secure: smtpConfig.secure,
-        hasUser: !!smtpConfig.user,
-        hasPass: !!smtpConfig.pass,
-        hasFrom: !!smtpConfig.from,
-        configured: smtpConfigured,
-      });
-      console.info("[auth/forgot-password] manual reset URL available", manualResetLog);
-      return NextResponse.json({
-        ok: true,
-        delivery: "skipped:missing-smtp" as const,
-        resetUrl,
-        sent: false,
-      });
-    }
-
-    console.error("[auth/forgot-password] send error", error);
-    console.info("[auth/forgot-password] manual reset URL available", manualResetLog);
-
-    return NextResponse.json({
-      ok: false,
-      reason: "smtp-failed" as const,
-      delivery: "failed:send-error" as const,
-      resetUrl,
-      sent: false,
-      smtp: smtpSnapshot,
-    });
-  }
-
-  return NextResponse.json({
-    ok: true,
-    delivery: "sent" as const,
-    resetUrl,
-    sent: true,
-  });
 }

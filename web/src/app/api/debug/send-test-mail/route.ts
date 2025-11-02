@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 
 import { auth, normalizeEmail } from "@/lib/auth-legacy";
-import { getSmtpConfig, sendMail } from "@/lib/mailer";
+import { getMailerConfig, isSmtpConfigured, sendAppMail } from "@/lib/mailer";
 import { prisma } from "@/lib/prisma";
 
 function normalize(value: string | null | undefined) {
@@ -35,48 +35,41 @@ export async function POST() {
     return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
   }
 
-  const result = await sendMail({
-    to: viewer.email,
-    subject: "Lab Yoyaku SMTP テストメール",
-    text: `このメールが届けば、SMTP 設定は動作しています。`,
-    html: `<p>このメールが届けば、SMTP 設定は動作しています。</p>`,
-  });
+  try {
+    await sendAppMail({
+      to: viewer.email,
+      subject: "Lab Yoyaku SMTP テストメール",
+      text: `このメールが届けば、SMTP 設定は動作しています。`,
+      html: `<p>このメールが届けば、SMTP 設定は動作しています。</p>`,
+    });
 
-  if (result.ok === false) {
-    const { reason, error } = result;
-    const cfg = getSmtpConfig();
-    const mappedReason = reason === "missing-config" ? "smtp-not-configured" : "smtp-failed";
+    console.info("[debug/send-test-mail] sent", { to: viewer.email });
+    return NextResponse.json({ ok: true });
+  } catch (error: any) {
+    const cfg = getMailerConfig();
+    const configured = isSmtpConfigured();
 
-    if (reason === "missing-config") {
-      console.warn("[debug/send-test-mail] smtp missing config", {
-        hasHost: !!cfg.host,
-        hasPort: !!cfg.port,
-        secure: cfg.secure,
-        hasUser: !!cfg.user,
-        hasPass: !!cfg.pass,
-        hasFrom: !!cfg.from,
-      });
-    } else {
-      console.error("[debug/send-test-mail] send error", error);
+    if (!configured) {
+      console.warn("[debug/send-test-mail] smtp missing config", cfg);
+      return NextResponse.json(
+        {
+          ok: false,
+          reason: "smtp-not-configured" as const,
+          smtp: cfg,
+        },
+        { status: 200 },
+      );
     }
 
+    console.error("[debug/send-test-mail] send error", error?.message || error);
     return NextResponse.json(
       {
         ok: false,
-        reason: mappedReason,
-        smtp: {
-          host: cfg.host,
-          port: cfg.port,
-          secure: cfg.secure,
-          hasUser: !!cfg.user,
-          hasPass: !!cfg.pass,
-          hasFrom: !!cfg.from,
-        },
+        reason: "smtp-failed" as const,
+        smtp: cfg,
+        error: error?.message || String(error),
       },
       { status: 200 },
     );
   }
-
-  console.info("[debug/send-test-mail] sent", { to: viewer.email });
-  return NextResponse.json({ ok: true });
 }
