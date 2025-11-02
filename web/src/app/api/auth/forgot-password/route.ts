@@ -1,7 +1,6 @@
-import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-
 import { sendMail } from "@/lib/mailer";
+import crypto from "node:crypto";
 
 export const runtime = "nodejs";
 
@@ -20,28 +19,29 @@ function makeResetToken(email: string) {
 export async function POST(req: Request) {
   try {
     const { email } = await req.json();
-
-    if (!email || typeof email !== "string") {
+    if (!email) {
       return NextResponse.json({ ok: false, error: "EMAIL_REQUIRED" }, { status: 400 });
     }
 
-    const targetEmail = email.trim();
-    const token = makeResetToken(targetEmail);
+    const token = makeResetToken(email);
     const resetUrl = `${APP_URL}/reset-password?token=${token}`;
 
-    console.log("[forgot-password] will send mail", { email: targetEmail, resetUrl });
+    console.log("[forgot-password] will send mail", { email, resetUrl });
 
     await sendMail(
-      targetEmail,
+      email,
       "Password reset",
-      `<p>To reset your password, click the link below (valid 30min):</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
+      `<p>下のリンクからパスワードを再設定してください（30分有効）:</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
     );
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {
-    console.error("[forgot-password] ERROR", err?.message || err);
+    console.error("[forgot-password] ERROR", err);
     return NextResponse.json(
-      { ok: false, error: err?.message || String(err) },
+      {
+        ok: false,
+        error: err?.message || String(err),
+      },
       { status: 500 },
     );
   }
