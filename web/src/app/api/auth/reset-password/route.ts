@@ -2,52 +2,70 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
+import { normalizeEmail } from "@/lib/users";
 import { prisma } from "@/server/db/prisma";
 
 export const runtime = "nodejs";
 
-function hashToken(token: string) {
-  return crypto.createHash("sha256").update(token).digest("hex");
+const RESET_SECRET = process.env.PASSWORD_RESET_SECRET || "dev-secret-change-me";
+
+type ResetPayload = { email: string; exp: number; sig: string };
+
+function verifyToken(token: string) {
+  try {
+    const raw = Buffer.from(token, "base64url").toString("utf8");
+    const parsed = JSON.parse(raw) as ResetPayload;
+    if (!parsed.email || !parsed.sig || !parsed.exp) return null;
+
+    const payload = `${parsed.email}:${parsed.exp}`;
+    const expected = crypto.createHmac("sha256", RESET_SECRET).update(payload).digest("hex");
+    if (expected !== parsed.sig) return null;
+    if (parsed.exp < Math.floor(Date.now() / 1000)) return null;
+
+    return parsed.email;
+  } catch (error) {
+    console.error("[reset-password] verifyToken error", error);
+    return null;
+  }
 }
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null);
-  const token = typeof body?.token === "string" ? body.token : null;
-  const passwordInput =
-    typeof body?.password === "string"
-      ? body.password
-      : typeof body?.newPassword === "string"
-        ? body.newPassword
-        : null;
+  try {
+    const { token, newPassword, password } = await req.json();
+    const passwordInput = typeof newPassword === "string" ? newPassword : password;
 
-  if (!token || !passwordInput || passwordInput.length < 8) {
-    return NextResponse.json({ ok: false, error: "token and password required" }, { status: 400 });
-  }
+    if (!token || typeof token !== "string" || !passwordInput || passwordInput.length < 8) {
+      return NextResponse.json(
+        { ok: false, error: "token and password required" },
+        { status: 400 },
+      );
+    }
 
-  const record = await prisma.passwordResetToken.findUnique({
-    where: { tokenHash: hashToken(token) },
-    select: { id: true, userId: true, expiresAt: true },
-  });
+    const email = verifyToken(token);
+    if (!email) {
+      return NextResponse.json({ ok: false, error: "INVALID_OR_EXPIRED" }, { status: 400 });
+    }
 
-  if (!record) {
-    return NextResponse.json({ ok: false, error: "invalid token" }, { status: 400 });
-  }
+    const normalized = normalizeEmail(email);
+    const user = await prisma.user.findUnique({
+      where: { normalizedEmail: normalized },
+      select: { id: true },
+    });
 
-  if (record.expiresAt && record.expiresAt < new Date()) {
-    return NextResponse.json({ ok: false, error: "token expired" }, { status: 400 });
-  }
+    if (!user) {
+      return NextResponse.json({ ok: false, error: "USER_NOT_FOUND" }, { status: 404 });
+    }
 
-  const hash = await bcrypt.hash(passwordInput, 12);
-
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: record.userId },
+    const hash = await bcrypt.hash(passwordInput, 12);
+    await prisma.user.update({
+      where: { id: user.id },
       data: { passwordHash: hash },
-    }),
-    prisma.passwordResetToken.delete({
-      where: { id: record.id },
-    }),
-  ]);
+    });
 
-  return NextResponse.json({ ok: true }, { status: 200 });
+    console.log("[reset-password] token verified for", email);
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    console.error("[reset-password] ERROR", e?.message || e);
+    return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
+  }
 }
