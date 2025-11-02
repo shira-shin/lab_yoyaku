@@ -12,7 +12,7 @@ const WEB_SCHEMA = "./web/prisma/schema.prisma";
 const ROOT_SCHEMA = "./prisma/schema.prisma";
 const schema = fs.existsSync(WEB_SCHEMA) ? WEB_SCHEMA : ROOT_SCHEMA;
 
-// we know this is the bad one from Vercel logs
+// this is the one that keeps showing up in Vercel logs
 const BAD_MIGRATION_NAME = "20251029151251_init";
 
 function runGenerate() {
@@ -20,20 +20,21 @@ function runGenerate() {
 }
 
 function runOptionalBackfill() {
-  if (fs.existsSync("./scripts/sql/backfill_normalized_email.sql")) {
-    sh(
-      `pnpm exec prisma db execute --schema="${schema}" --file=./scripts/sql/backfill_normalized_email.sql`
-    );
+  const backfillPath = path.join("scripts", "sql", "backfill_normalized_email.sql");
+  if (fs.existsSync(backfillPath)) {
+    sh(`pnpm exec prisma db execute --schema="${schema}" --file=${backfillPath}`);
   }
 }
 
-// ← NEW: force delete the stuck row in _prisma_migrations
+// NEW: delete the stuck row via a temp file, because prisma 5.22 has no --command
 function forceDeleteStuckMigration() {
-  // this uses SQL because prisma migrate resolve couldn't roll it back (P3011)
-  const sql = `DELETE FROM "_prisma_migrations" WHERE "migration_name" = '${BAD_MIGRATION_NAME}';`;
-  const cmd = `pnpm exec prisma db execute --schema="${schema}" --command="${sql}"`;
+  const tmpFile = "./tmp-delete-stuck-migration.sql";
+  const sql = `DELETE FROM "_prisma_migrations" WHERE "migration_name" = '${BAD_MIGRATION_NAME}';\n`;
   try {
-    sh(cmd);
+    fs.writeFileSync(tmpFile, sql, "utf8");
+    console.log(`[migrate] wrote temp sql to ${tmpFile}`);
+    // run it
+    sh(`pnpm exec prisma db execute --schema="${schema}" --file=${tmpFile}`);
     console.log(
       `[migrate] deleted stuck migration row "${BAD_MIGRATION_NAME}" from _prisma_migrations`
     );
@@ -42,6 +43,14 @@ function forceDeleteStuckMigration() {
       "[migrate] could not delete stuck migration row, will continue anyway:",
       err?.message || err
     );
+  } finally {
+    try {
+      if (fs.existsSync(tmpFile)) {
+        fs.unlinkSync(tmpFile);
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 }
 
@@ -50,21 +59,15 @@ function runDeploy() {
     sh(`pnpm exec prisma migrate deploy --schema="${schema}"`);
     console.log("[migrate] deploy OK");
   } catch (err) {
-    const text = String(
-      err?.stdout || err?.stderr || err?.message || err
-    );
+    const text = String(err?.stdout || err?.stderr || err?.message || err);
     console.log("[migrate] deploy failed:", text);
-
-    // if it's the same dirty-migration error, DO NOT crash the build
     if (text.includes("P3009")) {
       console.log(
-        "[migrate] P3009 detected again, but we already tried to delete the stuck row. Continuing build..."
+        "[migrate] P3009 detected (failed init migration in DB) but we already tried to delete it. Allowing build to continue."
       );
-      return; // ← IMPORTANT: swallow P3009
+      return; // ← swallow P3009
     }
-
-    // other errors should still fail the build
-    throw err;
+    throw err; // other errors should still fail
   }
 }
 
