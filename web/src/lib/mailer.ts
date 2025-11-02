@@ -35,13 +35,19 @@ export function isSmtpConfigured() {
 const transporter = nodemailer.createTransport(getMailerConfig());
 
 // これを各APIが使う
-export async function sendMail(opts: {
-  to: string;
-  subject: string;
-  text?: string;
-  html?: string;
-  from?: string;
-}) {
+export async function sendMail(
+  arg1:
+    | {
+        to: string;
+        subject: string;
+        text?: string;
+        html?: string;
+        from?: string;
+      }
+    | string,
+  arg2?: string,
+  arg3?: string
+) {
   if (!isSmtpConfigured()) {
     console.warn("[mailer] SMTP not configured; skip sendMail()");
     return { skipped: true };
@@ -58,11 +64,28 @@ export async function sendMail(opts: {
     console.warn("[mailer] transporter.verify() failed, continue:", err);
   }
 
-  const from =
-    opts.from || process.env.MAIL_FROM || process.env.EMAIL_FROM || SMTP_USER;
+  // 1) 新しい呼び方: sendMail({ to, subject, html })
+  if (typeof arg1 === "object") {
+    const from =
+      arg1.from ||
+      process.env.MAIL_FROM ||
+      process.env.EMAIL_FROM ||
+      SMTP_USER;
+    return transporter.sendMail({
+      ...arg1,
+      from,
+    });
+  }
 
-  return transporter.sendMail({
-    ...opts,
-    from,
-  });
+  // 2) 古い呼び方: sendMail(to, subject, html)
+  const to = arg1;
+  const subject = arg2 || "";
+  const html = arg3;
+  const from = process.env.MAIL_FROM || process.env.EMAIL_FROM || SMTP_USER;
+
+  const message: any = { to, subject, from };
+  if (html) {
+    message.html = html;
+  }
+  return transporter.sendMail(message);
 }
