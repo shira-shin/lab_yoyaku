@@ -1,101 +1,68 @@
-// web/src/lib/mailer.ts
 import nodemailer from "nodemailer";
 
-const SMTP_HOST = process.env.SMTP_HOST ?? "smtp.gmail.com";
-const SMTP_PORT = Number(process.env.SMTP_PORT ?? "587");
-const SMTP_USER = process.env.SMTP_USER ?? "";
-const SMTP_PASS = process.env.SMTP_PASS ?? "";
-const SMTP_FROM =
-  process.env.SMTP_FROM ?? (SMTP_USER ? SMTP_USER : "noreply@example.com");
+const SMTP_HOST =
+  process.env.SMTP_HOST || process.env.MAIL_HOST || "smtp.gmail.com";
+const SMTP_PORT = Number(
+  process.env.SMTP_PORT || process.env.MAIL_PORT || 587
+);
+const SMTP_USER =
+  process.env.SMTP_USER || process.env.MAIL_USER || process.env.EMAIL_USER;
+const SMTP_PASS =
+  process.env.SMTP_PASS || process.env.MAIL_PASS || process.env.EMAIL_PASS;
 
-/**
- * Gmail 587 のときは secure=false にして STARTTLS に寄せる。
- * 465 のときだけ secure=true (implicit TLS)。
- */
-function decideSecure(host: string, port: number): boolean {
-  if (host === "smtp.gmail.com" && port === 587) return false;
-  if (port === 465) return true;
-  return false;
-}
+// Gmail:587 のときは必ず secure: false
+const isGmail587 = SMTP_HOST === "smtp.gmail.com" && SMTP_PORT === 587;
 
-export function makeTransport() {
-  if (!SMTP_USER || !SMTP_PASS) {
-    throw new Error(
-      "[mailer] SMTP_USER / SMTP_PASS が設定されていません (env を確認してください)"
-    );
-  }
-
-  const isGmail587 = SMTP_HOST === "smtp.gmail.com" && SMTP_PORT === 587;
-
-  const transportOptions = {
+export function getMailerConfig() {
+  return {
     host: SMTP_HOST,
     port: SMTP_PORT,
-    secure: decideSecure(SMTP_HOST, SMTP_PORT),
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
-    },
-    tls: {
-      // Vercel ↔ Gmail でよく出た SSL routines:... を避けるために最低限 TLS1.2 にする
-      minVersion: "TLSv1.2",
-      servername: SMTP_HOST,
-    },
-  } as any;
-
-  // nodemailer の型にないけど、Gmail:587 のときだけ requireTLS を付ける
-  if (isGmail587) {
-    transportOptions.secure = false;
-    transportOptions.tls = {
-      ...(transportOptions.tls || {}),
-      rejectUnauthorized: true,
-    };
-    (transportOptions as any).requireTLS = true;
-  }
-
-  const transporter = nodemailer.createTransport(transportOptions);
-
-  console.log("[mailer] config", {
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: transportOptions.secure,
-    user: SMTP_USER,
-    hasPass: true,
-    from: SMTP_FROM,
-    isGmail587,
-  });
-
-  return { transporter, from: SMTP_FROM };
+    secure: isGmail587 ? false : SMTP_PORT === 465,
+    auth:
+      SMTP_USER && SMTP_PASS
+        ? {
+            user: SMTP_USER,
+            pass: SMTP_PASS,
+          }
+        : undefined,
+  };
 }
 
-async function safeVerify(transporter: any) {
-  if (typeof transporter.verify === "function") {
-    try {
+export function isSmtpConfigured() {
+  return Boolean(SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS);
+}
+
+const transporter = nodemailer.createTransport(getMailerConfig());
+
+// これを各APIが使う
+export async function sendMail(opts: {
+  to: string;
+  subject: string;
+  text?: string;
+  html?: string;
+  from?: string;
+}) {
+  if (!isSmtpConfigured()) {
+    console.warn("[mailer] SMTP not configured; skip sendMail()");
+    return { skipped: true };
+  }
+
+  // verify が無い/失敗しても落とさない
+  try {
+    // @ts-expect-error: verify may not exist on some transports
+    if (typeof transporter.verify === "function") {
+      // @ts-ignore
       await transporter.verify();
-    } catch (err) {
-      console.warn("[mailer] verify failed but continue:", err);
     }
-  } else {
-    console.log("[mailer] verify() not available, skipping");
+  } catch (err) {
+    console.warn("[mailer] transporter.verify() failed, continue:", err);
   }
-}
 
-export async function sendMail(
-  to: string,
-  subject: string,
-  html: string,
-  text?: string
-) {
-  const { transporter, from } = makeTransport();
-  await safeVerify(transporter);
+  const from =
+    opts.from || process.env.MAIL_FROM || process.env.EMAIL_FROM || SMTP_USER;
 
-  const info = await transporter.sendMail({
+  return transporter.sendMail({
+    ...opts,
     from,
-    to,
-    subject,
-    html,
-    text: text ?? html,
   });
-
-  console.log("[mailer] sent", { to, messageId: info.messageId });
-  return info;
 }
