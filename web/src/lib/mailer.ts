@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import nodemailer, { type Transporter } from "nodemailer";
 
 const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
@@ -64,6 +64,19 @@ export function makeTransport() {
   return { transporter, from: config.from };
 }
 
+async function safeVerify(transporter: Transporter) {
+  const maybeVerify = (transporter as any).verify;
+  if (typeof maybeVerify === "function") {
+    try {
+      await maybeVerify.call(transporter);
+    } catch (err) {
+      console.warn("[mailer] verify failed but continue:", err);
+    }
+  } else {
+    console.log("[mailer] verify() not available on this transporter; skipping");
+  }
+}
+
 export async function sendMail(
   to: string,
   subject: string,
@@ -72,7 +85,7 @@ export async function sendMail(
 ) {
   const { transporter, from } = makeTransport();
 
-  await transporter.verify();
+  await safeVerify(transporter);
 
   const info = await transporter.sendMail({
     from,
