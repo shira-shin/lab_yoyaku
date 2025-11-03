@@ -59,30 +59,31 @@ export async function POST(req: Request) {
 
     if (!user) {
       if (process.env.ALLOW_RESET_PROVISION === "true") {
-        user = await prisma.user.create({
+        const created = await prisma.user.create({
           data: {
             email: normEmail,
             normalizedEmail: normEmail,
             passwordHash: hash,
             emailVerified: new Date(),
           },
-          select: { id: true, email: true, emailVerified: true },
+          select: { id: true, email: true },
         });
-      } else {
-        return NextResponse.json({ error: "USER_NOT_FOUND" }, { status: 404 });
+
+        return NextResponse.json({ ok: true, created: true, user: created });
       }
-    } else {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          passwordHash: hash,
-          email: normEmail,
-          normalizedEmail: normEmail,
-          ...(user.emailVerified ? {} : { emailVerified: new Date() }),
-        },
-      });
-      user = { ...user, email: normEmail, emailVerified: user.emailVerified ?? new Date() };
+
+      return NextResponse.json({ ok: true, noop: true });
     }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: hash,
+        email: normEmail,
+        normalizedEmail: normEmail,
+        ...(user.emailVerified ? {} : { emailVerified: new Date() }),
+      },
+    });
 
     return NextResponse.json({ ok: true, user: { id: user.id, email: normEmail } });
   } catch (error) {

@@ -4,6 +4,7 @@ export const revalidate = 0
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { randomUUID } from 'crypto'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/server/db/prisma'
 import { getAuthContext, normalizeEmail } from '@/lib/auth-legacy'
 import { findUserByEmailNormalized } from '@/lib/users'
@@ -65,7 +66,8 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
         slug: true,
         name: true,
         passcode: true,
-        members: { select: { id: true, email: true, userId: true } },
+        hostEmail: true,
+        members: { select: { id: true, email: true, userId: true, role: true } },
       },
     })
     if (!group) {
@@ -121,34 +123,97 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
       }
     }
 
+    const normalizedHostEmail = normalizeEmail(group.hostEmail ?? '')
     const existingMember = group.members.find(
       (member) => normalizeEmail(member.email) === normalizedEmail,
     )
-
-    const membership = await prisma.groupMember.upsert({
-      where: { groupId_email: { groupId: group.id, email: normalizedEmail } },
-      update: { userId: dbUser.id },
-      create: { groupId: group.id, email: normalizedEmail, userId: dbUser.id, role: 'MEMBER' },
-    })
-
-    console.info('[join]', { email: normalizedEmail, userId: dbUser.id, groupId: group.id })
+    const isHost = normalizedHostEmail && normalizedHostEmail === normalizedEmail
 
     if (existingMember) {
-      return NextResponse.json(
-        {
-          ok: false,
-          code: 'already_member',
-          data: { slug: group.slug, name: group.name ?? group.slug, memberId: membership.id },
-        },
-        { status: 409 },
-      )
+      if (existingMember.userId !== dbUser.id) {
+        await prisma.groupMember.update({
+          where: { id: existingMember.id },
+          data: { userId: dbUser.id },
+        })
+      }
+
+      console.info('[join] already member', {
+        email: normalizedEmail,
+        userId: dbUser.id,
+        groupId: group.id,
+        memberId: existingMember.id,
+      })
+
+      return NextResponse.json({
+        ok: true,
+        code: 'already_member',
+        already: true,
+        data: { slug: group.slug, name: group.name ?? group.slug, memberId: existingMember.id },
+      })
     }
 
-    return NextResponse.json({
-      ok: true,
-      code: 'joined',
-      data: { slug: group.slug, name: group.name ?? group.slug, memberId: membership.id },
-    })
+    if (isHost) {
+      const membership = await prisma.groupMember.upsert({
+        where: { groupId_email: { groupId: group.id, email: normalizedEmail } },
+        update: { userId: dbUser.id, role: 'OWNER' },
+        create: {
+          groupId: group.id,
+          email: normalizedEmail,
+          userId: dbUser.id,
+          role: 'OWNER',
+        },
+        select: { id: true },
+      })
+
+      console.info('[join] owner auto-member', {
+        email: normalizedEmail,
+        userId: dbUser.id,
+        groupId: group.id,
+        memberId: membership.id,
+      })
+
+      return NextResponse.json({
+        ok: true,
+        code: 'already_member',
+        already: true,
+        data: { slug: group.slug, name: group.name ?? group.slug, memberId: membership.id },
+      })
+    }
+
+    try {
+      const membership = await prisma.groupMember.create({
+        data: { groupId: group.id, email: normalizedEmail, userId: dbUser.id, role: 'MEMBER' },
+        select: { id: true },
+      })
+
+      console.info('[join] joined', { email: normalizedEmail, userId: dbUser.id, groupId: group.id })
+
+      return NextResponse.json(
+        {
+          ok: true,
+          code: 'joined',
+          joined: true,
+          data: { slug: group.slug, name: group.name ?? group.slug, memberId: membership.id },
+        },
+        { status: 201 },
+      )
+    } catch (error: any) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const membership = await prisma.groupMember.findUnique({
+          where: { groupId_email: { groupId: group.id, email: normalizedEmail } },
+          select: { id: true },
+        })
+
+        return NextResponse.json({
+          ok: true,
+          code: 'already_member',
+          already: true,
+          data: { slug: group.slug, name: group.name ?? group.slug, memberId: membership?.id },
+        })
+      }
+
+      throw error
+    }
   } catch (error) {
     console.error('join group failed', error)
     return NextResponse.json({ ok: false, code: 'internal_error', error: 'join group failed' }, { status: 500 })

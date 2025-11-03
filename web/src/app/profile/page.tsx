@@ -26,6 +26,11 @@ export default function ProfilePage() {
   const [passcode, setPasscode] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const normalizedSlug = slug.trim().toLowerCase();
+  const alreadyMember = normalizedSlug
+    ? groups.some((group) => group.slug?.toLowerCase() === normalizedSlug)
+    : false;
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -85,8 +90,12 @@ export default function ProfilePage() {
 
   async function join() {
     if (!slug) return;
+    if (alreadyMember) {
+      window.location.href = `/groups/${encodeURIComponent(normalizedSlug)}`;
+      return;
+    }
     try {
-      const res = await fetch(`/api/groups/${encodeURIComponent(slug)}/join`, {
+      const res = await fetch(`/api/groups/${encodeURIComponent(normalizedSlug)}/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ passcode: passcode || undefined }),
@@ -198,13 +207,28 @@ export default function ProfilePage() {
               onChange={(event) => setPasscode(event.target.value)}
               className="flex-1 border rounded p-2"
             />
-            <button
-              onClick={join}
-              className="px-4 py-2 rounded bg-emerald-600 text-white"
-            >
-              参加
-            </button>
+            {alreadyMember ? (
+              <a
+                href={`/groups/${encodeURIComponent(normalizedSlug)}`}
+                className="px-4 py-2 rounded border border-emerald-600 text-emerald-700"
+              >
+                参加済みのグループを開く
+              </a>
+            ) : (
+              <button
+                onClick={join}
+                className="px-4 py-2 rounded bg-emerald-600 text-white"
+                disabled={!slug.trim()}
+              >
+                参加
+              </button>
+            )}
           </div>
+          {alreadyMember && (
+            <p className="text-sm text-emerald-700">
+              このグループにはすでに参加しています。
+            </p>
+          )}
         </div>
       </section>
     </div>
