@@ -16,6 +16,8 @@ importers:
 
   packages/nodemailer: {}
 
+  packages/lucide-react: {}
+
   web:
     dependencies:
       '@prisma/client':
@@ -39,6 +41,9 @@ importers:
       nodemailer:
         specifier: ^6.9.15
         version: link:../packages/nodemailer
+      lucide-react:
+        specifier: workspace:*
+        version: link:../packages/lucide-react
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4

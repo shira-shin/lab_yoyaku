@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { z } from 'zod';
 import { toast } from '@/lib/toast';
 import { localInputToUTC, toUtcIsoZ } from '@/lib/time';
+import { Button } from '@/components/ui/Button';
 
 const ReservationFormSchema = z
   .object({
@@ -192,12 +193,12 @@ export default function NewReservationClient({
         />
       </div>
       <div className="flex gap-2">
-        <button className="btn btn-primary" type="submit" disabled={submitting}>
-          {submitting ? '作成中…' : '作成'}
-        </button>
-        <a className="btn btn-secondary" href={`/groups/${params.slug}`}>
+        <Button type="submit" variant="primary" loading={submitting} disabled={submitting}>
+          作成
+        </Button>
+        <Button href={`/groups/${params.slug}`} variant="ghost">
           キャンセル
-        </a>
+        </Button>
       </div>
     </form>
   );

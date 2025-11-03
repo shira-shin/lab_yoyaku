@@ -185,7 +185,7 @@ export default async function DeviceDetail({
               ›
             </a>
             <div className="print:hidden">
-              <PrintButton className="btn btn-secondary" />
+              <PrintButton variant="secondary" size="sm" />
             </div>
           </div>
         </div>

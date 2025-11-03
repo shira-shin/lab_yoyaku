@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from '@/lib/toast';
+import { Button } from '@/components/ui/Button';
 
 export default function ProfileClient({
   initialName,
@@ -52,9 +53,9 @@ export default function ProfileClient({
           className="input w-full"
         />
       </label>
-      <button className="btn btn-primary" disabled={saving} type="submit">
+      <Button type="submit" variant="primary" loading={saving} block>
         保存
-      </button>
+      </Button>
     </form>
   );
 }

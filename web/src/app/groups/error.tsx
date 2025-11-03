@@ -1,9 +1,13 @@
 'use client';
+import { Button } from '@/components/ui/Button';
+
 export default function Error({ reset }: { error: Error; reset: () => void }) {
   return (
     <div className="p-4 space-y-2">
       <p>エラーが発生しました。</p>
-      <button className="btn btn-secondary" onClick={reset}>リトライ</button>
+      <Button type="button" variant="outline" onClick={reset} size="sm">
+        リトライ
+      </Button>
     </div>
   );
 }
