@@ -1,21 +1,30 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-type CookieOptions = Partial<{
-  path: string;
-  domain: string;
-}>;
+import { SESSION_COOKIE_NAME } from "@/lib/auth/cookies";
 
-export async function POST(req: Request) {
-  const { name, options } = (await req.json()) as {
-    name?: string;
-    options?: CookieOptions;
-  };
-  if (!name) return NextResponse.json({ ok: false, error: 'name required' }, { status: 400 });
+const COOKIE_NAMES = [
+  SESSION_COOKIE_NAME,
+  "next-auth.session-token",
+  "__Secure-next-auth.session-token",
+];
 
-  const res = NextResponse.json({ ok: true });
-  const { path = '/', domain } = options ?? {};
+export async function POST() {
+  try {
+    const jar = cookies();
+    for (const name of COOKIE_NAMES) {
+      if (!name) continue;
+      jar.set(name, "", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: true,
+        path: "/",
+        expires: new Date(0),
+      });
+    }
+  } catch (error) {
+    console.warn("[cookies/delete] failed to clear cookies", error);
+  }
 
-  res.cookies.delete({ name, path, domain });
-
-  return res;
+  return NextResponse.json({ ok: true });
 }
