@@ -22,6 +22,7 @@ Visit <http://localhost:3000> once the dev server boots.
 ## Neon endpoint (ep-ID) の統一と検証
 
 - `web/scripts/assert-endpoints-match.ts` が `pnpm build` 中に `DATABASE_URL` と `DIRECT_URL` の ep-ID を比較する。Production では不一致で即失敗し、Preview/Development では警告を出してビルドを継続する（ログに詳細な診断情報を残す）。
+- ランタイムの Prisma クライアントは常に `DIRECT_URL` を使用するため、Preview/Development の警告は「pooler と direct のズレを検知したが、runtime は direct を参照するので安全に無視する」という意味になる。
 - `PREBUILD_EXPECT_EP` を指定すると、両方の URL が特定の ep-ID を指しているかどうかを追加チェックできる。Production では不一致時に fail-fast、非本番では警告となる。
 - `/api/health/db` にアクセスすると、接続中の `endpoint` と主要テーブル（`User` / `GroupMember` / `Reservation` / `PasswordResetToken`）の存在可否を JSON で確認できる。
 
@@ -30,6 +31,9 @@ Visit <http://localhost:3000> once the dev server boots.
 1. Vercel ダッシュボードの **Project Settings → Environment Variables** を開き、Production / Preview / Development すべてのスコープで `DATABASE_URL`（pooler ホスト）と `DIRECT_URL`（直結ホスト）が同じ ep-ID を指していることを確認する。
 2. Env Group を使っている場合は Group 側の値も同じ組み合わせに更新し、ブランチ固有の ENV があれば削除または統一する。
 3. 値を変更したら再デプロイし、Preview でも Production でも `/api/health/db` の `info.endpoint` が期待どおりになっているか確認する。
+
+> **Note**
+> 本変更前に発行されたパスワードリセットメールは旧来の DATABASE_URL 側にトークンが保存されているため無効になる。DIRECT_URL へ揃えた後に再送したメールから正常に動作する。
 
 ### テーブル作成（統一先の ep 側）
 

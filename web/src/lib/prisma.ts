@@ -1,24 +1,22 @@
 import { PrismaClient } from "@prisma/client";
+import { getRuntimeDatabaseUrl } from "./db-url";
 
 declare global {
   // eslint-disable-next-line no-var
   var prismaGlobal: PrismaClient | undefined;
 }
 
-// Vercel env gives us both DATABASE_URL (pooler) and DIRECT_URL (direct).
-// Production runtime must use DIRECT_URL for Prisma to avoid the pooler.
-const directUrl = process.env.DIRECT_URL ?? undefined;
-const runtimeUrl = directUrl ?? process.env.DATABASE_URL;
+const datasourceUrl = getRuntimeDatabaseUrl();
 
-if (process.env.NODE_ENV === "production" && directUrl) {
-  process.env.DATABASE_URL = directUrl;
+if (process.env.NODE_ENV === "production") {
+  process.env.DATABASE_URL = datasourceUrl;
 }
 
 const prisma =
   globalThis.prismaGlobal ??
   new PrismaClient({
     log: ["warn", "error"],
-    ...(runtimeUrl ? { datasources: { db: { url: runtimeUrl } } } : {}),
+    datasourceUrl,
   });
 
 if (process.env.NODE_ENV !== "production") {
