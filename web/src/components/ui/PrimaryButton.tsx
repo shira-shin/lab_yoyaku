@@ -1,13 +1,13 @@
 "use client";
 import Button from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
+import clsx from "clsx";
 import * as React from "react";
 
 // 依存ゼロのスピナー
 function Spinner({ className }: { className?: string }) {
   return (
     <svg
-      className={cn("mr-2 h-5 w-5 animate-spin", className)}
+      className={clsx("mr-2 h-5 w-5 animate-spin", className)}
       viewBox="0 0 24 24"
       aria-hidden
     >
@@ -25,7 +25,7 @@ export default function PrimaryButton({ className, loading, children, ...rest }:
   return (
     <Button
       {...rest}
-      className={cn(
+      className={clsx(
         "h-11 px-6 text-base font-semibold rounded-2xl shadow-md",
         "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white",
         "focus:outline-none focus:ring-4 focus:ring-blue-300/60",
