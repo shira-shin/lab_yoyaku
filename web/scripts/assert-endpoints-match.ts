@@ -55,6 +55,9 @@ if (isProd) {
     console.warn(
       `[assert-endpoints-match] WARNING (non-prod): VERCEL_ENV=${vercelEnv}, ep mismatch db(${epDb}) vs direct(${epDirect})`
     );
+  if (mismatch) {
+    console.log('[assert-endpoints-match] runtimeはDIRECT_URLを使うので、このズレは無視します');
+  }
   if (wrongEp)
     console.warn(
       `[assert-endpoints-match] WARNING (non-prod): VERCEL_ENV=${vercelEnv}, expected(${expected}) but got db(${epDb})/direct(${epDirect})`
