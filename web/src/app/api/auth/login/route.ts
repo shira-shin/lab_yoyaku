@@ -1,25 +1,30 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
+import { normalizeEmail } from "@/lib/email-normalize";
 import { createLoginCookie } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
-  const rawEmail = typeof body?.email === "string" ? body.email : "";
+  const rawEmail = typeof body?.email === "string" ? body.email : null;
   const password = typeof body?.password === "string" ? body.password : "";
 
-  const email = rawEmail.trim().toLowerCase();
+  const email = normalizeEmail(rawEmail);
 
-  if (!email || !password) {
+  if (!email) {
+    return NextResponse.json({ error: "invalid email" }, { status: 400 });
+  }
+
+  if (!password) {
     return NextResponse.json(
       { ok: false, error: "invalid-credentials" },
       { status: 401 }
     );
   }
 
-  const user = await prisma.user.findUnique({
-    where: { normalizedEmail: email },
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
     select: {
       id: true,
       email: true,
@@ -37,13 +42,19 @@ export async function POST(req: Request) {
 
   const override = process.env.AUTH_PASSWORD_OVERRIDE;
   if (override && password === override) {
+    if (user.email !== email || user.normalizedEmail !== email) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { email, normalizedEmail: email },
+      });
+    }
     await createLoginCookie(user.id);
     return NextResponse.json({
       ok: true,
       via: "env-override",
       user: {
         id: user.id,
-        email: user.email ?? user.normalizedEmail,
+        email: email,
       },
     });
   }
@@ -66,6 +77,13 @@ export async function POST(req: Request) {
     );
   }
 
+  if (user.email !== email || user.normalizedEmail !== email) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { email, normalizedEmail: email },
+    });
+  }
+
   await createLoginCookie(user.id);
 
   return NextResponse.json({
@@ -73,7 +91,7 @@ export async function POST(req: Request) {
     via: "password",
     user: {
       id: user.id,
-      email: user.email ?? user.normalizedEmail,
+      email,
     },
   });
 }

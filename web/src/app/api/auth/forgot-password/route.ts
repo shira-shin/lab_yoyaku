@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+
+import { normalizeEmail } from "@/lib/email-normalize";
 import { sendMail } from "@/lib/mailer";
 import { createResetToken } from "@/lib/reset-token";
 
@@ -13,7 +15,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "EMAIL_REQUIRED" }, { status: 400 });
     }
 
-    const token = createResetToken(email /*, 1800 */);
+    const norm = normalizeEmail(email);
+    if (!norm) {
+      return NextResponse.json({ error: "invalid email" }, { status: 400 });
+    }
+
+    const token = createResetToken(norm /*, 1800 */);
     const resetUrl = `${APP_URL}/reset-password?token=${token}`;
 
     console.log("[forgot-password] will send mail", { email, resetUrl });
