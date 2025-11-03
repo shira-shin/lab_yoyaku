@@ -2,33 +2,61 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 import { NextResponse } from 'next/server'
-import { prisma } from '@/server/db/prisma'
+import { prisma } from '@/lib/prisma'
 import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
 
 function toISO(value: Date | null | undefined) {
   return value ? value.toISOString() : null
 }
 
-async function buildGroupPayload(slug: string) {
-  const group = await prisma.group.findUnique({
-    where: { slug },
-    include: {
-      members: true,
-      devices: {
-        orderBy: { name: 'asc' },
-        include: {
-          reservations: {
-            orderBy: { start: 'asc' },
-            include: { user: { select: { id: true, name: true, email: true } } },
-          },
-        },
-      },
-      dutyTypes: {
-        orderBy: { name: 'asc' },
-        select: { id: true, name: true, color: true, visibility: true, kind: true },
-      },
+const deviceIncludeBase = {
+  include: {
+    reservations: {
+      orderBy: { start: 'asc' as const },
+      include: { user: { select: { id: true, name: true, email: true } } },
     },
-  })
+  },
+} as const
+
+const dutyTypesInclude = {
+  orderBy: { name: 'asc' as const },
+  select: { id: true, name: true, color: true, visibility: true, kind: true },
+} as const
+
+async function loadGroupBySlug(slug: string) {
+  try {
+    return await prisma.group.findUnique({
+      where: { slug },
+      include: {
+        members: true,
+        devices: {
+          orderBy: { updatedAt: 'desc' as const },
+          ...deviceIncludeBase,
+        },
+        dutyTypes: dutyTypesInclude,
+      },
+    })
+  } catch (e: any) {
+    if (e?.code === 'P2022') {
+      console.warn('[groups.slug] fallback without updatedAt')
+      return await prisma.group.findUnique({
+        where: { slug },
+        include: {
+          members: true,
+          devices: {
+            orderBy: { createdAt: 'desc' as const },
+            ...deviceIncludeBase,
+          },
+          dutyTypes: dutyTypesInclude,
+        },
+      })
+    }
+    throw e
+  }
+}
+
+async function buildGroupPayload(slug: string) {
+  const group = await loadGroupBySlug(slug)
 
   if (!group) return null
 
