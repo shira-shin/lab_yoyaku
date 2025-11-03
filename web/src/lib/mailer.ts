@@ -56,7 +56,8 @@ export async function sendMail(
       }
     | string,
   arg2?: string,
-  arg3?: string
+  arg3?: string,
+  arg4?: string
 ) {
   if (!isSmtpConfigured()) {
     console.warn("[mailer] SMTP not configured; skip sendMail()");
@@ -84,16 +85,20 @@ export async function sendMail(
     });
   }
 
-  // 2) 古い呼び方: sendMail(to, subject, html)
+  // 2) 位置引数版（後方互換）: sendMail(to, subject, html?, text?)
   const to = arg1;
   const subject = arg2 || "";
   const html = arg3;
+  const text = arg4;
   const baseCfg = getMailerConfig();
   const from = baseCfg.from || baseCfg.user;
 
   const message: any = { to, subject, from };
   if (html) {
     message.html = html;
+  }
+  if (text) {
+    message.text = text;
   }
   return transporter.sendMail(message);
 }
