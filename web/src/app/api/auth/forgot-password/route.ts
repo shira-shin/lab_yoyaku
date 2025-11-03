@@ -1,20 +1,10 @@
 import { NextResponse } from "next/server";
 import { sendMail } from "@/lib/mailer";
-import crypto from "node:crypto";
+import { createResetToken } from "@/lib/reset-token";
 
 export const runtime = "nodejs";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://labyoyaku.vercel.app";
-const RESET_SECRET = process.env.PASSWORD_RESET_SECRET || "dev-secret-change-me";
-const TOKEN_TTL_SEC = 60 * 30;
-
-function makeResetToken(email: string) {
-  const exp = Math.floor(Date.now() / 1000) + TOKEN_TTL_SEC;
-  const payload = `${email}:${exp}`;
-  const sig = crypto.createHmac("sha256", RESET_SECRET).update(payload).digest("hex");
-  const raw = JSON.stringify({ email, exp, sig });
-  return Buffer.from(raw).toString("base64url");
-}
 
 export async function POST(req: Request) {
   try {
@@ -23,7 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "EMAIL_REQUIRED" }, { status: 400 });
     }
 
-    const token = makeResetToken(email);
+    const token = createResetToken(email /*, 1800 */);
     const resetUrl = `${APP_URL}/reset-password?token=${token}`;
 
     console.log("[forgot-password] will send mail", { email, resetUrl });
