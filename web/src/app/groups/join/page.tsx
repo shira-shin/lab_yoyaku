@@ -11,6 +11,7 @@ export default function GroupJoinPage() {
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const [dbNotInitialized, setDbNotInitialized] = useState(false);
+  const [myGroupSlugs, setMyGroupSlugs] = useState<string[]>([]);
   const router = useRouter();
 
   const slugParam = searchParams.get("slug") || "";
@@ -19,15 +20,50 @@ export default function GroupJoinPage() {
     setGroup(slugParam);
   }, [slugParam]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/groups?mine=1", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json().catch(() => null);
+        if (!data || cancelled) return;
+        const groups = Array.isArray(data?.groups)
+          ? data.groups
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
+        const slugs = Array.isArray(groups)
+          ? groups
+              .map((g: any) => (typeof g?.slug === "string" ? g.slug.toLowerCase() : null))
+              .filter((s): s is string => Boolean(s))
+          : [];
+        if (!cancelled) setMyGroupSlugs(slugs);
+      } catch {
+        /* noop */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const normalizedGroup = group.trim().toLowerCase();
+  const alreadyMember = normalizedGroup ? myGroupSlugs.includes(normalizedGroup) : false;
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr('');
     setLoading(true);
     setDbNotInitialized(false);
     try {
-      const slug = group.trim().toLowerCase();
+      const slug = normalizedGroup;
       if (!slug) {
         setErr('グループの識別子を入力してください');
+        return;
+      }
+      if (myGroupSlugs.includes(slug)) {
+        router.push(`/groups/${encodeURIComponent(slug)}`);
         return;
       }
       const res = await fetch(`/api/groups/${encodeURIComponent(slug)}/join`, {
@@ -49,7 +85,14 @@ export default function GroupJoinPage() {
         return;
       }
       const nextSlug = payload?.data?.slug || slug;
-      router.push(`/groups/${nextSlug}`);
+      const normalizedNextSlug =
+        typeof nextSlug === "string" ? nextSlug.trim().toLowerCase() : slug;
+      if (payload?.already) {
+        setMyGroupSlugs((prev) =>
+          prev.includes(normalizedNextSlug) ? prev : [...prev, normalizedNextSlug],
+        );
+      }
+      router.push(`/groups/${encodeURIComponent(nextSlug)}`);
     } catch (e: any) {
       setErr(e.message || '参加に失敗しました');
     } finally {
@@ -88,13 +131,27 @@ export default function GroupJoinPage() {
             {err}
           </p>
         )}
-        <button
-          className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={loading || !group.trim() || dbNotInitialized}
-          aria-disabled={loading || !group.trim() || dbNotInitialized}
-        >
-          {loading ? "参加中..." : "参加する"}
-        </button>
+        {alreadyMember ? (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+            <p className="font-semibold">このグループには既に参加しています。</p>
+            <p className="mt-1">
+              <a
+                className="text-emerald-700 underline"
+                href={`/groups/${encodeURIComponent(normalizedGroup)}`}
+              >
+                グループページを開く
+              </a>
+            </p>
+          </div>
+        ) : (
+          <button
+            className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading || !group.trim() || dbNotInitialized}
+            aria-disabled={loading || !group.trim() || dbNotInitialized}
+          >
+            {loading ? "参加中..." : "参加する"}
+          </button>
+        )}
       </form>
       {dbNotInitialized && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
