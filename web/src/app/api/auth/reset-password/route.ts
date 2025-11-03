@@ -1,9 +1,9 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
+import { normalizeEmail } from "@/lib/email-normalize";
 import { prisma } from "@/lib/prisma";
 import { verifyResetToken } from "@/lib/reset-token";
-import { normalizeEmail } from "@/lib/users";
 
 export const runtime = "nodejs";
 
@@ -40,40 +40,51 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "INVALID_OR_EXPIRED" }, { status: 400 });
     }
 
+    const normEmail = normalizeEmail(verified.email);
+    if (!normEmail) {
+      return NextResponse.json({ error: "invalid email" }, { status: 400 });
+    }
+
     console.info("[reset-password] datasource", {
       DIRECT_URL: Boolean(process.env.DIRECT_URL),
       using: (process.env.DIRECT_URL || process.env.DATABASE_URL || "").split("@").pop(),
     });
 
-    const normalized = normalizeEmail(verified.email);
-    const user = await prisma.user.findUnique({
-      where: { normalizedEmail: normalized },
+    let user = await prisma.user.findFirst({
+      where: { email: { equals: normEmail, mode: "insensitive" } },
       select: { id: true, email: true, emailVerified: true },
     });
 
+    const hash = await bcrypt.hash(passwordInput, 10);
+
     if (!user) {
-      return NextResponse.json({ ok: false, error: "USER_NOT_FOUND" }, { status: 404 });
+      if (process.env.ALLOW_RESET_PROVISION === "true") {
+        user = await prisma.user.create({
+          data: {
+            email: normEmail,
+            normalizedEmail: normEmail,
+            passwordHash: hash,
+            emailVerified: new Date(),
+          },
+          select: { id: true, email: true, emailVerified: true },
+        });
+      } else {
+        return NextResponse.json({ error: "USER_NOT_FOUND" }, { status: 404 });
+      }
+    } else {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash: hash,
+          email: normEmail,
+          normalizedEmail: normEmail,
+          ...(user.emailVerified ? {} : { emailVerified: new Date() }),
+        },
+      });
+      user = { ...user, email: normEmail, emailVerified: user.emailVerified ?? new Date() };
     }
 
-    const hash = await bcrypt.hash(passwordInput, 12);
-
-    const updateData: { passwordHash: string; emailVerified?: Date } = {
-      passwordHash: hash,
-    };
-
-    if (!user.emailVerified) {
-      updateData.emailVerified = new Date();
-    }
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: updateData,
-    });
-
-    return NextResponse.json({
-      ok: true,
-      user: { id: user.id, email: user.email ?? verified.email },
-    });
+    return NextResponse.json({ ok: true, user: { id: user.id, email: normEmail } });
   } catch (error) {
     console.error("[reset-password] ERROR", error);
     return NextResponse.json({ ok: false, error: "SERVER_ERROR" }, { status: 500 });
