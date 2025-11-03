@@ -85,7 +85,7 @@ export default async function GroupPage({
     redirect(`/groups/join?slug=${encodeURIComponent(paramSlug)}`);
   }
   if (!res.ok) {
-    redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
+    throw new Error('グループ情報の取得に失敗しました');
   }
   const data = await res.json();
   const raw = data?.group ?? {};
@@ -150,7 +150,7 @@ export default async function GroupPage({
     redirect(`/groups/join?slug=${encodeURIComponent(paramSlug)}`);
   }
   if (!reservationsRes.ok) {
-    redirect(`/login?next=/groups/${encodeURIComponent(paramSlug)}`);
+    throw new Error('予約情報の取得に失敗しました');
   }
   const reservationsJson = await reservationsRes.json();
   const reservationItems = extractReservationItems(reservationsJson);

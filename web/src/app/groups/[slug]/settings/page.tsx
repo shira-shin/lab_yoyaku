@@ -22,7 +22,7 @@ export default async function GroupSettingsPage({ params }: { params: { slug: st
   }
   if (res.status === 404) return notFound();
   if (!res.ok) {
-    redirect(`/login?next=/groups/${slug}/settings`);
+    throw new Error('グループ設定の取得に失敗しました');
   }
   const data = await res.json();
   const group = data?.group ?? data;

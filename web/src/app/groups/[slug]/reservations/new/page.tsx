@@ -22,7 +22,7 @@ export default async function NewReservationPage({ params }: { params: { slug: s
     redirect(`/groups/join?slug=${encodeURIComponent(params.slug)}`);
   }
   if (!res.ok) {
-    redirect(`/login?next=/groups/${params.slug}/reservations/new`);
+    throw new Error('機器一覧の取得に失敗しました');
   }
   const { devices } = await res.json();
   return <NewReservationClient params={params} devices={devices} />;

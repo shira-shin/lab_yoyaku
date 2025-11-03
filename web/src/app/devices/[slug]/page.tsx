@@ -14,7 +14,7 @@ export default async function DeviceGlobal({ params }: { params: { slug: string 
   }
   if (res.status === 404) return notFound();
   if (!res.ok) {
-    redirect(`/login?next=/devices/${params.slug}`);
+    throw new Error('機器情報の取得に失敗しました');
   }
   const dev = await res.json();
   if (!dev?.device?.groupSlug) return notFound();
