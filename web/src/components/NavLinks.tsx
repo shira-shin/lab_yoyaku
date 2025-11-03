@@ -3,6 +3,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { UserMenu } from './UserMenu';
+import { Button } from '@/components/ui/Button';
 
 export default function NavLinks({ me, displayName }: { me: any; displayName?: string | null }) {
   const pathname = usePathname();
@@ -15,10 +16,14 @@ export default function NavLinks({ me, displayName }: { me: any; displayName?: s
         ? pathname === '/' || pathname.startsWith('/dashboard')
           ? 'underline underline-offset-8'
           : undefined
-        : pathname === href || pathname.startsWith(href + '/')
-        ? 'underline underline-offset-8'
-        : undefined
+      : pathname === href || pathname.startsWith(href + '/')
+      ? 'underline underline-offset-8'
+      : undefined
     );
+  const isActive = (href: string) =>
+    href === '/dashboard'
+      ? pathname === '/' || pathname.startsWith('/dashboard')
+      : pathname === href || pathname.startsWith(href + '/');
   const userLabel =
     displayName || me?.name || (me?.email ? me.email.split('@')[0] : null);
   const userInitial = userLabel?.charAt(0)?.toUpperCase() ?? '👤';
@@ -47,10 +52,24 @@ export default function NavLinks({ me, displayName }: { me: any; displayName?: s
   return (
     <nav className="flex items-center gap-4 text-sm">
       <a className={linkClass('/usage')} href="/usage">使い方</a>
-      <a className={linkClass('/groups/join')} href="/groups/join">グループ参加</a>
+      <Button
+        href="/groups/join"
+        variant="outline"
+        size="sm"
+        className={clsx('font-semibold', isActive('/groups/join') && 'ring-2 ring-white/70')}
+      >
+        グループ参加
+      </Button>
       {me ? (
         <>
-          <a className={linkClass('/groups/new')} href="/groups/new">グループをつくる</a>
+          <Button
+            href="/groups/new"
+            variant="primary"
+            size="sm"
+            className={clsx('font-semibold', isActive('/groups/new') && 'ring-2 ring-white/70')}
+          >
+            グループをつくる
+          </Button>
           <a className={linkClass('/dashboard')} href="/dashboard">ホーム</a>
           <a className={linkClass('/groups')} href="/groups">グループ</a>
           <div className="relative" ref={menuRef}>
@@ -73,18 +92,22 @@ export default function NavLinks({ me, displayName }: { me: any; displayName?: s
         </>
       ) : (
         <>
-          <a
-            className="rounded-md bg-white/10 px-3 py-1 hover:bg-white/20"
+          <Button
             href="/login?tab=login"
+            variant="ghost"
+            size="sm"
+            className={clsx(isActive('/login') && 'ring-2 ring-white/70')}
           >
             ログイン
-          </a>
-          <a
-            className="rounded-md bg-accent px-3 py-1 text-white hover:bg-accent/90"
+          </Button>
+          <Button
             href="/login?tab=register"
+            variant="primary"
+            size="sm"
+            className={clsx(isActive('/login') && 'ring-2 ring-white/70')}
           >
             新規作成
-          </a>
+          </Button>
         </>
       )}
     </nav>

@@ -10,6 +10,7 @@ import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { utcIsoToLocalDate } from '@/lib/time';
 import { DB_NOT_INITIALIZED_ERROR } from '@/lib/db/constants';
+import { Button } from '@/components/ui/Button';
 
 type Mine = {
   id:string; deviceId:string; deviceName?:string; userEmail:string; userName?:string;
@@ -123,22 +124,26 @@ export default async function DashboardPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">ダッシュボード</h1>
         <div className="flex gap-2">
-          <a
+          <Button
             href="/groups/new"
-            className={`btn btn-primary${dbNotInitialized ? ' pointer-events-none opacity-60' : ''}`}
+            variant="primary"
+            size="sm"
+            className="font-semibold"
             aria-disabled={dbNotInitialized}
             tabIndex={dbNotInitialized ? -1 : undefined}
           >
             グループをつくる
-          </a>
-          <a
+          </Button>
+          <Button
             href="/groups/join"
-            className={`btn btn-secondary${dbNotInitialized ? ' pointer-events-none opacity-60' : ''}`}
+            variant="outline"
+            size="sm"
+            className="font-semibold"
             aria-disabled={dbNotInitialized}
             tabIndex={dbNotInitialized ? -1 : undefined}
           >
             グループ参加
-          </a>
+          </Button>
         </div>
       </div>
 

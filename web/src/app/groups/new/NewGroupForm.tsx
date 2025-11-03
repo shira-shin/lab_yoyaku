@@ -2,6 +2,7 @@
 
 import { useFormState, useFormStatus } from 'react-dom';
 import { createGroupAction, type NewGroupFormState } from './actions';
+import { Button } from '@/components/ui/Button';
 
 type Props = {
   disabled?: boolean;
@@ -13,14 +14,16 @@ const initialState: NewGroupFormState = { error: '' };
 function SubmitButton({ disabled }: { disabled?: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button
+    <Button
       type="submit"
-      className="btn btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+      variant="primary"
+      block
+      loading={pending}
       disabled={pending || disabled}
       aria-disabled={pending || disabled}
     >
-      {pending ? '作成中…' : 'グループを作る'}
-    </button>
+      グループを作る
+    </Button>
   );
 }
 

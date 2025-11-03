@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Button } from '@/components/ui/Button';
 
 function slugify(name: string) {
   return name
@@ -68,12 +69,12 @@ export default function DeviceNewClient({ slug }: { slug: string }) {
           <input name="code" className="w-full rounded-xl border px-3 py-2" />
         </div>
         <div className="flex gap-2">
-          <button className="btn btn-primary" type="submit">
+          <Button type="submit" variant="primary">
             登録
-          </button>
-          <a className="btn btn-secondary" href={`/groups/${slug}`}>
+          </Button>
+          <Button href={`/groups/${slug}`} variant="ghost">
             キャンセル
-          </a>
+          </Button>
         </div>
       </form>
     </div>

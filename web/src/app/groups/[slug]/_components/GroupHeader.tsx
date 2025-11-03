@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { prisma } from '@/server/db/prisma';
 import { getAuthContext } from '@/lib/auth-legacy';
 import { normalizeEmail } from '@/lib/email';
+import { Button } from '@/components/ui/Button';
 
 export default async function GroupHeader({ slug }: { slug: string }) {
   const auth = await getAuthContext();
@@ -24,12 +24,9 @@ export default async function GroupHeader({ slug }: { slug: string }) {
     <div className="flex items-center justify-between mb-4">
       <h1 className="text-xl font-semibold">{group.name ?? group.slug}</h1>
       {isOwner && (
-        <Link
-          href={`/groups/${encodeURIComponent(group.slug)}/admin`}
-          className="rounded-lg bg-purple-600 text-white px-3 py-2 text-sm"
-        >
+        <Button href={`/groups/${encodeURIComponent(group.slug)}/admin`} variant="primary" size="sm">
           ホスト専用ページ
-        </Link>
+        </Button>
       )}
     </div>
   );

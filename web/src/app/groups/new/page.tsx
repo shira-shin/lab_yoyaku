@@ -8,6 +8,7 @@ import NewGroupForm from './NewGroupForm';
 import { unstable_noStore as noStore } from 'next/cache';
 import { serverFetch } from '@/lib/http/serverFetch';
 import { DB_NOT_INITIALIZED_ERROR } from '@/lib/db/constants';
+import { Button } from '@/components/ui/Button';
 
 export default async function NewGroupPage() {
   noStore();
@@ -36,7 +37,9 @@ export default async function NewGroupPage() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">グループ作成</h1>
-        <a href="/" className="btn btn-secondary">ホームに戻る</a>
+        <Button href="/" variant="ghost" size="sm">
+          ホームに戻る
+        </Button>
       </div>
       {dbNotInitialized && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DB_NOT_INITIALIZED_ERROR } from "@/lib/db/constants";
+import { Button } from "@/components/ui/Button";
 
 export default function GroupJoinPage() {
   const searchParams = useSearchParams();
@@ -104,7 +105,9 @@ export default function GroupJoinPage() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">グループに参加</h1>
-        <a href="/" className="btn btn-secondary">ホームに戻る</a>
+        <Button href="/" variant="ghost" size="sm">
+          ホームに戻る
+        </Button>
       </div>
       <form onSubmit={onSubmit} className="space-y-5">
         <label className="block">
@@ -144,13 +147,16 @@ export default function GroupJoinPage() {
             </p>
           </div>
         ) : (
-          <button
-            className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          <Button
+            type="submit"
+            variant="primary"
+            loading={loading}
             disabled={loading || !group.trim() || dbNotInitialized}
             aria-disabled={loading || !group.trim() || dbNotInitialized}
+            block
           >
-            {loading ? "参加中..." : "参加する"}
-          </button>
+            参加する
+          </Button>
         )}
       </form>
       {dbNotInitialized && (

@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LeaveButton from './LeaveButton';
 import { DeviceCard } from './_components/DeviceCard';
+import { Button } from '@/components/ui/Button';
 
 export default function GroupScreenClient({
   initialGroup,
@@ -84,30 +84,30 @@ export default function GroupScreenClient({
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-3xl font-bold">{group.name}</h1>
           <div className="flex gap-2 flex-wrap justify-end">
-            <Link
+            <Button
               href={`/groups/${encodeURIComponent(group.slug)}/reservations/new${
                 firstDevice ? `?device=${encodeURIComponent(firstDevice.slug)}` : ''
               }`}
-              className="btn btn-primary"
+              variant="primary"
             >
               予約を追加
-            </Link>
-            <Link
+            </Button>
+            <Button
               href={`/groups/${encodeURIComponent(group.slug)}/duties`}
-              className="px-3 py-2 rounded bg-purple-600 text-white"
+              variant="secondary"
             >
               当番・作業
-            </Link>
-            <button onClick={handleShareLink} className="btn btn-secondary">
+            </Button>
+            <Button type="button" variant="outline" onClick={handleShareLink}>
               リンクをコピー
-            </button>
+            </Button>
             {isHost && (
-              <a
+              <Button
                 href={`/groups/${encodeURIComponent(group.slug.toLowerCase())}/settings`}
-                className="btn btn-secondary"
+                variant="outline"
               >
                 設定を変更
-              </a>
+              </Button>
             )}
             {!isHost && canLeave && (
               <LeaveButton slug={group.slug} />
@@ -135,12 +135,12 @@ export default function GroupScreenClient({
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">機器</h2>
           {canManageDevices && (
-            <Link
+            <Button
               href={`/groups/${encodeURIComponent(group.slug.toLowerCase())}/devices/new?next=${encodeURIComponent(`/groups/${group.slug.toLowerCase()}`)}`}
-              className="btn btn-primary"
+              variant="outline"
             >
               機器を追加
-            </Link>
+            </Button>
           )}
         </div>
         <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

@@ -12,7 +12,6 @@ import {
   type NormalizedReservation,
 } from '@/lib/reservations';
 import GroupScreenClient from './GroupScreenClient';
-import Link from 'next/link';
 import { prisma } from '@/server/db/prisma';
 import type { Span } from '@/components/CalendarWithBars';
 import PrintButton from '@/components/PrintButton';
@@ -23,6 +22,7 @@ import { getAuthUser } from '@/lib/auth';
 import { normalizeEmail } from '@/lib/email';
 import { unstable_noStore as noStore } from 'next/cache';
 import GroupHeader from './_components/GroupHeader';
+import { Button } from '@/components/ui/Button';
 
 function buildMonth(base = new Date()) {
   const y = base.getFullYear(), m = base.getMonth();
@@ -279,24 +279,21 @@ export default async function GroupPage({
               ›
             </a>
             <div className="print:hidden">
-              <PrintButton className="btn btn-secondary" />
+              <PrintButton variant="secondary" size="sm" />
             </div>
-            <Link
+            <Button
               href={`/groups/${encodeURIComponent(group.slug)}/reservations/new${
                 devices.length === 1
                   ? `?device=${encodeURIComponent(devices[0].slug)}`
                   : ''
               }`}
-              className="btn btn-primary"
+              variant="primary"
             >
               予約を追加
-            </Link>
-            <Link
-              href={`/groups/${encodeURIComponent(group.slug)}/duties`}
-              className="ml-2 px-3 py-2 rounded bg-purple-600 text-white"
-            >
+            </Button>
+            <Button href={`/groups/${encodeURIComponent(group.slug)}/duties`} variant="secondary">
               当番・作業
-            </Link>
+            </Button>
           </div>
         </div>
         <CalendarReservationSection

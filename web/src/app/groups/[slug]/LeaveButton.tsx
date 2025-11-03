@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 
 export default function LeaveButton({ slug }: { slug: string }) {
   const router = useRouter();
@@ -32,12 +33,8 @@ export default function LeaveButton({ slug }: { slug: string }) {
   }
 
   return (
-    <button
-      onClick={leave}
-      disabled={leaving}
-      className="btn btn-danger"
-    >
-      {leaving ? '退出中…' : 'グループを退出'}
-    </button>
+    <Button onClick={leave} disabled={leaving} variant="danger" loading={leaving}>
+      グループを退出
+    </Button>
   );
 }

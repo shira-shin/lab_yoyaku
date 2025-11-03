@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/lib/toast';
+import { Button } from '@/components/ui/Button';
 
 export default function GroupSettingsClient({ initialGroup }: { initialGroup: any }) {
   const [reserveFrom, setReserveFrom] = useState(initialGroup.reserveFrom || '');
@@ -145,9 +146,9 @@ export default function GroupSettingsClient({ initialGroup }: { initialGroup: an
           rows={4}
         />
         <div className="mt-4">
-          <button type="submit" disabled={saving} className="btn btn-primary">
+          <Button type="submit" variant="primary" loading={saving} disabled={saving}>
             保存
-          </button>
+          </Button>
         </div>
       </section>
     </form>

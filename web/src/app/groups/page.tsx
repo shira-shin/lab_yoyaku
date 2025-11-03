@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation';
 import { getUserFromCookies } from '@/lib/auth/server';
 import { serverFetch } from '@/lib/http/serverFetch';
 import Empty from '@/components/Empty';
+import { Button } from '@/components/ui/Button';
 
 export default async function GroupsPage() {
   noStore();
@@ -34,8 +35,12 @@ export default async function GroupsPage() {
     <div className="flex items-center justify-between">
       <h1 className="text-2xl font-bold">グループ一覧</h1>
       <div className="flex gap-2">
-        <a href="/groups/new" className="btn btn-primary">グループをつくる</a>
-        <a href="/" className="btn btn-secondary">ホームに戻る</a>
+        <Button href="/groups/new" variant="primary" size="sm">
+          グループをつくる
+        </Button>
+        <Button href="/" variant="ghost" size="sm">
+          ホームに戻る
+        </Button>
       </div>
     </div>
   );
