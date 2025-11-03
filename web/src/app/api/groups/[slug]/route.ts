@@ -4,17 +4,24 @@ export const revalidate = 0
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { normalizeEmail, readUserFromCookie } from '@/lib/auth-legacy'
+import { deviceOrderSafe, type DeviceOrder } from '@/lib/safe-order'
 
 function toISO(value: Date | null | undefined) {
   return value ? value.toISOString() : null
 }
 
-const deviceIncludeBase = {
-  include: {
-    reservations: {
-      orderBy: { start: 'asc' as const },
-      include: { user: { select: { id: true, name: true, email: true } } },
-    },
+const deviceReservationsSelect = {
+  orderBy: { start: 'asc' as const },
+  select: {
+    id: true,
+    start: true,
+    end: true,
+    purpose: true,
+    reminderMinutes: true,
+    userEmail: true,
+    userName: true,
+    userId: true,
+    user: { select: { id: true, name: true, email: true } },
   },
 } as const
 
@@ -23,40 +30,46 @@ const dutyTypesInclude = {
   select: { id: true, name: true, color: true, visibility: true, kind: true },
 } as const
 
-async function loadGroupBySlug(slug: string) {
+async function hasDeviceUpdatedAtColumn(): Promise<boolean> {
+  const rows = await prisma.$queryRaw<Array<{ column_name: string }>>`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_name = 'Device'
+      AND column_name = 'updatedAt'
+  `
+  return Array.isArray(rows) && rows.length > 0
+}
+
+async function resolveDeviceOrder(): Promise<DeviceOrder> {
   try {
-    return await prisma.group.findUnique({
-      where: { slug },
-      include: {
-        members: true,
-        devices: {
-          orderBy: { updatedAt: 'desc' as const },
-          ...deviceIncludeBase,
-        },
-        dutyTypes: dutyTypesInclude,
-      },
-    })
-  } catch (e: any) {
-    if (e?.code === 'P2022') {
-      console.warn('[groups.slug] fallback without updatedAt')
-      return await prisma.group.findUnique({
-        where: { slug },
-        include: {
-          members: true,
-          devices: {
-            orderBy: { createdAt: 'desc' as const },
-            ...deviceIncludeBase,
-          },
-          dutyTypes: dutyTypesInclude,
-        },
-      })
-    }
-    throw e
+    const hasUpdatedAt = await hasDeviceUpdatedAtColumn()
+    return deviceOrderSafe(hasUpdatedAt)
+  } catch (error) {
+    console.warn('[groups.slug] failed to inspect Device.updatedAt column', error)
+    return deviceOrderSafe(false)
   }
 }
 
-async function buildGroupPayload(slug: string) {
-  const group = await loadGroupBySlug(slug)
+async function buildGroupPayload(slug: string, order: DeviceOrder) {
+  const group = await prisma.group.findUnique({
+    where: { slug },
+    include: {
+      members: true,
+      devices: {
+        orderBy: order,
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          caution: true,
+          code: true,
+          createdAt: true,
+          reservations: deviceReservationsSelect,
+        },
+      },
+      dutyTypes: dutyTypesInclude,
+    },
+  })
 
   if (!group) return null
 
@@ -152,7 +165,8 @@ export async function GET(_req: Request, { params }: { params: { slug: string } 
     }
 
     const slug = params.slug.toLowerCase()
-    const payload = await buildGroupPayload(slug)
+    const order = await resolveDeviceOrder()
+    const payload = await buildGroupPayload(slug, order)
     if (!payload) {
       return NextResponse.json({ error: 'group not found' }, { status: 404 })
     }
@@ -259,7 +273,8 @@ export async function PATCH(req: Request, { params }: { params: { slug: string }
       await prisma.group.update({ where: { id: group.id }, data: updates })
     }
 
-    const payload = await buildGroupPayload(slug)
+    const order = await resolveDeviceOrder()
+    const payload = await buildGroupPayload(slug, order)
     if (!payload) {
       return NextResponse.json({ error: 'group not found' }, { status: 404 })
     }

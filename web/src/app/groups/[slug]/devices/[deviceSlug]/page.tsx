@@ -56,7 +56,7 @@ export default async function DeviceDetail({
   if (res.status === 401) redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
   if (res.status === 403) redirect(`/groups/join?slug=${encodeURIComponent(group)}`);
   if (res.status === 404) return notFound();
-  if (!res.ok) redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
+  if (!res.ok) throw new Error('機器の詳細を取得できませんでした');
   const json = await res.json();
   const dev = json?.device;
   const deviceCode: string | null = dev?.code ?? null;
@@ -108,7 +108,7 @@ export default async function DeviceDetail({
     return notFound();
   }
   if (!reservationsRes.ok) {
-    redirect(`/login?next=/groups/${group}/devices/${deviceSlug}`);
+    throw new Error('予約情報の取得に失敗しました');
   }
   const reservationsJson = await reservationsRes.json();
   const reservationItems = extractReservationItems(reservationsJson);

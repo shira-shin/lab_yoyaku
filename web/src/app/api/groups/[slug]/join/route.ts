@@ -4,7 +4,7 @@ export const revalidate = 0
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { randomUUID } from 'crypto'
-import { Prisma } from '@prisma/client'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { prisma } from '@/server/db/prisma'
 import { getAuthContext, normalizeEmail } from '@/lib/auth-legacy'
 import { findUserByEmailNormalized } from '@/lib/users'
@@ -198,7 +198,7 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
         { status: 201 },
       )
     } catch (error: any) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
         const membership = await prisma.groupMember.findUnique({
           where: { groupId_email: { groupId: group.id, email: normalizedEmail } },
           select: { id: true },
