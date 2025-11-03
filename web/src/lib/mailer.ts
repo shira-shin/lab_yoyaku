@@ -14,17 +14,27 @@ const SMTP_PASS =
 const isGmail587 = SMTP_HOST === "smtp.gmail.com" && SMTP_PORT === 587;
 
 export function getMailerConfig() {
+  // debug API が直接見たいのでここで from を決めておく
+  const from =
+    process.env.MAIL_FROM || process.env.EMAIL_FROM || SMTP_USER || undefined;
+
+  const auth =
+    SMTP_USER && SMTP_PASS
+      ? {
+          user: SMTP_USER,
+          pass: SMTP_PASS,
+        }
+      : undefined;
+
   return {
     host: SMTP_HOST,
     port: SMTP_PORT,
     secure: isGmail587 ? false : SMTP_PORT === 465,
-    auth:
-      SMTP_USER && SMTP_PASS
-        ? {
-            user: SMTP_USER,
-            pass: SMTP_PASS,
-          }
-        : undefined,
+    auth,
+    // ↓↓↓ ここが今回の“後方互換”フィールド ↓↓↓
+    user: SMTP_USER,
+    hasPass: Boolean(SMTP_PASS),
+    from,
   };
 }
 
@@ -34,7 +44,7 @@ export function isSmtpConfigured() {
 
 const transporter = nodemailer.createTransport(getMailerConfig());
 
-// これを各APIが使う
+// 後方互換あり sendMail
 export async function sendMail(
   arg1:
     | {
@@ -53,9 +63,9 @@ export async function sendMail(
     return { skipped: true };
   }
 
-  // verify が無い/失敗しても落とさない
+  // verify が無くても / 失敗しても続行
   try {
-    // @ts-expect-error: verify may not exist on some transports
+    // @ts-expect-error: verify may not exist
     if (typeof transporter.verify === "function") {
       // @ts-ignore
       await transporter.verify();
@@ -64,13 +74,10 @@ export async function sendMail(
     console.warn("[mailer] transporter.verify() failed, continue:", err);
   }
 
-  // 1) 新しい呼び方: sendMail({ to, subject, html })
+  // 1) 新しい呼び方: sendMail({ ... })
   if (typeof arg1 === "object") {
-    const from =
-      arg1.from ||
-      process.env.MAIL_FROM ||
-      process.env.EMAIL_FROM ||
-      SMTP_USER;
+    const baseCfg = getMailerConfig();
+    const from = arg1.from || baseCfg.from || baseCfg.user;
     return transporter.sendMail({
       ...arg1,
       from,
@@ -81,7 +88,8 @@ export async function sendMail(
   const to = arg1;
   const subject = arg2 || "";
   const html = arg3;
-  const from = process.env.MAIL_FROM || process.env.EMAIL_FROM || SMTP_USER;
+  const baseCfg = getMailerConfig();
+  const from = baseCfg.from || baseCfg.user;
 
   const message: any = { to, subject, from };
   if (html) {
