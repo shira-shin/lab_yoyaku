@@ -251,13 +251,6 @@ export default function CalendarWithBars({
                     event.startsAtUTC,
                     event.endsAtUTC,
                   )}）`;
-                  console.info('[tz-check]', {
-                    src: 'MonthGrid',
-                    itemId: event.id,
-                    startUTC: event.startsAtUTC,
-                    startLocal: utcIsoToLocalDate(event.startsAtUTC),
-                    label: formatUtcInAppTz(event.startsAtUTC),
-                  });
                   return (
                     <div
                       key={event.id}
@@ -368,13 +361,6 @@ function DayModal({
                 : deviceBg(event.device.id)
               : '#f5f3ff';
             const contentOpacity = past ? 'opacity-30' : undefined;
-            console.info('[tz-check]', {
-              src: 'DayModal',
-              itemId: event.id,
-              startUTC: event.startsAtUTC,
-              startLocal: utcIsoToLocalDate(event.startsAtUTC),
-              label: formatUtcInAppTz(event.startsAtUTC),
-            });
             return (
               <li
                 key={event.id}

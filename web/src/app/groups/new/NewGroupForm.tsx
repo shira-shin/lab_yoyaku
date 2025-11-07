@@ -3,6 +3,7 @@
 import { useFormState, useFormStatus } from 'react-dom';
 import { createGroupAction, type NewGroupFormState } from './actions';
 import { Button } from '@/components/ui/Button';
+import PasswordInput from '@/components/ui/PasswordInput';
 
 type Props = {
   disabled?: boolean;
@@ -39,11 +40,11 @@ export default function NewGroupForm({ disabled, disabledReason }: Props) {
         </label>
         <label className="block">
           <div className="mb-1">パスワード</div>
-          <input
-            type="password"
+          <PasswordInput
             name="password"
             className="w-full rounded-xl border p-3"
             required
+            autoComplete="new-password"
           />
         </label>
         <div className="pt-2 space-y-4">

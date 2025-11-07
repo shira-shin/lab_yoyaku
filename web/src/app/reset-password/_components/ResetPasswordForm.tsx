@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import PasswordInput from "@/components/ui/PasswordInput";
 
 type ResetPasswordFormProps = {
   initialToken?: string;
@@ -81,25 +82,27 @@ export default function ResetPasswordForm({ initialToken = "" }: ResetPasswordFo
 
           <label className="block text-sm font-medium text-muted-foreground">
             新しいパスワード（8文字以上）
-            <input
-              type="password"
+            <PasswordInput
               minLength={8}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-xl border bg-background px-4 py-3"
+              className="w-full rounded-xl border bg-background px-4 py-3"
+              containerClassName="mt-1"
+              autoComplete="new-password"
             />
           </label>
 
           <label className="block text-sm font-medium text-muted-foreground">
             新しいパスワード（確認）
-            <input
-              type="password"
+            <PasswordInput
               minLength={8}
               required
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 w-full rounded-xl border bg-background px-4 py-3"
+              className="w-full rounded-xl border bg-background px-4 py-3"
+              containerClassName="mt-1"
+              autoComplete="new-password"
             />
           </label>
 
