@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DB_NOT_INITIALIZED_ERROR } from "@/lib/db/constants";
 import { Button } from "@/components/ui/Button";
+import PasswordInput from "@/components/ui/PasswordInput";
 
 export default function GroupJoinPage() {
   const searchParams = useSearchParams();
@@ -122,11 +123,11 @@ export default function GroupJoinPage() {
         </label>
         <label className="block">
           <div className="mb-1">パスコード（必要な場合）</div>
-          <input
-            type="password"
-            className="w-full rounded-xl border p-3"
+          <PasswordInput
             value={passcode}
             onChange={(e) => setPasscode(e.target.value)}
+            className="w-full rounded-xl border p-3"
+            autoComplete="off"
           />
         </label>
         {err && (

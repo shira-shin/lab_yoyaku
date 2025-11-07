@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useMemo, useState } from "react";
+import PasswordInput from "@/components/ui/PasswordInput";
 
 type AuthTab = "login" | "register" | "forgot";
 
@@ -236,12 +237,13 @@ export default function LoginPage() {
                   </label>
                   <label className="block text-sm font-medium text-muted-foreground">
                     パスワード
-                    <input
+                    <PasswordInput
                       required
-                      type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="mt-1 w-full rounded-xl border bg-background px-4 py-3"
+                      className="w-full rounded-xl border bg-background px-4 py-3"
+                      containerClassName="mt-1"
+                      autoComplete="current-password"
                     />
                   </label>
                   <button
@@ -278,24 +280,26 @@ export default function LoginPage() {
                   </label>
                   <label className="block text-sm font-medium text-muted-foreground">
                     パスワード（8文字以上）
-                    <input
+                    <PasswordInput
                       required
                       minLength={8}
-                      type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="mt-1 w-full rounded-xl border bg-background px-4 py-3"
+                      className="w-full rounded-xl border bg-background px-4 py-3"
+                      containerClassName="mt-1"
+                      autoComplete="new-password"
                     />
                   </label>
                   <label className="block text-sm font-medium text-muted-foreground">
                     パスワード（確認）
-                    <input
+                    <PasswordInput
                       required
                       minLength={8}
-                      type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="mt-1 w-full rounded-xl border bg-background px-4 py-3"
+                      className="w-full rounded-xl border bg-background px-4 py-3"
+                      containerClassName="mt-1"
+                      autoComplete="new-password"
                     />
                   </label>
                   <button

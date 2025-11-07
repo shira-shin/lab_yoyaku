@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import PasswordInput from "@/components/ui/PasswordInput";
 
 type Group = {
   id: string;
@@ -201,11 +202,13 @@ export default function ProfilePage() {
               onChange={(event) => setSlug(event.target.value)}
               className="flex-1 border rounded p-2"
             />
-            <input
+            <PasswordInput
               placeholder="passcode (必要な場合)"
               value={passcode}
               onChange={(event) => setPasscode(event.target.value)}
-              className="flex-1 border rounded p-2"
+              className="w-full border rounded p-2"
+              containerClassName="flex-1"
+              autoComplete="off"
             />
             {alreadyMember ? (
               <a
