@@ -74,13 +74,29 @@ export default function ReservationPanel({
           const bg = past ? deviceBgPast(r.device.id) : deviceBg(r.device.id);
           const bar = deviceColor(r.device.id);
           const userName = r.user.name ?? '（予約者不明）';
-          console.info('[tz-check]', {
-            src: 'ReservationPanel',
-            itemId: r.id,
-            startUTC: r.startsAtUTC,
-            startLocal: utcIsoToLocalDate(r.startsAtUTC),
-            label: formatUtcInAppTz(r.startsAtUTC),
+          const startLocal = utcIsoToLocalDate(r.startsAtUTC);
+          const endLocal = utcIsoToLocalDate(r.endsAtUTC);
+          const sameDay =
+            startLocal.getFullYear() === endLocal.getFullYear() &&
+            startLocal.getMonth() === endLocal.getMonth() &&
+            startLocal.getDate() === endLocal.getDate();
+          const startLabel = formatUtcInAppTz(r.startsAtUTC, {
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
           });
+          const endLabel = sameDay
+            ? formatUtcInAppTz(r.endsAtUTC, {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : formatUtcInAppTz(r.endsAtUTC, {
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              });
           return (
             <li
               key={r.id}
@@ -96,19 +112,7 @@ export default function ReservationPanel({
                   <span className="font-medium text-sm truncate">{r.device.name}</span>
                 </div>
                 <div className={`text-xs ${past ? 'opacity-30' : ''}`}>
-                  {formatUtcInAppTz(r.startsAtUTC, {
-                    month: undefined,
-                    day: undefined,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}{' '}
-                  →{' '}
-                  {formatUtcInAppTz(r.endsAtUTC, {
-                    month: undefined,
-                    day: undefined,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {startLabel} → {endLabel}
                 </div>
               </div>
               <div className={`px-3 pb-2 text-sm ${past ? 'opacity-30' : ''}`}>
