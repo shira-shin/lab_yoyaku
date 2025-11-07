@@ -1,4 +1,4 @@
-import { formatUtcInAppTz, utcIsoToLocalDate } from '@/lib/time';
+import { formatUtcInAppTz } from '@/lib/time';
 
 export type ReservationListItem = {
   id: string;
@@ -10,13 +10,6 @@ export type ReservationListItem = {
 
 function Row({ r }: { r: ReservationListItem }) {
   const userName = r.user.name ?? '（予約者不明）';
-  console.info('[tz-check]', {
-    src: 'ReservationList',
-    itemId: r.id,
-    startUTC: r.startsAtUTC,
-    startLocal: utcIsoToLocalDate(r.startsAtUTC),
-    label: formatUtcInAppTz(r.startsAtUTC),
-  });
   return (
     <li className="leading-6">
       <span className="text-gray-500">機器：</span>
