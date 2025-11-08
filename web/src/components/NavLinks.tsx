@@ -50,18 +50,18 @@ export default function NavLinks({ me, displayName }: { me: any; displayName?: s
   }, [menuOpen]);
 
   return (
-    <nav className="flex items-center gap-4 text-sm">
+    <nav className="flex flex-wrap items-center justify-end gap-2 text-sm sm:gap-4">
       <a className={linkClass('/usage')} href="/usage">使い方</a>
-      <Button
-        href="/groups/join"
-        variant="outline"
-        size="sm"
-        className={clsx('font-semibold', isActive('/groups/join') && 'ring-2 ring-white/70')}
-      >
-        グループ参加
-      </Button>
       {me ? (
         <>
+          <Button
+            href="/groups/join"
+            variant="outline"
+            size="sm"
+            className={clsx('font-semibold', isActive('/groups/join') && 'ring-2 ring-white/70')}
+          >
+            グループ参加
+          </Button>
           <Button
             href="/groups/new"
             variant="primary"
@@ -94,11 +94,11 @@ export default function NavLinks({ me, displayName }: { me: any; displayName?: s
         <>
           <Button
             href="/login?tab=login"
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className={clsx(isActive('/login') && 'ring-2 ring-white/70')}
+            className={clsx('font-semibold', isActive('/login') && 'ring-2 ring-white/70')}
           >
-            ログイン
+            ログインして利用
           </Button>
           <Button
             href="/login?tab=register"

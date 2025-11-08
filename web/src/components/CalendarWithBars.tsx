@@ -125,10 +125,11 @@ export default function CalendarWithBars({
     return Array.from(map, ([id, name]) => ({ id, name }));
   }, [spans]);
 
-  const eventTextClass = density === 'compact' ? 'text-[11px]' : 'text-[13px]';
-  const eventPaddingClass = density === 'compact' ? 'py-0.5' : 'py-1.5';
+  const eventTextClass =
+    density === 'compact' ? 'text-xs sm:text-[11px]' : 'text-sm sm:text-[13px]';
+  const eventPaddingClass = density === 'compact' ? 'py-0.5 sm:py-0.5' : 'py-1 sm:py-1.5';
   const eventSpacingClass = density === 'compact' ? 'space-y-1' : 'space-y-2';
-  const cellHeightClass = density === 'compact' ? 'min-h-[110px]' : 'min-h-[140px]';
+  const cellHeightClass = density === 'compact' ? 'min-h-[120px]' : 'min-h-[150px]';
 
   return (
     <div className="space-y-3">
@@ -175,8 +176,9 @@ export default function CalendarWithBars({
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-2">
-        {weeks.flat().map((day, index) => {
+      <div className="overflow-x-auto pb-2 -mx-2 sm:mx-0 sm:overflow-visible">
+        <div className="grid min-w-[640px] grid-cols-7 gap-2 px-1 sm:min-w-0 sm:px-0">
+          {weeks.flat().map((day, index) => {
           const key = toYmd(day);
           const todays = eventsByDay.get(key) ?? [];
           const displayEvents = todays.slice(0, MAX_PER_CELL);
@@ -213,7 +215,7 @@ export default function CalendarWithBars({
               key={`${key}-${index}`}
               type="button"
               className={clsx(
-                'relative flex w-full flex-col rounded-xl border bg-white p-2 text-left shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'relative flex w-full flex-col rounded-xl border bg-white p-3 text-left shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500',
                 cellHeightClass,
                 !isCurrentMonth && 'bg-gray-50 text-gray-400',
                 isToday && 'border-blue-500',
@@ -223,10 +225,10 @@ export default function CalendarWithBars({
               onClick={handleSelect}
               aria-label={`${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`}
             >
-              <div className="flex items-start justify-between text-xs">
+              <div className="flex items-start justify-between text-sm font-semibold sm:text-xs">
                 <span
                   className={clsx(
-                    'font-semibold',
+                    'text-base sm:text-sm',
                     isSun && 'text-red-500',
                     isSat && 'text-blue-500'
                   )}
@@ -234,7 +236,7 @@ export default function CalendarWithBars({
                   {day.getDate()}
                 </span>
                 {todays.length > 0 && (
-                  <span className="text-[10px] text-gray-400">{todays.length}件</span>
+                  <span className="text-[11px] text-gray-400">{todays.length}件</span>
                 )}
               </div>
 
@@ -288,7 +290,8 @@ export default function CalendarWithBars({
               )}
             </button>
           );
-        })}
+          })}
+        </div>
       </div>
 
       {showModal && modalDate && (
