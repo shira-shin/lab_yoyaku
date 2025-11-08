@@ -20,9 +20,16 @@ type BaseProps = {
   'aria-label'?: string
 }
 
+type LinkButtonProps =
+  BaseProps &
+    Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> & {
+      href: string
+      prefetch?: boolean
+    }
+
 type ButtonProps =
   | (BaseProps & React.ButtonHTMLAttributes<HTMLButtonElement> & { href?: never })
-  | (BaseProps & React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string })
+  | LinkButtonProps
 
 const stylesByVariant: Record<Variant, string> = {
   primary:
@@ -80,9 +87,15 @@ export function Button(props: ButtonProps) {
   )
 
   if ('href' in props && props.href) {
-    const { href, ...anchorRest } = rest
+    const { href, prefetch, ...anchorRest } = rest as LinkButtonProps
     return (
-      <Link href={href as string} className={cn} {...(anchorRest as any)} role="button">
+      <Link
+        href={href as string}
+        prefetch={prefetch ?? false}
+        className={cn}
+        {...(anchorRest as any)}
+        role="button"
+      >
         {content}
       </Link>
     )
