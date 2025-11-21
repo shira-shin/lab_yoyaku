@@ -99,31 +99,48 @@ export default function CalendarWithBars({
 
   const today = new Date();
 
+  const visibleRangeStart = weeks[0]?.[0];
+  const visibleRangeEnd = weeks.at(-1)?.[6];
+
+  const visibleSpans = useMemo(() => {
+    if (!visibleRangeStart || !visibleRangeEnd) return spans;
+    const rangeStart = new Date(visibleRangeStart);
+    rangeStart.setHours(0, 0, 0, 0);
+    const rangeEnd = new Date(visibleRangeEnd);
+    rangeEnd.setHours(23, 59, 59, 999);
+
+    return spans.filter((span) => {
+      const startLocal = utcIsoToLocalDate(span.startsAtUTC);
+      const endLocal = utcIsoToLocalDate(span.endsAtUTC);
+      return endLocal >= rangeStart && startLocal <= rangeEnd;
+    });
+  }, [spans, visibleRangeEnd, visibleRangeStart]);
+
   const eventsByDay = useMemo(() => {
     const map = new Map<string, Span[]>();
     weeks.flat().forEach((day) => {
       const key = toYmd(day);
-      const items = spans
+      const items = visibleSpans
         .filter((span) => overlapsLocalDay(span.startsAtUTC, span.endsAtUTC, key))
         .sort(
           (a, b) =>
             utcIsoToLocalDate(a.startsAtUTC).getTime() -
             utcIsoToLocalDate(b.startsAtUTC).getTime(),
-        );
+      );
       map.set(key, items);
     });
     return map;
-  }, [weeks, spans]);
+  }, [visibleSpans, weeks]);
 
   const legendDevices = useMemo(() => {
     const map = new Map<string, string>();
-    spans.forEach((span) => {
+    visibleSpans.forEach((span) => {
       if (span.device) {
         map.set(span.device.id, span.device.name);
       }
     });
     return Array.from(map, ([id, name]) => ({ id, name }));
-  }, [spans]);
+  }, [visibleSpans]);
 
   const eventTextClass =
     density === 'compact' ? 'text-xs sm:text-[11px]' : 'text-sm sm:text-[13px]';
@@ -177,7 +194,7 @@ export default function CalendarWithBars({
       </div>
 
       <div className="overflow-x-auto pb-2 -mx-2 sm:mx-0 sm:overflow-visible">
-        <div className="grid min-w-[640px] grid-cols-7 gap-2 px-1 sm:min-w-0 sm:px-0">
+        <div className="grid min-w-full grid-cols-7 gap-2 px-1 sm:min-w-0 sm:px-0">
           {weeks.flat().map((day, index) => {
           const key = toYmd(day);
           const todays = eventsByDay.get(key) ?? [];
