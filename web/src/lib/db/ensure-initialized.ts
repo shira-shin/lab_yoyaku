@@ -52,7 +52,9 @@ async function withPrismaClient<T>(fn: (client: PrismaClient) => Promise<T>): Pr
 }
 
 async function fetchTableStatuses(client: PrismaClient): Promise<TableStatus[]> {
-  const columns = REQUIRED_TABLES.map((name) => `to_regclass('public."${name}"') AS "${name}"`).join(', ');
+  const columns = REQUIRED_TABLES.map(
+    (name) => `to_regclass('public."${name}"')::text AS "${name}"`,
+  ).join(', ');
   try {
     const result = (await client.$queryRawUnsafe(`SELECT ${columns}`)) as TableCheckRow[] | undefined;
     const row = result?.[0];
