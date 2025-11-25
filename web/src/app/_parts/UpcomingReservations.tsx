@@ -81,19 +81,21 @@ export default function UpcomingReservations({
 
   return (
     <>
-      <div className="flex items-center justify-between mb-3">
-        <div className="font-medium">直近の自分の予約</div>
-        <div className="flex items-center gap-2">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="font-medium text-lg">直近の自分の予約</div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
           <button
             onClick={load}
-            className="border rounded px-3 py-1 text-sm"
+            className="rounded border px-3 py-1 text-sm sm:w-auto"
             disabled={loading}
             aria-label="予約を更新"
             title="予約を更新"
           >
             {loading ? '更新中…' : '更新'}
           </button>
-          <a className="text-sm text-muted hover:underline" href="/groups">すべてのグループへ</a>
+          <a className="text-sm text-muted hover:underline sm:text-right" href="/groups">
+            すべてのグループへ
+          </a>
         </div>
       </div>
 
@@ -118,7 +120,7 @@ export default function UpcomingReservations({
           {items.map((r) => (
             <li
               key={r.id}
-              className="rounded-lg border px-3 py-2 flex items-start gap-3 cursor-pointer"
+              className="flex cursor-pointer flex-col gap-3 rounded-lg border px-3 py-3 sm:flex-row sm:items-start sm:gap-3"
               onClick={() => setSel(r)}
             >
               <span
