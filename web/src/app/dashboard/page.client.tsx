@@ -1,7 +1,8 @@
 'use client';
 import { useMemo, useState } from 'react';
 import UpcomingReservations, { Item } from '../_parts/UpcomingReservations';
-import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
+import CalendarWithBars from '@/components/CalendarWithBars';
+import type { Span } from '@/components/CalendarWithBars';
 import { addMonths, buildWeeks, firstOfMonth } from '@/lib/date-cal';
 import { utcIsoToLocalDate } from '@/lib/time';
 
