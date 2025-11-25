@@ -121,14 +121,15 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">ダッシュボード</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
           <Button
             href="/groups/new"
             variant="primary"
             size="sm"
             className="font-semibold"
+            block
             aria-disabled={dbNotInitialized}
             tabIndex={dbNotInitialized ? -1 : undefined}
           >
@@ -139,6 +140,7 @@ export default async function DashboardPage() {
             variant="outline"
             size="sm"
             className="font-semibold"
+            block
             aria-disabled={dbNotInitialized}
             tabIndex={dbNotInitialized ? -1 : undefined}
           >

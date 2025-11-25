@@ -1,9 +1,24 @@
 'use client';
-import { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import UpcomingReservations, { Item } from '../_parts/UpcomingReservations';
-import CalendarWithBars, { Span } from '@/components/CalendarWithBars';
+import type CalendarWithBarsBase, { Span } from '@/components/CalendarWithBars';
 import { addMonths, buildWeeks, firstOfMonth } from '@/lib/date-cal';
 import { utcIsoToLocalDate } from '@/lib/time';
+
+type CalendarProps = ComponentProps<typeof CalendarWithBarsBase>;
+
+const CalendarWithBars = dynamic<CalendarProps>(
+  () => import('@/components/CalendarWithBars'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-[360px] w-full items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white text-sm text-gray-500">
+        カレンダーを読み込み中…
+      </div>
+    ),
+  },
+);
 
 export default function DashboardClient({
   initialItems,
@@ -19,6 +34,35 @@ export default function DashboardClient({
   const [spans, setSpans] = useState<Span[]>(initialSpans);
   const today = new Date();
   const [anchor, setAnchor] = useState(firstOfMonth(today.getFullYear(), today.getMonth()));
+  const [calendarVisible, setCalendarVisible] = useState(false);
+  const calendarRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (calendarVisible) return;
+    const element = calendarRef.current;
+    if (!element) return;
+
+    const media = window.matchMedia('(min-width: 768px)');
+    if (media.matches) {
+      setCalendarVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setCalendarVisible(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.2 },
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [calendarVisible]);
 
   const { month, weeks, monthSpans } = useMemo(() => {
     const m = anchor.getMonth();
@@ -64,7 +108,7 @@ export default function DashboardClient({
   const card = 'rounded-xl border border-gray-200 bg-white p-5 shadow-sm';
 
   return (
-    <div className="grid gap-6 md:grid-cols-3">
+    <div className="grid gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-[2fr,1fr]">
       <section className={`md:col-span-2 ${card}`}>
         <UpcomingReservations
           initialItems={initialItems}
@@ -74,20 +118,34 @@ export default function DashboardClient({
         />
       </section>
 
-      <section className={card}>
-        <h2 className="font-medium mb-2">予約カレンダー</h2>
-        <div className="flex items-center justify-between mb-2">
-          <button className="px-2 py-1 rounded border" onClick={() => setAnchor((a) => addMonths(a, -1))}>
-            ‹
-          </button>
-          <div className="font-medium">
-            {anchor.getFullYear()}年 {anchor.getMonth() + 1}月
+      <section ref={calendarRef} className={`${card} space-y-3`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-medium text-lg sm:text-xl">予約カレンダー</h2>
+          <div className="flex w-full justify-end gap-2 sm:w-auto">
+            <button
+              className="flex-1 rounded border px-2 py-1 text-sm sm:flex-none"
+              onClick={() => setAnchor((a) => addMonths(a, -1))}
+            >
+              ‹
+            </button>
+            <div className="flex flex-1 items-center justify-center rounded border px-3 py-1 text-sm font-medium sm:flex-none sm:min-w-[180px]">
+              {anchor.getFullYear()}年 {anchor.getMonth() + 1}月
+            </div>
+            <button
+              className="flex-1 rounded border px-2 py-1 text-sm sm:flex-none"
+              onClick={() => setAnchor((a) => addMonths(a, 1))}
+            >
+              ›
+            </button>
           </div>
-          <button className="px-2 py-1 rounded border" onClick={() => setAnchor((a) => addMonths(a, 1))}>
-            ›
-          </button>
         </div>
-        <CalendarWithBars weeks={weeks} month={month} spans={monthSpans} />
+        {calendarVisible ? (
+          <CalendarWithBars weeks={weeks} month={month} spans={monthSpans} />
+        ) : (
+          <div className="flex h-[320px] items-center justify-center rounded-lg bg-gray-50 text-sm text-gray-500">
+            カレンダーを表示する準備中です…
+          </div>
+        )}
       </section>
     </div>
   );
